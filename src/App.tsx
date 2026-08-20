@@ -1,9 +1,12 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { lazy, useEffect, useState } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { AppShell } from './components/layout/app-shell'
 import { QuickAdd } from './components/quick-add'
+import { setFolderStore } from './data/adapters'
+import { restoreFolder } from './data/folder-store'
 import { ensureSeed } from './data/queries'
+import { AuthProvider, useAuth } from './features/auth/auth-context'
 
 // Rotas em lazy: os gráficos (Recharts) só chegam ao navegador na tela que os usa.
 const Dashboard = lazy(() => import('./pages/dashboard').then((m) => ({ default: m.Dashboard })))
@@ -59,6 +62,7 @@ const AgendaPage = lazy(() =>
 const InsightsPage = lazy(() =>
   import('./pages/routine/insights').then((m) => ({ default: m.InsightsPage })),
 )
+const LoginPage = lazy(() => import('./pages/login').then((m) => ({ default: m.LoginPage })))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -67,10 +71,51 @@ const queryClient = new QueryClient({
 })
 
 export function App() {
+  return (
+    <AuthProvider>
+      <Gate />
+    </AuthProvider>
+  )
+}
+
+/**
+ * Segura o app enquanto a sessão é verificada e manda para o login quando ela
+ * não existe. Sem isso, a tela pisca o dashboard vazio antes de descobrir que
+ * o usuário nem entrou.
+ */
+function Gate() {
+  const auth = useAuth()
+
+  if (auth.loading) return <Splash />
+  if (auth.required && !auth.session) {
+    return (
+      <Suspense fallback={<Splash />}>
+        <LoginPage />
+      </Suspense>
+    )
+  }
+  return <AuthenticatedApp />
+}
+
+function Splash() {
+  return <div className="bg-bg min-h-dvh" />
+}
+
+function AuthenticatedApp() {
   const [paletteOpen, setPaletteOpen] = useState(false)
+  const [ready, setReady] = useState(false)
 
   useEffect(() => {
-    void ensureSeed()
+    void (async () => {
+      // A pasta de trabalho precisa ser reconectada antes de qualquer leitura:
+      // semear no navegador e só então trocar de destino deixaria a pasta
+      // nascer pela metade, sem o catálogo de atividades e alimentos.
+      const store = await restoreFolder(false).catch(() => null)
+      if (store) setFolderStore(store)
+
+      await ensureSeed()
+      setReady(true)
+    })()
   }, [])
 
   useEffect(() => {
@@ -83,6 +128,10 @@ export function App() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
+
+  // Tela em branco por uma fração de segundo, em vez de mostrar dados do
+  // navegador que serão trocados pelos da pasta no instante seguinte.
+  if (!ready) return <Splash />
 
   return (
     <QueryClientProvider client={queryClient}>

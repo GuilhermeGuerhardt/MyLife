@@ -16,7 +16,9 @@ registro rápido em linguagem natural e PWA instalável. O que ainda falta está
 - **Tailwind CSS v4** com design system próprio em tokens semânticos (tema claro/escuro)
 - **TanStack Query** para estado de servidor, **Recharts** para gráficos (carregado sob demanda)
 - **Supabase** (Postgres + Auth + RLS) — opcional: o app roda 100% local sem ele
-- **PWA** via vite-plugin-pwa
+- **PWA** via vite-plugin-pwa — instalável de verdade: ícones PNG 192/512, versão `maskable` para
+  o Android não desenhar um adesivo quadrado dentro do círculo, `apple-touch-icon` para o iOS
+  (que ignora o manifest) e as fontes em cache de um ano
 
 ## Rodando
 
@@ -51,9 +53,42 @@ VITE_SUPABASE_ANON_KEY=eyJhbGciOi...
 A anon key é pública por design — quem protege os dados é o **RLS**, e toda tabela da migração
 já vem com a policy `user_id = auth.uid()`. Nenhuma linha é visível sem sessão autenticada.
 
-> A tela de login ainda não existe: enquanto o módulo de auth não entra (Fase 1.1), configurar
-> o `.env` faz as escritas exigirem um usuário autenticado. Para uso imediato, deixe sem `.env`
-> e o modo local cobre tudo.
+Com o `.env` preenchido, o app pede login: entrar, criar conta e recuperar senha, em
+`src/pages/login.tsx`. Habilite o provedor **Email** em Authentication → Providers no painel do
+Supabase. Sem `.env`, não há servidor capaz de verificar senha e o app abre direto — uma senha
+guardada no navegador seria encenação, contornável por qualquer um que abrisse o console.
+
+## Onde os dados ficam
+
+Três destinos possíveis. O app escolhe em tempo de execução e nenhuma tela sabe qual está ativo —
+a lógica vive em `src/data/adapters.ts`.
+
+| Modo | Onde grava | Sincroniza entre máquinas | Exige login |
+|---|---|---|---|
+| **Local** | `localStorage` do navegador | Não | Não |
+| **Pasta** | Arquivos JSON numa pasta do disco | Pelo Drive/OneDrive, se a pasta estiver lá | Não |
+| **Supabase** | Postgres com RLS | Sim, inclusive no celular | Sim |
+
+### Pasta de trabalho
+
+Em **Perfil → Pasta de trabalho**, escolha uma pasta e o app passa a guardar tudo nela: um arquivo
+JSON por tabela, indentado e legível. Aponte para dentro da pasta sincronizada do Google Drive ou
+do OneDrive e os dados acompanham você entre computadores, sem servidor e sem conta — a ideia é a
+mesma do Obsidian.
+
+**Um arquivo por tabela, não um só.** Gravar um hábito reescreve 2 kB em vez de 2 MB, o Drive
+sincroniza só o que mudou (menos conflito), e dá para abrir `transactions.json` e entender o que
+tem lá.
+
+**Onde funciona:** Chrome e Edge, no computador. A File System Access API não existe no Firefox,
+no Safari nem em navegador de celular — por isso o modo pasta é uma opção, nunca o padrão, e o
+cartão diz isso na cara quando o navegador não suporta.
+
+**Permissão:** o navegador lembra da pasta entre sessões, mas exige um clique para reconceder a
+escrita a cada nova sessão. Pedir permissão sem gesto do usuário é recusado — por isso existe o
+botão "Reconectar a última" em vez de uma tentativa silenciosa ao abrir.
+
+Trocar para uma pasta vazia com dados já no navegador pergunta antes se você quer levá-los junto.
 
 ## Backup e restauração
 

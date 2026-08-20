@@ -1,4 +1,4 @@
-import { Cloud, CloudOff, Download, Trash2, Upload } from 'lucide-react'
+import { Cloud, CloudOff, Download, FolderSync, Trash2, Upload } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -14,12 +14,32 @@ import {
   totalRows,
   type BackupFile,
 } from '@/lib/backup/backup'
+import { storageMode, type StorageMode } from '@/data/adapters'
 import { today } from '@/lib/dates'
-import { isCloudEnabled } from '@/lib/supabase'
 import { integer, longDate } from '@/lib/format'
 
 /** Data do último backup, só para lembrar quanto tempo faz. */
 const LAST_BACKUP_KEY = 'life:last-backup'
+
+const MODE_TITLE: Record<StorageMode, string> = {
+  cloud: 'Conectado ao Supabase',
+  folder: 'Gravando numa pasta do disco',
+  local: 'Rodando em modo local',
+}
+
+const MODE_DETAIL: Record<StorageMode, string> = {
+  cloud: 'Os registros vão para o Postgres e são protegidos por RLS.',
+  folder:
+    'Os arquivos ficam na pasta escolhida. Se ela estiver dentro do Drive ou do OneDrive, a sincronização entre computadores é do próprio serviço.',
+  local:
+    'Os registros ficam neste navegador, nesta máquina. Formatar o computador ou limpar os dados do site apaga tudo — o backup é o que sobrevive.',
+}
+
+const MODE_BADGE: Record<StorageMode, string> = {
+  cloud: 'Supabase',
+  folder: 'Pasta',
+  local: 'Local',
+}
 
 export function BackupCard() {
   const fileInput = useRef<HTMLInputElement>(null)
@@ -28,6 +48,7 @@ export function BackupCard() {
   const [error, setError] = useState<string | null>(null)
   const [status, setStatus] = useState<string | null>(null)
   const [lastBackup, setLastBackup] = useState(() => localStorage.getItem(LAST_BACKUP_KEY))
+  const mode = storageMode()
 
   async function handleExport() {
     setBusy(true)
@@ -93,18 +114,18 @@ export function BackupCard() {
       <CardContent className="space-y-4">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-fg text-sm font-medium">
-              {isCloudEnabled ? 'Conectado ao Supabase' : 'Rodando em modo local'}
-            </p>
-            <p className="text-fg-muted mt-1 text-xs">
-              {isCloudEnabled
-                ? 'Os registros vão para o Postgres e são protegidos por RLS.'
-                : 'Os registros ficam neste navegador, nesta máquina. Formatar o computador ou limpar os dados do site apaga tudo — o backup é o que sobrevive.'}
-            </p>
+            <p className="text-fg text-sm font-medium">{MODE_TITLE[mode]}</p>
+            <p className="text-fg-muted mt-1 text-xs">{MODE_DETAIL[mode]}</p>
           </div>
-          <Badge tone={isCloudEnabled ? 'positive' : 'neutral'}>
-            {isCloudEnabled ? <Cloud className="size-3" /> : <CloudOff className="size-3" />}
-            {isCloudEnabled ? 'Supabase' : 'Local'}
+          <Badge tone={mode === 'local' ? 'neutral' : 'positive'}>
+            {mode === 'cloud' ? (
+              <Cloud className="size-3" />
+            ) : mode === 'folder' ? (
+              <FolderSync className="size-3" />
+            ) : (
+              <CloudOff className="size-3" />
+            )}
+            {MODE_BADGE[mode]}
           </Badge>
         </div>
 
@@ -122,10 +143,14 @@ export function BackupCard() {
             <Upload />
             Restaurar backup
           </Button>
-          <Button variant="ghost" size="sm" onClick={resetData}>
-            <Trash2 />
-            Apagar dados locais
-          </Button>
+          {/* Só faz sentido no modo local: nos outros, o botão limparia uma
+              cópia no navegador que o app nem está lendo. */}
+          {mode === 'local' && (
+            <Button variant="ghost" size="sm" onClick={resetData}>
+              <Trash2 />
+              Apagar dados locais
+            </Button>
+          )}
 
           <input
             ref={fileInput}
