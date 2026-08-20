@@ -1,12 +1,12 @@
-import { Check, Cloud, CloudOff, Download, Trash2 } from 'lucide-react'
+import { Check } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useProfile } from '@/data/queries'
+import { BackupCard } from '@/features/profile/backup-card'
 import { ACTIVITY_LABELS, type ActivityLevel, type Sex } from '@/lib/health/formulas'
-import { isCloudEnabled } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Field, Input, Select } from '@/components/ui/field'
-import { Badge, SectionTitle } from '@/components/ui/misc'
+import { SectionTitle } from '@/components/ui/misc'
 
 export function ProfilePage() {
   const { profile, save, isSaving } = useProfile()
@@ -34,32 +34,6 @@ export function ProfilePage() {
     await save({ ...form, birthdate: form.birthdate || null })
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
-  }
-
-  function exportData() {
-    const data: Record<string, unknown> = {}
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i)
-      if (key?.startsWith('life:table:')) {
-        data[key.replace('life:table:', '')] = JSON.parse(localStorage.getItem(key) ?? '[]')
-      }
-    }
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = `life-backup-${new Date().toISOString().slice(0, 10)}.json`
-    link.click()
-    URL.revokeObjectURL(url)
-  }
-
-  function resetData() {
-    if (!confirm('Isso apaga todos os dados locais deste navegador. Continuar?')) return
-    for (let i = localStorage.length - 1; i >= 0; i--) {
-      const key = localStorage.key(i)
-      if (key?.startsWith('life:table:')) localStorage.removeItem(key)
-    }
-    location.reload()
   }
 
   return (
@@ -141,37 +115,7 @@ export function ProfilePage() {
 
       <div>
         <SectionTitle>Dados e sincronização</SectionTitle>
-        <Card>
-          <CardContent className="space-y-4">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-fg text-sm font-medium">
-                  {isCloudEnabled ? 'Conectado ao Supabase' : 'Rodando em modo local'}
-                </p>
-                <p className="text-fg-muted mt-1 text-xs">
-                  {isCloudEnabled
-                    ? 'Os registros vão para o Postgres e são protegidos por RLS.'
-                    : 'Os registros ficam no localStorage deste navegador. Defina VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY no .env para sincronizar na nuvem.'}
-                </p>
-              </div>
-              <Badge tone={isCloudEnabled ? 'positive' : 'neutral'}>
-                {isCloudEnabled ? <Cloud className="size-3" /> : <CloudOff className="size-3" />}
-                {isCloudEnabled ? 'Supabase' : 'Local'}
-              </Badge>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <Button variant="secondary" size="sm" onClick={exportData}>
-                <Download />
-                Exportar backup
-              </Button>
-              <Button variant="ghost" size="sm" onClick={resetData}>
-                <Trash2 />
-                Apagar dados locais
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <BackupCard />
       </div>
     </div>
   )

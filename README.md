@@ -53,7 +53,28 @@ já vem com a policy `user_id = auth.uid()`. Nenhuma linha é visível sem sess�
 
 > A tela de login ainda não existe: enquanto o módulo de auth não entra (Fase 1.1), configurar
 > o `.env` faz as escritas exigirem um usuário autenticado. Para uso imediato, deixe sem `.env`
-> e o modo local cobre tudo. O backup em JSON fica em **Perfil → Exportar backup**.
+> e o modo local cobre tudo.
+
+## Backup e restauração
+
+Em **Perfil → Dados e sincronização**:
+
+- **Exportar backup** gera um JSON com todas as tabelas. Ele lê pelo adaptador ativo, então
+  funciona igual no modo local e no Supabase.
+- **Restaurar backup** lê o arquivo de volta. Antes de gravar, valida o conteúdo e mostra a
+  contagem por tabela para conferência.
+
+A restauração deixa o app **igual ao arquivo**: o que está no backup entra, e o que existe e não
+está lá é removido. Um import que só somasse faria registros apagados ressuscitarem a cada
+restauração — por isso a confirmação é explícita e o botão é vermelho.
+
+O formato é versionado (`app`, `version`, `exported_at`, `tables`), e o import ainda aceita os
+backups do formato antigo, sem cabeçalho. Arquivo de outro app, versão futura ou tabela
+corrompida são recusados inteiros, em vez de gravados pela metade.
+
+No modo local os dados vivem no `localStorage` **daquele navegador, naquela máquina** — formatar
+o computador ou limpar os dados do site apaga tudo. Enquanto a tela de login não existe, exportar
+de vez em quando é o que garante levar os dados para outro computador.
 
 ## Deploy no Render
 

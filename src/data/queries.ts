@@ -91,6 +91,67 @@ const collections = {
 
 type CollectionName = keyof typeof collections
 
+/** Nomes de tabela que o backup sabe restaurar. */
+export const BACKUP_TABLES: readonly string[] = Object.values(TABLES)
+
+/**
+ * Lê todas as tabelas pelo adaptador ativo — não pelo localStorage direto.
+ * É o que faz o backup funcionar igual nos dois modos; a versão anterior lia
+ * as chaves do navegador e devolvia um arquivo vazio para quem estava no
+ * Supabase, sem avisar.
+ */
+export async function exportAll(): Promise<Record<string, unknown[]>> {
+  const names = Object.keys(collections) as CollectionName[]
+  const entries = await Promise.all(
+    names.map(async (name) => [TABLES[name], await collections[name].list()] as const),
+  )
+  return Object.fromEntries(entries)
+}
+
+export interface ImportReport {
+  restored: Array<{ table: string; count: number }>
+  removed: number
+}
+
+/**
+ * Restaura o backup por cima dos dados atuais.
+ *
+ * "Restaurar" aqui significa deixar o banco igual ao arquivo: o que está no
+ * backup entra, e o que existe hoje e não está lá sai. Um import que só
+ * somasse deixaria registros apagados ressuscitarem a cada restauração.
+ *
+ * A remoção acontece depois da escrita e é feita por id, o que a torna
+ * inofensiva no adaptador local (onde `replaceAll` já trocou o conjunto
+ * inteiro) e necessária no Supabase (onde `replaceAll` é um upsert e não
+ * remove nada sozinho).
+ */
+export async function importAll(tables: Record<string, unknown[]>): Promise<ImportReport> {
+  const names = Object.keys(collections) as CollectionName[]
+  const report: ImportReport = { restored: [], removed: 0 }
+
+  for (const name of names) {
+    const table = TABLES[name]
+    const rows = tables[table]
+    if (!rows) continue
+
+    const store = collections[name] as unknown as Collection<BaseRow>
+    const existing = await store.list()
+
+    await store.replaceAll(rows as BaseRow[])
+
+    const incoming = new Set((rows as BaseRow[]).map((row) => row.id))
+    for (const row of existing) {
+      if (incoming.has(row.id)) continue
+      await store.remove(row.id)
+      report.removed++
+    }
+
+    report.restored.push({ table, count: rows.length })
+  }
+
+  return report
+}
+
 function withMeta<T>(items: T[]): Array<T & BaseRow> {
   const now = new Date().toISOString()
   return items.map((item) => ({ ...item, id: uid(), created_at: now, updated_at: now })) as Array<
