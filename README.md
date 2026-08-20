@@ -3,8 +3,9 @@
 Dashboard da vida: saúde, alimentação, faculdade, cursos e finanças em um lugar só.
 
 **Entregue até aqui:** módulos de **Saúde** (atividades, medidas, plano de emagrecimento
-adaptativo e diário alimentar), **Faculdade**, **Cursos**, **Caderno** e **Financeiro**, além do
-registro rápido em linguagem natural e do PWA instalável. O que ainda falta está em
+adaptativo e diário alimentar), **Faculdade**, **Cursos**, **Caderno**, **Financeiro** e
+**Rotina** (hábitos, agenda unificada e insights entre módulos), com dashboard configurável,
+registro rápido em linguagem natural e PWA instalável. O que ainda falta está em
 [docs/PLANO.md](docs/PLANO.md).
 
 ---
@@ -39,7 +40,7 @@ Scripts:
 ## Conectando ao Supabase
 
 1. Crie o projeto no [Supabase](https://supabase.com).
-2. Rode a migração `supabase/migrations/0001_health.sql` no SQL Editor (ou via `supabase db push`).
+2. Rode as migrações de `supabase/migrations/` em ordem no SQL Editor (ou via `supabase db push`).
 3. Copie `.env.example` para `.env` e preencha:
 
 ```bash
@@ -75,7 +76,11 @@ src/
 │  ├─ health/          # TMB, TDEE, IMC, média móvel, plano e recalibração (puro + testado)
 │  ├─ education/       # progresso, pré-requisitos, faltas, média e simulador (puro + testado)
 │  ├─ finance/         # centavos, ciclo de fatura, parcelas e relatórios (puro + testado)
+│  ├─ habits/          # sequências, meta semanal e heatmap (puro + testado)
+│  ├─ calendar/        # agenda unificada e export iCalendar (puro + testado)
+│  ├─ insights/        # série semanal, correlação e regras de insight (puro + testado)
 │  ├─ quick-add/       # interpretador do Ctrl+K
+│  ├─ dates.ts         # aritmética de datas em ISO local
 │  ├─ format.ts        # formatação pt-BR
 │  └─ supabase.ts
 ├─ pages/              # uma rota por arquivo
@@ -104,7 +109,7 @@ ajuste calórico limitado a ±250 kcal.
 1–2 kg por água e sal.
 
 **Registro rápido (Ctrl+K).** `peso 84,2`, `corri 5km em 28min`, `futvolei 1h30`, `dormi 7h30`,
-`agua 500ml`. Regex pura: instantâneo e offline.
+`agua 500ml`, `feito leitura`. Regex pura: instantâneo e offline.
 
 ## Destaques de Faculdade e Cursos
 
@@ -152,6 +157,34 @@ anterior. **Metas** calculam o aporte mensal necessário para o prazo.
 
 **Registro rápido** também lança: `gastei 35 no mercado` grava a despesa na categoria certa,
 `recebi 3500 de salario` grava a receita.
+
+## Destaques da Rotina
+
+**O dia de hoje não quebra sequência.** Enquanto o dia não acabou, não dá para dizer que o hábito
+falhou: a sequência conta a partir de hoje quando já houve registro e a partir de ontem quando
+não. É a diferença entre abrir o app de manhã e ver "12 dias" ou ver "0".
+
+**Hábito semanal se mede em semanas.** "Treinar 4× por semana" não é quebrado por uma terça-feira
+sem treino. A sequência conta semanas que bateram a meta, e a semana corrente só entra depois de
+batida — antes disso ela fica pendente, não perdida. O cartão avisa quando a meta ainda cabe nos
+dias restantes ("faltam 2 em 2 dias") e quando não cabe mais.
+
+**Heatmap clicável.** Seis meses de consistência em uma tira; clicar numa célula corrige o
+passado, porque ninguém marca hábito no dia certo por 180 dias seguidos.
+
+**Agenda unificada de verdade.** Aulas projetadas da grade semanal, provas e entregas, treinos
+registrados, contas a pagar e o vencimento de cada fatura, no mesmo mês. Compra no cartão não vira
+"conta a pagar" — quem vence é a fatura, e ela aparece com o total do período certo. Export `.ics`
+com horário flutuante: aula das 19h continua às 19h em qualquer fuso, sem andar no horário de
+verão.
+
+**Insights que sabem calar a boca.** Toda regra passa por três travas antes de virar frase: pelo
+menos 3 semanas de cada lado da comparação, efeito de no mínimo 10%, e linguagem descritiva — "nas
+semanas em que X, Y foi maior", nunca "X causa Y". A tela vazia com "ainda não dá para afirmar
+nada" é o comportamento correto, não uma feature faltando.
+
+**Dashboard configurável.** Onze widgets que podem ser ligados, desligados e reordenados; o banco
+guarda só o que foi personalizado, então widget novo aparece com o padrão dele em vez de sumir.
 
 ## Aviso
 

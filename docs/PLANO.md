@@ -295,8 +295,26 @@ pronto para Static Site.
 - Migração `supabase/migrations/0003_finance.sql`
 - 85 testes no total
 
+**Fase 4 (cola tudo) — concluída.**
+- **Hábitos** diários e semanais, com sequência, meta da semana, adesão e heatmap clicável de seis
+  meses. O dia corrente nunca quebra sequência, e hábito semanal é medido em semanas
+- **Agenda unificada**: aulas projetadas da grade, provas e entregas, treinos, contas a pagar e
+  vencimento de fatura na mesma grade mensal, com export `.ics` em horário flutuante
+- **Insights cross-módulo** com travas de amostra (3 semanas por grupo), de efeito (10%) e de
+  linguagem (descritiva, nunca causal), mais a revisão semanal comparando com a semana anterior
+- **Dashboard configurável**: catálogo de 11 widgets, mostrar/ocultar/reordenar persistido; o
+  banco guarda só o que foi personalizado
+- Registro rápido passa a marcar hábito (`feito leitura`)
+- Migração `supabase/migrations/0004_routine.sql`
+- 155 testes no total
+
+**Decisão de modelagem da Fase 4.** A agenda não ganhou tabela: ela é uma leitura sobre o que já
+existe. Duplicar disciplina, deadline, sessão e transação num "eventos" próprio criaria duas
+verdades para o mesmo compromisso, e a segunda envelheceria em silêncio. Os insights, pelo mesmo
+motivo, são calculados a cada abertura em vez de materializados.
+
 **Pendente na Fase 1.1:** tela de login (Supabase Auth) — hoje o app roda no adaptador local
 quando não há `.env` configurado.
 
-**Próximas:** importação de OFX, transações recorrentes automáticas, dashboard configurável,
-hábitos, calendário unificado e insights cross-módulo.
+**Próximas (Fase 5):** importação de OFX, transações recorrentes geradas automaticamente,
+flashcards com repetição espaçada, investimentos, bot no Telegram e notificações push.

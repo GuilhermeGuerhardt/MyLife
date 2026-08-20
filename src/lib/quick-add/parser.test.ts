@@ -91,4 +91,43 @@ describe('parseQuickAdd', () => {
   it('devolve unknown para texto solto', () => {
     expect(parseQuickAdd('blablabla', activities).kind).toBe('unknown')
   })
+
+  describe('hábitos', () => {
+    const habits = [
+      { id: 'h1', name: 'Leitura diária' },
+      { id: 'h2', name: 'Meditação' },
+      { id: 'h3', name: 'Academia' },
+    ]
+
+    it('marca o hábito pelo verbo explícito', () => {
+      expect(parseQuickAdd('feito leitura', activities, habits)).toEqual({
+        kind: 'habit',
+        habitId: 'h1',
+        habitName: 'Leitura diária',
+      })
+      expect(parseQuickAdd('cumpri a meditacao', activities, habits)).toMatchObject({
+        kind: 'habit',
+        habitId: 'h2',
+      })
+    })
+
+    it('sem o verbo, o texto continua sendo treino', () => {
+      // "academia" existe como hábito e como atividade: sem "feito", vale o treino.
+      expect(parseQuickAdd('academia 1h', activities, habits)).toMatchObject({
+        kind: 'session',
+        activityId: 'a2',
+      })
+    })
+
+    it('cai no treino quando nenhum hábito casa com o texto', () => {
+      expect(parseQuickAdd('fiz natacao 45min', activities, habits)).toMatchObject({
+        kind: 'session',
+        activityId: 'a4',
+      })
+    })
+
+    it('não inventa hábito quando não há nenhum cadastrado', () => {
+      expect(parseQuickAdd('feito leitura', activities).kind).toBe('unknown')
+    })
+  })
 })

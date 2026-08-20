@@ -1,0 +1,415 @@
+/**
+ * Agenda unificada.
+ *
+ * O calendário só vira algo útil quando mostra tudo junto: a prova de terça, o
+ * treino de quarta, a fatura que vence quinta. Separado por módulo, cada um
+ * deles já existe em outra tela — o valor está na sobreposição, que é onde os
+ * conflitos aparecem.
+ *
+ * Tudo aqui é função pura sobre listas já filtradas. Cada origem tem seu
+ * construtor, e `buildAgenda` só junta e ordena — assim dá para testar cada
+ * regra isoladamente e adicionar uma origem nova sem tocar nas outras.
+ */
+
+import { addDays, eachDay, weekdayOf } from '@/lib/dates'
+import { addMonths, dateInCompetence, statementPeriod, toCompetence } from '@/lib/finance/billing'
+
+export type AgendaSource =
+  | 'class'
+  | 'exam'
+  | 'assignment'
+  | 'workout'
+  | 'bill'
+  | 'invoice'
+  | 'recurring'
+
+export type AgendaArea = 'health' | 'education' | 'finance'
+
+export interface AgendaEvent {
+  id: string
+  date: string
+  /** HH:MM, ou nulo quando o compromisso é do dia inteiro. */
+  time: string | null
+  endTime: string | null
+  title: string
+  detail: string | null
+  source: AgendaSource
+  area: AgendaArea
+  /** Rota que abre o registro de origem. */
+  href: string | null
+  done: boolean
+  /** Valor em centavos, nas origens financeiras. */
+  amountCents?: number
+}
+
+export const SOURCE_LABELS: Record<AgendaSource, string> = {
+  class: 'Aula',
+  exam: 'Prova',
+  assignment: 'Entrega',
+  workout: 'Treino',
+  bill: 'Conta',
+  invoice: 'Fatura',
+  recurring: 'Recorrente',
+}
+
+const AREA_OF: Record<AgendaSource, AgendaArea> = {
+  class: 'education',
+  exam: 'education',
+  assignment: 'education',
+  workout: 'health',
+  bill: 'finance',
+  invoice: 'finance',
+  recurring: 'finance',
+}
+
+// ---------------------------------------------------------------------------
+// Aulas — a grade semanal projetada sobre o intervalo
+// ---------------------------------------------------------------------------
+
+export interface SubjectLike {
+  id: string
+  program_id: string
+  name: string
+  status: string
+  weekday: number | null
+  start_time: string | null
+  end_time: string | null
+  room: string | null
+}
+
+/**
+ * Só disciplinas em curso geram aula: uma matéria concluída no semestre
+ * passado ainda tem dia e horário cadastrados, e projetá-la encheria a agenda
+ * de aulas que não existem mais.
+ */
+export function classEvents(subjects: SubjectLike[], from: string, to: string): AgendaEvent[] {
+  const active = subjects.filter((s) => s.status === 'doing' && s.weekday !== null)
+  if (active.length === 0) return []
+
+  const events: AgendaEvent[] = []
+  for (const date of eachDay(from, to)) {
+    const weekday = weekdayOf(date)
+    for (const subject of active) {
+      if (subject.weekday !== weekday) continue
+      events.push({
+        id: `class:${subject.id}:${date}`,
+        date,
+        time: subject.start_time,
+        endTime: subject.end_time,
+        title: subject.name,
+        detail: subject.room ? `Sala ${subject.room}` : null,
+        source: 'class',
+        area: 'education',
+        href: `/faculdade/${subject.program_id}`,
+        done: false,
+      })
+    }
+  }
+  return events
+}
+
+// ---------------------------------------------------------------------------
+// Provas e entregas
+// ---------------------------------------------------------------------------
+
+export interface DeadlineLike {
+  id: string
+  title: string
+  kind: 'prova' | 'trabalho' | 'entrega' | 'aula'
+  date: string
+  done: boolean
+  program_id: string | null
+  subject_id: string | null
+  notes: string | null
+}
+
+export function deadlineEvents(
+  deadlines: DeadlineLike[],
+  subjectName: (id: string | null) => string | null,
+): AgendaEvent[] {
+  return deadlines.map((deadline) => ({
+    id: `deadline:${deadline.id}`,
+    date: deadline.date,
+    time: null,
+    endTime: null,
+    title: deadline.title,
+    detail: subjectName(deadline.subject_id) ?? deadline.notes,
+    source: deadline.kind === 'prova' ? 'exam' : deadline.kind === 'aula' ? 'class' : 'assignment',
+    area: 'education',
+    href: deadline.program_id ? `/faculdade/${deadline.program_id}` : null,
+    done: deadline.done,
+  }))
+}
+
+export interface AssessmentLike {
+  id: string
+  subject_id: string
+  name: string
+  date: string | null
+  grade: number | null
+}
+
+/**
+ * Avaliação com data vira compromisso — e some da agenda quando a nota chega:
+ * prova feita não é mais prazo, é histórico.
+ */
+export function assessmentEvents(
+  assessments: AssessmentLike[],
+  subject: (id: string) => { name: string; program_id: string } | null,
+): AgendaEvent[] {
+  return assessments
+    .filter((item) => item.date !== null && item.grade === null)
+    .map((item) => {
+      const info = subject(item.subject_id)
+      return {
+        id: `assessment:${item.id}`,
+        date: item.date!,
+        time: null,
+        endTime: null,
+        title: info ? `${item.name} · ${info.name}` : item.name,
+        detail: 'Avaliação sem nota lançada',
+        source: 'exam' as const,
+        area: 'education' as const,
+        href: info ? `/faculdade/${info.program_id}` : null,
+        done: false,
+      }
+    })
+}
+
+// ---------------------------------------------------------------------------
+// Treinos realizados
+// ---------------------------------------------------------------------------
+
+export interface SessionLike {
+  id: string
+  activity_type_id: string
+  date: string
+  duration_min: number
+  calories_estimated: number
+}
+
+export function workoutEvents(
+  sessions: SessionLike[],
+  activityName: (id: string) => string,
+): AgendaEvent[] {
+  return sessions.map((session) => ({
+    id: `session:${session.id}`,
+    date: session.date,
+    time: null,
+    endTime: null,
+    title: activityName(session.activity_type_id),
+    detail: `${session.duration_min} min · ${Math.round(session.calories_estimated)} kcal`,
+    source: 'workout' as const,
+    area: 'health' as const,
+    href: '/saude/atividades',
+    // Treino registrado é treino feito.
+    done: true,
+  }))
+}
+
+// ---------------------------------------------------------------------------
+// Financeiro: contas a pagar, faturas e recorrentes
+// ---------------------------------------------------------------------------
+
+export interface TransactionLike {
+  id: string
+  account_id: string
+  kind: 'income' | 'expense' | 'transfer'
+  amount_cents: number
+  date: string
+  description: string
+  paid: boolean
+}
+
+export interface AccountLike {
+  id: string
+  name: string
+  kind: string
+  closing_day: number | null
+  due_day: number | null
+}
+
+/**
+ * Despesa não paga vira conta a pagar na agenda. Compra no cartão fica de
+ * fora: ela não se paga sozinha, é a fatura que vence — e a fatura entra em
+ * `invoiceEvents`. Sem essa separação a mesma despesa apareceria duas vezes.
+ */
+export function billEvents(
+  transactions: TransactionLike[],
+  accounts: AccountLike[],
+  from: string,
+  to: string,
+): AgendaEvent[] {
+  const cardIds = new Set(accounts.filter((a) => a.kind === 'credit').map((a) => a.id))
+
+  return transactions
+    .filter(
+      (tx) =>
+        tx.kind === 'expense' &&
+        !tx.paid &&
+        !cardIds.has(tx.account_id) &&
+        tx.date >= from &&
+        tx.date <= to,
+    )
+    .map((tx) => ({
+      id: `bill:${tx.id}`,
+      date: tx.date,
+      time: null,
+      endTime: null,
+      title: tx.description || 'Despesa',
+      detail: accounts.find((a) => a.id === tx.account_id)?.name ?? null,
+      source: 'bill' as const,
+      area: 'finance' as const,
+      href: '/financeiro/transacoes',
+      done: false,
+      amountCents: tx.amount_cents,
+    }))
+}
+
+/** Vencimento de cada fatura de cartão dentro do intervalo, com o total dela. */
+export function invoiceEvents(
+  accounts: AccountLike[],
+  transactions: TransactionLike[],
+  from: string,
+  to: string,
+): AgendaEvent[] {
+  const events: AgendaEvent[] = []
+
+  for (const account of accounts) {
+    if (account.kind !== 'credit' || account.closing_day === null || account.due_day === null) {
+      continue
+    }
+    const card = { closingDay: account.closing_day, dueDay: account.due_day }
+
+    // Uma competência a mais de cada lado: a fatura de um mês pode vencer no
+    // seguinte, e a do mês anterior pode vencer dentro do intervalo.
+    let competence = addMonths(toCompetence(from), -1)
+    const lastCompetence = addMonths(toCompetence(to), 1)
+
+    while (competence <= lastCompetence) {
+      const period = statementPeriod(competence, card)
+      if (period.dueDate >= from && period.dueDate <= to) {
+        const total = transactions
+          .filter((tx) => tx.account_id === account.id && tx.date >= period.start && tx.date <= period.end)
+          .reduce((sum, tx) => sum + (tx.kind === 'income' ? -tx.amount_cents : tx.amount_cents), 0)
+
+        if (total > 0) {
+          events.push({
+            id: `invoice:${account.id}:${competence}`,
+            date: period.dueDate,
+            time: null,
+            endTime: null,
+            title: `Fatura ${account.name}`,
+            detail: `Fechou em ${period.end}`,
+            source: 'invoice',
+            area: 'finance',
+            href: '/financeiro/contas',
+            done: false,
+            amountCents: total,
+          })
+        }
+      }
+      competence = addMonths(competence, 1)
+    }
+  }
+
+  return events
+}
+
+export interface RecurringLike {
+  id: string
+  description: string
+  kind: 'income' | 'expense'
+  amount_cents: number
+  day_of_month: number
+  start_date: string
+  end_date: string | null
+  active: boolean
+}
+
+/**
+ * Projeta as recorrentes no intervalo. São previsões, não lançamentos: só
+ * aparecem na agenda para o mês não terminar em surpresa.
+ */
+export function recurringEvents(
+  recurring: RecurringLike[],
+  from: string,
+  to: string,
+): AgendaEvent[] {
+  const events: AgendaEvent[] = []
+
+  for (const rule of recurring) {
+    if (!rule.active || rule.kind !== 'expense') continue
+
+    let competence = toCompetence(from)
+    const lastCompetence = toCompetence(to)
+
+    while (competence <= lastCompetence) {
+      const date = dateInCompetence(competence, rule.day_of_month)
+      const withinRule = date >= rule.start_date && (!rule.end_date || date <= rule.end_date)
+
+      if (withinRule && date >= from && date <= to) {
+        events.push({
+          id: `recurring:${rule.id}:${competence}`,
+          date,
+          time: null,
+          endTime: null,
+          title: rule.description,
+          detail: 'Previsto',
+          source: 'recurring',
+          area: 'finance',
+          href: '/financeiro/transacoes',
+          done: false,
+          amountCents: rule.amount_cents,
+        })
+      }
+      competence = addMonths(competence, 1)
+    }
+  }
+
+  return events
+}
+
+// ---------------------------------------------------------------------------
+// Junção
+// ---------------------------------------------------------------------------
+
+export function sortAgenda(events: AgendaEvent[]): AgendaEvent[] {
+  return [...events].sort((a, b) => {
+    if (a.date !== b.date) return a.date.localeCompare(b.date)
+    // Compromisso do dia inteiro vem antes dos que têm hora marcada.
+    if (a.time === null && b.time !== null) return -1
+    if (a.time !== null && b.time === null) return 1
+    if (a.time && b.time && a.time !== b.time) return a.time.localeCompare(b.time)
+    return a.title.localeCompare(b.title, 'pt-BR')
+  })
+}
+
+export function groupByDay(events: AgendaEvent[]): Map<string, AgendaEvent[]> {
+  const map = new Map<string, AgendaEvent[]>()
+  for (const event of sortAgenda(events)) {
+    const list = map.get(event.date)
+    if (list) list.push(event)
+    else map.set(event.date, [event])
+  }
+  return map
+}
+
+/** Os próximos compromissos a partir de uma data, ignorando o que já passou. */
+export function upcoming(events: AgendaEvent[], from: string, limit = 5): AgendaEvent[] {
+  return sortAgenda(events)
+    .filter((event) => event.date >= from && !event.done && event.source !== 'workout')
+    .slice(0, limit)
+}
+
+export function areaOf(source: AgendaSource): AgendaArea {
+  return AREA_OF[source]
+}
+
+/** Intervalo que a tela do mês precisa carregar (as 6 semanas visíveis). */
+export function monthRange(competence: string): { from: string; to: string } {
+  const [year, month] = competence.split('-').map(Number) as [number, number]
+  const first = `${competence}-01`
+  const last = `${competence}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`
+  return { from: addDays(first, -weekdayOf(first)), to: addDays(last, 6 - weekdayOf(last)) }
+}

@@ -23,6 +23,7 @@ export type QuickIntent =
       durationMin: number
       distanceKm: number | null
     }
+  | { kind: 'habit'; habitId: string; habitName: string }
   | { kind: 'meal'; query: string; quantityG: number | null }
   | { kind: 'expense'; amount: number; description: string }
   | { kind: 'income'; amount: number; description: string }
@@ -32,6 +33,8 @@ export interface ActivityRef {
   id: string
   name: string
 }
+
+export type HabitRef = ActivityRef
 
 /** Apelidos que as pessoas realmente digitam, mapeados para o catálogo. */
 const ALIASES: Record<string, string[]> = {
@@ -81,7 +84,11 @@ function parseDuration(text: string): number | null {
   return null
 }
 
-export function parseQuickAdd(input: string, activities: ActivityRef[] = []): QuickIntent {
+export function parseQuickAdd(
+  input: string,
+  activities: ActivityRef[] = [],
+  habits: HabitRef[] = [],
+): QuickIntent {
   const text = normalize(input)
   if (!text) return { kind: 'unknown', input }
 
@@ -135,6 +142,15 @@ export function parseQuickAdd(input: string, activities: ActivityRef[] = []): Qu
     }
   }
 
+  // Hábito: "feito leitura" | "fiz meditacao" | "cumpri agua".
+  // Exige verbo explícito: sem ele, "academia" seria hábito e treino ao mesmo
+  // tempo, e o registro erraria metade das vezes.
+  const habitPhrase = text.match(/^(?:feito|fiz|cumpri|bati)\s+(?:o\s+|a\s+)?(.+)$/)
+  if (habitPhrase?.[1]) {
+    const habit = matchByName(habitPhrase[1], habits)
+    if (habit) return { kind: 'habit', habitId: habit.id, habitName: habit.name }
+  }
+
   // Refeição: "comi 150g de arroz"
   const meal = text.match(/(?:comi|almocei|jantei|lanchei)\s*(?:([\d.,]+)\s*g\s*(?:de\s*)?)?(.*)/)
   if (meal) {
@@ -158,6 +174,25 @@ export function parseQuickAdd(input: string, activities: ActivityRef[] = []): Qu
   }
 
   return { kind: 'unknown', input }
+}
+
+/**
+ * Casa o texto com o nome cadastrado. Aceita nos dois sentidos — "leitura"
+ * encontra "Leitura diária", e "corrida matinal" encontra "Corrida" — e o
+ * nome mais longo entre os candidatos vence, por ser o mais específico.
+ */
+function matchByName(query: string, items: ActivityRef[]): ActivityRef | null {
+  const term = normalize(query)
+  if (term.length < 2) return null
+
+  let best: { item: ActivityRef; score: number } | null = null
+  for (const item of items) {
+    const name = normalize(item.name)
+    if (!name.includes(term) && !term.includes(name)) continue
+    if (!best || name.length > best.score) best = { item, score: name.length }
+  }
+
+  return best?.item ?? null
 }
 
 function matchActivity(text: string, activities: ActivityRef[]): ActivityRef | null {
@@ -196,6 +231,8 @@ export function describeIntent(intent: QuickIntent): string {
       return `Registrar ${intent.activityName} · ${intent.durationMin} min${
         intent.distanceKm ? ` · ${intent.distanceKm} km` : ''
       }`
+    case 'habit':
+      return `Marcar "${intent.habitName}" como cumprido hoje`
     case 'meal':
       return `Buscar "${intent.query}"${intent.quantityG ? ` (${intent.quantityG} g)` : ''} no diário alimentar`
     case 'expense':

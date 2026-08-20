@@ -6,8 +6,9 @@
 import type { ActivityLevel, Sex } from '@/lib/health/formulas'
 // O status da disciplina mora junto das regras que o interpretam.
 import type { SubjectStatus } from '@/lib/education/academics'
+import type { HabitCadence } from '@/lib/habits/habits'
 
-export type { SubjectStatus }
+export type { HabitCadence, SubjectStatus }
 
 export interface BaseRow {
   id: string
@@ -341,4 +342,43 @@ export interface Deadline extends BaseRow {
   date: string
   done: boolean
   notes: string | null
+}
+
+// ---------------------------------------------------------------------------
+// Transversais — o que atravessa os módulos.
+// ---------------------------------------------------------------------------
+
+/** Área a que o hábito pertence. Serve para agrupar e para herdar a cor. */
+export type LifeArea = 'health' | 'education' | 'finance' | 'other'
+
+export const LIFE_AREA_LABELS: Record<LifeArea, string> = {
+  health: 'Saúde',
+  education: 'Estudos',
+  finance: 'Financeiro',
+  other: 'Pessoal',
+}
+
+export interface Habit extends BaseRow {
+  name: string
+  icon: string
+  area: LifeArea
+  cadence: HabitCadence
+  /** Dias por semana esperados. Em hábito diário, o app usa 7. */
+  target_per_week: number
+  archived: boolean
+  position: number
+  notes: string | null
+}
+
+/** Um registro por dia; a lib de hábitos deduplica se vier repetido. */
+export interface HabitLog extends BaseRow {
+  habit_id: string
+  date: string
+}
+
+export interface DashboardWidget extends BaseRow {
+  /** Identificador do widget no catálogo (`src/features/dashboard/widgets`). */
+  widget: string
+  position: number
+  visible: boolean
 }
