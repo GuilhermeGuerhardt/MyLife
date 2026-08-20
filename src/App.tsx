@@ -38,7 +38,18 @@ const AcademicNotebook = lazy(() =>
 const CourseNotebook = lazy(() =>
   import('./pages/education/notebook').then((m) => ({ default: m.CourseNotebook })),
 )
-const FinanceSoon = lazy(() => import('./pages/soon').then((m) => ({ default: m.FinanceSoon })))
+const FinanceOverview = lazy(() =>
+  import('./pages/finance/overview').then((m) => ({ default: m.FinanceOverview })),
+)
+const TransactionsPage = lazy(() =>
+  import('./pages/finance/transactions').then((m) => ({ default: m.TransactionsPage })),
+)
+const AccountsPage = lazy(() =>
+  import('./pages/finance/accounts').then((m) => ({ default: m.AccountsPage })),
+)
+const BudgetPage = lazy(() =>
+  import('./pages/finance/budget').then((m) => ({ default: m.BudgetPage })),
+)
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -80,7 +91,10 @@ export function App() {
             <Route path="cursos" element={<CoursePrograms />} />
             <Route path="cursos/caderno" element={<CourseNotebook />} />
             <Route path="cursos/:programId" element={<CourseDetail />} />
-            <Route path="financeiro" element={<FinanceSoon />} />
+            <Route path="financeiro" element={<FinanceOverview />} />
+            <Route path="financeiro/transacoes" element={<TransactionsPage />} />
+            <Route path="financeiro/contas" element={<AccountsPage />} />
+            <Route path="financeiro/orcamento" element={<BudgetPage />} />
             <Route path="perfil" element={<ProfilePage />} />
             <Route path="*" element={<Dashboard onOpenPalette={() => setPaletteOpen(true)} />} />
           </Route>

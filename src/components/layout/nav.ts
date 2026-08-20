@@ -50,7 +50,18 @@ export const NAV: NavItem[] = [
       { to: '/cursos/caderno', label: 'Caderno' },
     ],
   },
-  { to: '/financeiro', label: 'Financeiro', icon: Wallet, accent: 'accent-finance' },
+  {
+    to: '/financeiro',
+    label: 'Financeiro',
+    icon: Wallet,
+    accent: 'accent-finance',
+    children: [
+      { to: '/financeiro', label: 'Visão geral' },
+      { to: '/financeiro/transacoes', label: 'Lançamentos' },
+      { to: '/financeiro/contas', label: 'Contas e cartões' },
+      { to: '/financeiro/orcamento', label: 'Orçamento e metas' },
+    ],
+  },
 ]
 
 export function accentForPath(pathname: string): string {

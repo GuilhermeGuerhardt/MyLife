@@ -67,7 +67,9 @@ export function NutritionPage() {
           </Button>
           <div className="min-w-40 text-center">
             <p className="text-fg text-sm font-medium">{longDate(date)}</p>
-            <p className="text-fg-subtle text-[11px] capitalize">{relativeDay(date)}</p>
+            <p className="text-fg-subtle text-[11px] first-letter:uppercase">
+              {relativeDay(date)}
+            </p>
           </div>
           <Button
             variant="ghost"

@@ -3,8 +3,8 @@
 Dashboard da vida: saúde, alimentação, faculdade, cursos e finanças em um lugar só.
 
 **Entregue até aqui:** módulos de **Saúde** (atividades, medidas, plano de emagrecimento
-adaptativo e diário alimentar), **Faculdade**, **Cursos** e **Caderno**, além do registro rápido
-em linguagem natural e do PWA instalável. O Financeiro é a próxima fase — o escopo está em
+adaptativo e diário alimentar), **Faculdade**, **Cursos**, **Caderno** e **Financeiro**, além do
+registro rápido em linguagem natural e do PWA instalável. O que ainda falta está em
 [docs/PLANO.md](docs/PLANO.md).
 
 ---
@@ -74,6 +74,7 @@ src/
 ├─ lib/
 │  ├─ health/          # TMB, TDEE, IMC, média móvel, plano e recalibração (puro + testado)
 │  ├─ education/       # progresso, pré-requisitos, faltas, média e simulador (puro + testado)
+│  ├─ finance/         # centavos, ciclo de fatura, parcelas e relatórios (puro + testado)
 │  ├─ quick-add/       # interpretador do Ctrl+K
 │  ├─ format.ts        # formatação pt-BR
 │  └─ supabase.ts
@@ -126,6 +127,31 @@ sozinha — em vez de preencher formulário aula por aula.
 **Caderno em Markdown**, compartilhado por Faculdade e Cursos: anotação ligada ao curso e à
 disciplina, etiquetas, busca em título/conteúdo/etiqueta, prévia renderizada e salvamento
 automático. O HTML gerado passa por sanitização antes de ir para a tela.
+
+## Destaques do Financeiro
+
+**Fatura por competência.** Uma compra não pertence ao mês em que foi feita, e sim à fatura que
+a inclui: comprar dia 29 com fechamento dia 28 significa pagar só na fatura seguinte. Cada
+lançamento carrega uma competência (`AAAA-MM`) calculada a partir do ciclo do cartão, e é por
+isso que o "gasto do mês" bate com o extrato. O formulário mostra a fatura de destino antes de
+salvar.
+
+**Parcelamento que fecha a conta.** R$ 900 em 7x viram 6 parcelas de R$ 128,57 e uma primeira de
+R$ 128,58 — a sobra de centavos fica na primeira, como as operadoras fazem, e a soma devolve o
+total exato. Cada parcela cai na sua fatura, e remover uma pergunta se você quer apagar o grupo
+inteiro.
+
+**Dinheiro em centavos.** Todo valor é inteiro. Reais em ponto flutuante parecem inofensivos até
+somar algumas centenas de lançamentos e o saldo fechar com uns centavos que ninguém explica.
+
+**Categoria adivinhada pela descrição.** "DELIVERY *LANCHE" cai em Delivery, "POSTO 24H" em
+Transporte. As mesmas palavras-chave vão servir à importação de OFX.
+
+**Orçamento envelope** por categoria e mês, com alerta em 80% e 100% e cópia dos limites do mês
+anterior. **Metas** calculam o aporte mensal necessário para o prazo.
+
+**Registro rápido** também lança: `gastei 35 no mercado` grava a despesa na categoria certa,
+`recebi 3500 de salario` grava a receita.
 
 ## Aviso
 

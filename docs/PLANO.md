@@ -283,7 +283,20 @@ pronto para Static Site.
 - Migração `supabase/migrations/0002_education.sql`, com busca full-text em português
 - 54 testes no total
 
+**Financeiro — concluído.**
+- Contas (corrente, poupança, carteira, investimento) e cartões com limite e ciclo de fatura
+- Lançamentos com competência: no cartão, a fatura que inclui a compra, não o mês dela
+- Parcelamento distribuído pelas faturas, sem perder centavos; remoção por parcela ou por grupo
+- Categorias com palavra-chave e palpite automático pela descrição
+- Orçamento envelope por categoria e mês, com alerta e cópia do mês anterior
+- Metas com cálculo de aporte mensal
+- Relatórios: fluxo de caixa de 6 meses, distribuição por categoria, taxa de poupança
+- Registro rápido lançando despesa e receita
+- Migração `supabase/migrations/0003_finance.sql`
+- 85 testes no total
+
 **Pendente na Fase 1.1:** tela de login (Supabase Auth) — hoje o app roda no adaptador local
 quando não há `.env` configurado.
 
-**Próxima:** Financeiro.
+**Próximas:** importação de OFX, transações recorrentes automáticas, dashboard configurável,
+hábitos, calendário unificado e insights cross-módulo.
