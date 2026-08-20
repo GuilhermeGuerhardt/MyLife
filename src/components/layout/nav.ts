@@ -3,6 +3,7 @@ import {
   GraduationCap,
   HeartPulse,
   LayoutDashboard,
+  Repeat,
   Wallet,
   type LucideIcon,
 } from 'lucide-react'
@@ -60,6 +61,17 @@ export const NAV: NavItem[] = [
       { to: '/financeiro/transacoes', label: 'Lançamentos' },
       { to: '/financeiro/contas', label: 'Contas e cartões' },
       { to: '/financeiro/orcamento', label: 'Orçamento e metas' },
+    ],
+  },
+  {
+    to: '/rotina',
+    label: 'Rotina',
+    icon: Repeat,
+    accent: 'accent-routine',
+    children: [
+      { to: '/rotina', label: 'Hábitos' },
+      { to: '/rotina/agenda', label: 'Agenda' },
+      { to: '/rotina/insights', label: 'Insights' },
     ],
   },
 ]

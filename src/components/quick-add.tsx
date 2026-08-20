@@ -15,6 +15,7 @@ import { sessionCalories } from '@/lib/health/formulas'
 import { describeIntent, parseQuickAdd, type QuickIntent } from '@/lib/quick-add/parser'
 import { today } from '@/lib/utils'
 import { useHealthSummary } from '@/features/health/use-health-summary'
+import { useHabitBoard } from '@/features/routine/use-habit-board'
 import { Button } from './ui/button'
 import { Input } from './ui/field'
 import { Modal } from './ui/modal'
@@ -26,6 +27,7 @@ const EXAMPLES = [
   'dormi 7h30',
   'agua 500ml',
   'gastei 35 no mercado',
+  'feito leitura',
 ]
 
 export function QuickAdd({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -41,12 +43,17 @@ export function QuickAdd({ open, onClose }: { open: boolean; onClose: () => void
   const { data: categories } = useCategories()
   const createTransaction = useCreateTransaction()
   const { currentWeight } = useHealthSummary()
+  const board = useHabitBoard(7)
 
   const refs = useMemo(
     () => activities.map((a) => ({ id: a.id, name: a.name })),
     [activities],
   )
-  const intent = useMemo(() => parseQuickAdd(text, refs), [text, refs])
+  const habitRefs = useMemo(
+    () => board.items.map((item) => ({ id: item.habit.id, name: item.habit.name })),
+    [board.items],
+  )
+  const intent = useMemo(() => parseQuickAdd(text, refs, habitRefs), [text, refs, habitRefs])
 
   useEffect(() => {
     if (!open) {
@@ -122,6 +129,14 @@ export function QuickAdd({ open, onClose }: { open: boolean; onClose: () => void
       case 'mood':
         await upsertMetric({ mood: value.score })
         return 'Humor registrado.'
+
+      case 'habit': {
+        // Já marcado hoje? Não desmarca por engano — quem quis desfazer vai na
+        // tela de hábitos, onde a ação é visível e reversível.
+        if (board.isDone(value.habitId, today())) return `"${value.habitName}" já estava marcado.`
+        await board.toggle(value.habitId, today())
+        return `"${value.habitName}" marcado hoje.`
+      }
 
       case 'meal':
         navigate(`/saude/alimentacao?buscar=${encodeURIComponent(value.query)}`)

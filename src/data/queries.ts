@@ -16,10 +16,13 @@ import type {
   Category,
   CourseLesson,
   DailyMetric,
+  DashboardWidget,
   Deadline,
   DietPlanRow,
   FinancialGoal,
   Food,
+  Habit,
+  HabitLog,
   Institution,
   MealLog,
   Note,
@@ -54,6 +57,9 @@ export const TABLES = {
   budgets: 'budgets',
   goals: 'financial_goals',
   recurring: 'recurring_transactions',
+  habits: 'habits',
+  habitLogs: 'habit_logs',
+  widgets: 'dashboard_widgets',
 } as const
 
 const collections = {
@@ -78,6 +84,9 @@ const collections = {
   budgets: collection<Budget>(TABLES.budgets),
   goals: collection<FinancialGoal>(TABLES.goals),
   recurring: collection<RecurringTransaction>(TABLES.recurring),
+  habits: collection<Habit>(TABLES.habits),
+  habitLogs: collection<HabitLog>(TABLES.habitLogs),
+  widgets: collection<DashboardWidget>(TABLES.widgets),
 }
 
 type CollectionName = keyof typeof collections
@@ -216,6 +225,18 @@ export function useGoals() {
 
 export function useRecurring() {
   return useCollection<RecurringTransaction>('recurring')
+}
+
+export function useHabits() {
+  return useCollection<Habit>('habits')
+}
+
+export function useHabitLogs() {
+  return useCollection<HabitLog>('habitLogs')
+}
+
+export function useWidgets() {
+  return useCollection<DashboardWidget>('widgets')
 }
 
 const DEFAULT_PROFILE: Omit<Profile, keyof BaseRow> = {

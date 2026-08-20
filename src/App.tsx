@@ -50,6 +50,15 @@ const AccountsPage = lazy(() =>
 const BudgetPage = lazy(() =>
   import('./pages/finance/budget').then((m) => ({ default: m.BudgetPage })),
 )
+const HabitsPage = lazy(() =>
+  import('./pages/routine/habits').then((m) => ({ default: m.HabitsPage })),
+)
+const AgendaPage = lazy(() =>
+  import('./pages/routine/agenda').then((m) => ({ default: m.AgendaPage })),
+)
+const InsightsPage = lazy(() =>
+  import('./pages/routine/insights').then((m) => ({ default: m.InsightsPage })),
+)
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -95,6 +104,9 @@ export function App() {
             <Route path="financeiro/transacoes" element={<TransactionsPage />} />
             <Route path="financeiro/contas" element={<AccountsPage />} />
             <Route path="financeiro/orcamento" element={<BudgetPage />} />
+            <Route path="rotina" element={<HabitsPage />} />
+            <Route path="rotina/agenda" element={<AgendaPage />} />
+            <Route path="rotina/insights" element={<InsightsPage />} />
             <Route path="perfil" element={<ProfilePage />} />
             <Route path="*" element={<Dashboard onOpenPalette={() => setPaletteOpen(true)} />} />
           </Route>
