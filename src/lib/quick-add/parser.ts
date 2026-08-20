@@ -25,6 +25,7 @@ export type QuickIntent =
     }
   | { kind: 'meal'; query: string; quantityG: number | null }
   | { kind: 'expense'; amount: number; description: string }
+  | { kind: 'income'; amount: number; description: string }
   | { kind: 'unknown'; input: string }
 
 export interface ActivityRef {
@@ -115,12 +116,22 @@ export function parseQuickAdd(input: string, activities: ActivityRef[] = []): Qu
   if (mood?.[1]) return { kind: 'mood', score: Math.min(Number(mood[1]), 10) }
 
   // Gasto: "gastei 35 no mercado" | "gasto 120,50 farmacia"
-  const expense = text.match(/(?:gastei|gasto|paguei)\s*(?:r\$\s*)?([\d.,]+)\s*(?:no|na|em|com|de)?\s*(.*)/)
+  const expense = text.match(/(?:gastei|gasto|paguei|comprei)\s*(?:r\$\s*)?([\d.,]+)\s*(?:no|na|em|com|de)?\s*(.*)/)
   if (expense?.[1]) {
     return {
       kind: 'expense',
       amount: num(expense[1]),
       description: (expense[2] ?? '').trim(),
+    }
+  }
+
+  // Receita: "recebi 3000 salario" | "entrou 500 de freela"
+  const income = text.match(/(?:recebi|ganhei|entrou)\s*(?:r\$\s*)?([\d.,]+)\s*(?:de|do|da|em)?\s*(.*)/)
+  if (income?.[1]) {
+    return {
+      kind: 'income',
+      amount: num(income[1]),
+      description: (income[2] ?? '').trim(),
     }
   }
 
@@ -190,6 +201,10 @@ export function describeIntent(intent: QuickIntent): string {
     case 'expense':
       return `Lançar despesa de R$ ${intent.amount.toFixed(2).replace('.', ',')}${
         intent.description ? ` em ${intent.description}` : ''
+      }`
+    case 'income':
+      return `Lançar receita de R$ ${intent.amount.toFixed(2).replace('.', ',')}${
+        intent.description ? ` — ${intent.description}` : ''
       }`
     default:
       return 'Não entendi. Tente "peso 84,2", "corri 5km em 28min" ou "gastei 35 no mercado".'

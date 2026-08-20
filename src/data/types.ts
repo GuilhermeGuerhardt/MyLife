@@ -243,6 +243,96 @@ export interface Note extends BaseRow {
   pinned: boolean
 }
 
+// ---------------------------------------------------------------------------
+// Financeiro. Todo valor é inteiro, em centavos (ver lib/finance/money.ts).
+// ---------------------------------------------------------------------------
+
+export type AccountKind = 'checking' | 'savings' | 'cash' | 'credit' | 'investment'
+
+export const ACCOUNT_KIND_LABELS: Record<AccountKind, string> = {
+  checking: 'Conta corrente',
+  savings: 'Poupança',
+  cash: 'Carteira',
+  credit: 'Cartão de crédito',
+  investment: 'Investimento',
+}
+
+export interface Account extends BaseRow {
+  name: string
+  kind: AccountKind
+  bank: string | null
+  initial_balance_cents: number
+  /** Só para cartão. */
+  credit_limit_cents: number | null
+  closing_day: number | null
+  due_day: number | null
+  color: string
+  archived: boolean
+}
+
+export type TransactionKind = 'income' | 'expense' | 'transfer'
+
+export interface Category extends BaseRow {
+  name: string
+  kind: 'income' | 'expense'
+  color: string
+  icon: string
+  /** Palavras que identificam a categoria na importação e no registro rápido. */
+  keywords: string[]
+}
+
+export interface Transaction extends BaseRow {
+  account_id: string
+  /** Conta de destino, só em transferências. */
+  transfer_account_id: string | null
+  category_id: string | null
+  kind: TransactionKind
+  /** Sempre positivo — o sinal vem de `kind`. */
+  amount_cents: number
+  /** Data em que aconteceu. */
+  date: string
+  /** Fatura/mês a que pertence (AAAA-MM). Difere de `date` em compras no cartão. */
+  competence: string
+  description: string
+  tags: string[]
+  paid: boolean
+  /** Agrupa as parcelas de uma mesma compra. */
+  installment_group_id: string | null
+  installment_n: number | null
+  installment_total: number | null
+  recurring_id: string | null
+  notes: string | null
+}
+
+export interface Budget extends BaseRow {
+  category_id: string
+  competence: string
+  limit_cents: number
+}
+
+export interface FinancialGoal extends BaseRow {
+  name: string
+  target_cents: number
+  current_cents: number
+  target_date: string | null
+  account_id: string | null
+  color: string
+  done: boolean
+}
+
+export interface RecurringTransaction extends BaseRow {
+  description: string
+  account_id: string
+  category_id: string | null
+  kind: 'income' | 'expense'
+  amount_cents: number
+  /** Dia do mês em que se repete. */
+  day_of_month: number
+  start_date: string
+  end_date: string | null
+  active: boolean
+}
+
 export interface Deadline extends BaseRow {
   program_id: string | null
   subject_id: string | null

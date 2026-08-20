@@ -5,22 +5,29 @@
 import { useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query'
 import { collection, type Collection } from './adapters'
 import { ACTIVITY_CATALOG, FOOD_CATALOG } from './seed'
+import { CATEGORY_CATALOG } from './seed-finance'
 import type {
+  Account,
   ActivityType,
   Assessment,
   BaseRow,
   BodyMeasurement,
+  Budget,
+  Category,
   CourseLesson,
   DailyMetric,
   Deadline,
   DietPlanRow,
+  FinancialGoal,
   Food,
   Institution,
   MealLog,
   Note,
   Profile,
   Program,
+  RecurringTransaction,
   Subject,
+  Transaction,
   WorkoutSession,
 } from './types'
 import { uid } from '@/lib/utils'
@@ -41,6 +48,12 @@ export const TABLES = {
   courseLessons: 'course_lessons',
   notes: 'notes',
   deadlines: 'deadlines',
+  accounts: 'accounts',
+  categories: 'categories',
+  transactions: 'transactions',
+  budgets: 'budgets',
+  goals: 'financial_goals',
+  recurring: 'recurring_transactions',
 } as const
 
 const collections = {
@@ -59,6 +72,12 @@ const collections = {
   courseLessons: collection<CourseLesson>(TABLES.courseLessons),
   notes: collection<Note>(TABLES.notes),
   deadlines: collection<Deadline>(TABLES.deadlines),
+  accounts: collection<Account>(TABLES.accounts),
+  categories: collection<Category>(TABLES.categories),
+  transactions: collection<Transaction>(TABLES.transactions),
+  budgets: collection<Budget>(TABLES.budgets),
+  goals: collection<FinancialGoal>(TABLES.goals),
+  recurring: collection<RecurringTransaction>(TABLES.recurring),
 }
 
 type CollectionName = keyof typeof collections
@@ -70,17 +89,21 @@ function withMeta<T>(items: T[]): Array<T & BaseRow> {
   >
 }
 
-/** Popula o catálogo de atividades e alimentos na primeira execução. */
+/** Popula atividades, alimentos e categorias financeiras na primeira execução. */
 export async function ensureSeed(): Promise<void> {
-  const [activities, foods] = await Promise.all([
+  const [activities, foods, categories] = await Promise.all([
     collections.activityTypes.list(),
     collections.foods.list(),
+    collections.categories.list(),
   ])
   if (activities.length === 0) {
     await collections.activityTypes.replaceAll(withMeta(ACTIVITY_CATALOG) as ActivityType[])
   }
   if (foods.length === 0) {
     await collections.foods.replaceAll(withMeta(FOOD_CATALOG) as Food[])
+  }
+  if (categories.length === 0) {
+    await collections.categories.replaceAll(withMeta(CATEGORY_CATALOG) as Category[])
   }
 }
 
@@ -169,6 +192,30 @@ export function useNotes() {
 
 export function useDeadlines() {
   return useCollection<Deadline>('deadlines')
+}
+
+export function useAccounts() {
+  return useCollection<Account>('accounts')
+}
+
+export function useCategories() {
+  return useCollection<Category>('categories')
+}
+
+export function useTransactions() {
+  return useCollection<Transaction>('transactions')
+}
+
+export function useBudgets() {
+  return useCollection<Budget>('budgets')
+}
+
+export function useGoals() {
+  return useCollection<FinancialGoal>('goals')
+}
+
+export function useRecurring() {
+  return useCollection<RecurringTransaction>('recurring')
 }
 
 const DEFAULT_PROFILE: Omit<Profile, keyof BaseRow> = {

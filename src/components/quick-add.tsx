@@ -2,11 +2,15 @@ import { CornerDownLeft, Sparkles } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
+  useAccounts,
   useActivityTypes,
+  useCategories,
   useDailyMetrics,
   useMeasurements,
   useSessions,
 } from '@/data/queries'
+import { guessCategory } from '@/data/seed-finance'
+import { useCreateTransaction } from '@/features/finance/actions'
 import { sessionCalories } from '@/lib/health/formulas'
 import { describeIntent, parseQuickAdd, type QuickIntent } from '@/lib/quick-add/parser'
 import { today } from '@/lib/utils'
@@ -33,6 +37,9 @@ export function QuickAdd({ open, onClose }: { open: boolean; onClose: () => void
   const { create: createMeasurement } = useMeasurements()
   const { create: createSession } = useSessions()
   const { data: metrics, create: createMetric, update: updateMetric } = useDailyMetrics()
+  const { data: accounts } = useAccounts()
+  const { data: categories } = useCategories()
+  const createTransaction = useCreateTransaction()
   const { currentWeight } = useHealthSummary()
 
   const refs = useMemo(
@@ -122,9 +129,33 @@ export function QuickAdd({ open, onClose }: { open: boolean; onClose: () => void
         return null
 
       case 'expense':
-        navigate('/financeiro')
-        onClose()
-        return null
+      case 'income': {
+        // Sem conta cadastrada não há onde lançar — manda para o financeiro.
+        const account = accounts.find((a) => !a.archived && a.kind !== 'credit') ?? accounts[0]
+        if (!account) {
+          navigate('/financeiro')
+          onClose()
+          return null
+        }
+        const kind = value.kind === 'expense' ? 'expense' : 'income'
+        const category = guessCategory(value.description, categories, kind)
+        await createTransaction({
+          account_id: account.id,
+          transfer_account_id: null,
+          category_id: category?.id ?? null,
+          kind,
+          amount_cents: Math.round(value.amount * 100),
+          date: today(),
+          description: value.description || (category?.name ?? ''),
+          tags: [],
+          paid: true,
+          installments: 1,
+          notes: null,
+        })
+        return category
+          ? `Lançado em ${category.name} · ${account.name}.`
+          : `Lançado em ${account.name}.`
+      }
 
       default:
         return null

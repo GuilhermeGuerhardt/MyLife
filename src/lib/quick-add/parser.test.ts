@@ -68,6 +68,18 @@ describe('parseQuickAdd', () => {
     expect(parseQuickAdd('paguei R$ 120,50')).toMatchObject({ kind: 'expense', amount: 120.5 })
   })
 
+  it('entende receita', () => {
+    expect(parseQuickAdd('recebi 3500 de salario')).toEqual({
+      kind: 'income',
+      amount: 3500,
+      description: 'salario',
+    })
+    expect(parseQuickAdd('entrou 1.250,50 freela')).toMatchObject({
+      kind: 'income',
+      amount: 1250.5,
+    })
+  })
+
   it('entende refeição com quantidade', () => {
     expect(parseQuickAdd('comi 150g de arroz')).toEqual({
       kind: 'meal',
