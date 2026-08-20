@@ -1,4 +1,4 @@
-import { BookOpen, GraduationCap, Wallet, type LucideIcon } from 'lucide-react'
+import { Wallet, type LucideIcon } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/misc'
 
@@ -52,97 +52,6 @@ function ModulePreview({
         ))}
       </div>
     </div>
-  )
-}
-
-export function EducationSoon() {
-  return (
-    <ModulePreview
-      icon={GraduationCap}
-      title="Faculdade"
-      phase="Fase 3"
-      intro="Várias instituições em paralelo, grade curricular com pré-requisitos e o cálculo automático do que ainda falta para formar."
-      groups={[
-        {
-          name: 'Curso e grade',
-          items: [
-            'Instituições e cursos (graduação, pós, técnico), com carga horária total e semestre atual',
-            'Grade curricular com créditos, pré-requisitos e status por disciplina',
-            'Progresso em % e tela "o que falta", incluindo horas complementares, estágio e TCC',
-            'Histórico com CR/CRA calculado',
-          ],
-        },
-        {
-          name: 'Semestre em andamento',
-          items: [
-            'Notas por avaliação com peso e média parcial',
-            'Controle de faltas com o limite de 25%: "você pode faltar mais 3 aulas"',
-            'Simulador: "preciso de 6,5 na final para passar"',
-            'Grade de horários semanal e calendário de provas e entregas',
-          ],
-        },
-        {
-          name: 'Anotações e resumos',
-          items: [
-            'Editor Markdown com upload de PDF e imagem, vinculado à disciplina',
-            'Tags e busca full-text em português direto no Postgres',
-            'Flashcards com repetição espaçada gerados a partir dos resumos',
-          ],
-        },
-        {
-          name: 'Integrações',
-          items: [
-            'Provas e entregas aparecem no dashboard e no calendário unificado',
-            'Mensalidade lançada como despesa recorrente no módulo financeiro',
-            'Export das anotações em Markdown ou PDF',
-          ],
-        },
-      ]}
-    />
-  )
-}
-
-export function CoursesSoon() {
-  return (
-    <ModulePreview
-      icon={BookOpen}
-      title="Cursos"
-      phase="Fase 3"
-      intro="Mesma estrutura da faculdade, adaptada a cursos livres — Udemy, Alura, YouTube ou qualquer trilha própria."
-      groups={[
-        {
-          name: 'Catálogo',
-          items: [
-            'Plataforma, instrutor, link, carga horária e custo',
-            'Trilhas agrupando cursos por objetivo ("Back-end Node", "Inglês")',
-            'Avaliação pessoal e status (fazendo, pausado, concluído, abandonado)',
-          ],
-        },
-        {
-          name: 'Progresso',
-          items: [
-            'Módulos e aulas com percentual automático',
-            '"Próxima aula" fixada no dashboard',
-            'Ritmo necessário para bater o prazo: "2 aulas/dia para terminar até 30/09"',
-            'Certificado salvo no Storage com data de conclusão',
-          ],
-        },
-        {
-          name: 'Estudo',
-          items: [
-            'Anotações e flashcards reaproveitando o módulo da faculdade',
-            'Tempo de estudo registrado e somado aos hábitos',
-          ],
-        },
-        {
-          name: 'Integrações',
-          items: [
-            'Custo do curso vira despesa no financeiro',
-            'Meta anual de cursos concluídos alimentada automaticamente',
-          ],
-        },
-      ]}
-    />
   )
 }
 

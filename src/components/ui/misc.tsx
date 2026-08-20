@@ -117,7 +117,8 @@ export function Segmented<T extends string>({
   onChange,
   className,
 }: {
-  options: Array<{ value: T; label: ReactNode }>
+  /** `ariaLabel` é obrigatório quando o rótulo visível é só um ícone. */
+  options: Array<{ value: T; label: ReactNode; ariaLabel?: string }>
   value: T
   onChange: (value: T) => void
   className?: string
@@ -130,6 +131,10 @@ export function Segmented<T extends string>({
         <button
           key={option.value}
           type="button"
+          role="tab"
+          aria-selected={value === option.value}
+          aria-label={option.ariaLabel}
+          title={option.ariaLabel}
           onClick={() => onChange(option.value)}
           className={cn(
             'rounded-[6px] px-3 py-1.5 text-xs font-medium transition-colors',

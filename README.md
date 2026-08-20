@@ -2,9 +2,10 @@
 
 Dashboard da vida: saúde, alimentação, faculdade, cursos e finanças em um lugar só.
 
-**Fase 1 entregue:** módulo de Saúde completo (atividades, medidas, plano de emagrecimento
-adaptativo e diário alimentar), registro rápido em linguagem natural e PWA instalável.
-As demais fases estão descritas em [docs/PLANO.md](docs/PLANO.md).
+**Entregue até aqui:** módulos de **Saúde** (atividades, medidas, plano de emagrecimento
+adaptativo e diário alimentar), **Faculdade**, **Cursos** e **Caderno**, além do registro rápido
+em linguagem natural e do PWA instalável. O Financeiro é a próxima fase — o escopo está em
+[docs/PLANO.md](docs/PLANO.md).
 
 ---
 
@@ -67,9 +68,12 @@ O `render.yaml` já descreve um Static Site com rewrite de SPA e cache dos asset
 src/
 ├─ components/         # design system (button, card, field, modal…) e layout
 ├─ data/               # tipos, adaptadores (local/Supabase), hooks de query, seeds
-├─ features/health/    # composição da lógica de saúde (resumo, gráfico de peso)
+├─ features/
+│  ├─ health/          # composição da lógica de saúde (resumo, gráfico de peso)
+│  └─ education/       # formulários de curso/disciplina, cartão do semestre, Markdown
 ├─ lib/
 │  ├─ health/          # TMB, TDEE, IMC, média móvel, plano e recalibração (puro + testado)
+│  ├─ education/       # progresso, pré-requisitos, faltas, média e simulador (puro + testado)
 │  ├─ quick-add/       # interpretador do Ctrl+K
 │  ├─ format.ts        # formatação pt-BR
 │  └─ supabase.ts
@@ -100,6 +104,28 @@ ajuste calórico limitado a ±250 kcal.
 
 **Registro rápido (Ctrl+K).** `peso 84,2`, `corri 5km em 28min`, `futvolei 1h30`, `dormi 7h30`,
 `agua 500ml`. Regex pura: instantâneo e offline.
+
+## Destaques de Faculdade e Cursos
+
+**Progresso por carga horária, não por contagem.** Uma disciplina de 80 h não vale o mesmo que
+uma de 30 h. Horas complementares entram na conta, e disciplinas dispensadas contam carga sem
+entrar na média.
+
+**Pré-requisitos de verdade.** Cada disciplina aponta as que precisam vir antes; a tela mostra o
+que está bloqueado, o que falta para destravar e o que já dá para cursar no próximo semestre.
+
+**Limite de faltas.** Frequência mínima de 75%, com a resposta que interessa no meio do
+semestre: "pode faltar mais 8 de 20", virando alerta quando resta uma e reprovação quando passa.
+
+**Simulador de nota.** Avaliações com peso respondem "preciso de 6,5 na P2 para fechar em 6,0",
+avisam quando a aprovação já está garantida e quando não dá mais para alcançar.
+
+**Cadastro de aulas em lote.** Cole o índice do curso — uma aula por linha, numeração é removida
+sozinha — em vez de preencher formulário aula por aula.
+
+**Caderno em Markdown**, compartilhado por Faculdade e Cursos: anotação ligada ao curso e à
+disciplina, etiquetas, busca em título/conteúdo/etiqueta, prévia renderizada e salvamento
+automático. O HTML gerado passa por sanitização antes de ir para a tela.
 
 ## Aviso
 

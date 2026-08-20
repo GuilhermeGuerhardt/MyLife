@@ -4,6 +4,10 @@
  */
 
 import type { ActivityLevel, Sex } from '@/lib/health/formulas'
+// O status da disciplina mora junto das regras que o interpretam.
+import type { SubjectStatus } from '@/lib/education/academics'
+
+export type { SubjectStatus }
 
 export interface BaseRow {
   id: string
@@ -127,4 +131,124 @@ export interface MealLog extends BaseRow {
   protein_g: number
   carb_g: number
   fat_g: number
+}
+
+// ---------------------------------------------------------------------------
+// Educação — faculdade e cursos compartilham as mesmas tabelas.
+// O campo `track` separa os dois mundos sem duplicar modelo.
+// ---------------------------------------------------------------------------
+
+export type Track = 'academic' | 'course'
+
+export interface Institution extends BaseRow {
+  name: string
+  track: Track
+  /** Site ou portal do aluno. */
+  link: string | null
+}
+
+export type Degree = 'graduacao' | 'pos' | 'mba' | 'tecnico' | 'livre'
+
+export const DEGREE_LABELS: Record<Degree, string> = {
+  graduacao: 'Graduação',
+  pos: 'Pós-graduação',
+  mba: 'MBA',
+  tecnico: 'Técnico',
+  livre: 'Livre',
+}
+
+export type ProgramStatus = 'planned' | 'active' | 'paused' | 'done' | 'dropped'
+
+export const PROGRAM_STATUS_LABELS: Record<ProgramStatus, string> = {
+  planned: 'Planejado',
+  active: 'Em andamento',
+  paused: 'Pausado',
+  done: 'Concluído',
+  dropped: 'Abandonado',
+}
+
+export interface Program extends BaseRow {
+  institution_id: string | null
+  track: Track
+  name: string
+  degree: Degree
+  status: ProgramStatus
+  total_hours: number
+  complementary_hours_required: number
+  complementary_hours_done: number
+  start_date: string | null
+  expected_end: string | null
+  /** Semestre atual (faculdade). */
+  current_term: number | null
+  /** Nota mínima para aprovação — varia por instituição. */
+  passing_grade: number
+  link: string | null
+  instructor: string | null
+  cost: number | null
+  /** Avaliação pessoal do curso, 1 a 5. */
+  rating: number | null
+  certificate_url: string | null
+  notes: string | null
+}
+
+export interface Subject extends BaseRow {
+  program_id: string
+  name: string
+  code: string | null
+  hours: number
+  credits: number
+  /** Período sugerido na grade curricular. */
+  period: number | null
+  status: SubjectStatus
+  /** Semestre em que foi/está sendo cursada, ex.: "2026.1". */
+  term_label: string | null
+  grade: number | null
+  absences: number
+  total_classes: number | null
+  /** IDs de outras disciplinas do mesmo curso. */
+  prerequisites: string[]
+  /** Grade semanal: 0 = domingo. */
+  weekday: number | null
+  start_time: string | null
+  end_time: string | null
+  room: string | null
+}
+
+export interface Assessment extends BaseRow {
+  subject_id: string
+  name: string
+  weight: number
+  grade: number | null
+  date: string | null
+}
+
+export interface CourseLesson extends BaseRow {
+  program_id: string
+  /** Módulo/seção a que a aula pertence. */
+  module: string
+  title: string
+  duration_min: number
+  done: boolean
+  position: number
+}
+
+export interface Note extends BaseRow {
+  track: Track
+  program_id: string | null
+  subject_id: string | null
+  title: string
+  /** Conteúdo em Markdown. */
+  content: string
+  tags: string[]
+  pinned: boolean
+}
+
+export interface Deadline extends BaseRow {
+  program_id: string | null
+  subject_id: string | null
+  title: string
+  kind: 'prova' | 'trabalho' | 'entrega' | 'aula'
+  date: string
+  done: boolean
+  notes: string | null
 }

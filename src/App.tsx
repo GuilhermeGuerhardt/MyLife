@@ -20,10 +20,24 @@ const NutritionPage = lazy(() =>
   import('./pages/health/nutrition').then((m) => ({ default: m.NutritionPage })),
 )
 const ProfilePage = lazy(() => import('./pages/profile').then((m) => ({ default: m.ProfilePage })))
-const EducationSoon = lazy(() =>
-  import('./pages/soon').then((m) => ({ default: m.EducationSoon })),
+const AcademicPrograms = lazy(() =>
+  import('./pages/education/programs').then((m) => ({ default: m.AcademicPrograms })),
 )
-const CoursesSoon = lazy(() => import('./pages/soon').then((m) => ({ default: m.CoursesSoon })))
+const CoursePrograms = lazy(() =>
+  import('./pages/education/programs').then((m) => ({ default: m.CoursePrograms })),
+)
+const ProgramDetail = lazy(() =>
+  import('./pages/education/program-detail').then((m) => ({ default: m.ProgramDetail })),
+)
+const CourseDetail = lazy(() =>
+  import('./pages/education/course-detail').then((m) => ({ default: m.CourseDetail })),
+)
+const AcademicNotebook = lazy(() =>
+  import('./pages/education/notebook').then((m) => ({ default: m.AcademicNotebook })),
+)
+const CourseNotebook = lazy(() =>
+  import('./pages/education/notebook').then((m) => ({ default: m.CourseNotebook })),
+)
 const FinanceSoon = lazy(() => import('./pages/soon').then((m) => ({ default: m.FinanceSoon })))
 
 const queryClient = new QueryClient({
@@ -60,8 +74,12 @@ export function App() {
             <Route path="saude/atividades" element={<ActivitiesPage />} />
             <Route path="saude/plano" element={<DietPlanPage />} />
             <Route path="saude/alimentacao" element={<NutritionPage />} />
-            <Route path="faculdade" element={<EducationSoon />} />
-            <Route path="cursos" element={<CoursesSoon />} />
+            <Route path="faculdade" element={<AcademicPrograms />} />
+            <Route path="faculdade/caderno" element={<AcademicNotebook />} />
+            <Route path="faculdade/:programId" element={<ProgramDetail />} />
+            <Route path="cursos" element={<CoursePrograms />} />
+            <Route path="cursos/caderno" element={<CourseNotebook />} />
+            <Route path="cursos/:programId" element={<CourseDetail />} />
             <Route path="financeiro" element={<FinanceSoon />} />
             <Route path="perfil" element={<ProfilePage />} />
             <Route path="*" element={<Dashboard onOpenPalette={() => setPaletteOpen(true)} />} />

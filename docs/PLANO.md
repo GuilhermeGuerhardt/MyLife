@@ -273,7 +273,17 @@ pronto para Static Site.
 - 35 testes unitários cobrindo as fórmulas, o plano e o parser
 - Migração SQL com RLS em `supabase/migrations/0001_health.sql`
 
+**Faculdade, Cursos e Caderno — concluídos** (trazidos à frente do Financeiro).
+- Instituições e cursos múltiplos, grade curricular com pré-requisitos e progresso por carga
+  horária, CR ponderado por créditos, previsão de conclusão pelo ritmo
+- Semestre atual: controle de faltas no limite de 25%, avaliações com peso e simulador de nota
+- Cursos livres com aulas por módulo, cadastro em lote, ritmo necessário e próxima aula
+- Caderno em Markdown compartilhado pelos dois módulos, com etiquetas, busca e salvamento
+  automático
+- Migração `supabase/migrations/0002_education.sql`, com busca full-text em português
+- 54 testes no total
+
 **Pendente na Fase 1.1:** tela de login (Supabase Auth) — hoje o app roda no adaptador local
 quando não há `.env` configurado.
 
-**Próxima:** Fase 2 — Financeiro.
+**Próxima:** Financeiro.

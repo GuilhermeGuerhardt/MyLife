@@ -7,13 +7,20 @@ import { collection, type Collection } from './adapters'
 import { ACTIVITY_CATALOG, FOOD_CATALOG } from './seed'
 import type {
   ActivityType,
+  Assessment,
   BaseRow,
   BodyMeasurement,
+  CourseLesson,
   DailyMetric,
+  Deadline,
   DietPlanRow,
   Food,
+  Institution,
   MealLog,
+  Note,
   Profile,
+  Program,
+  Subject,
   WorkoutSession,
 } from './types'
 import { uid } from '@/lib/utils'
@@ -27,6 +34,13 @@ export const TABLES = {
   dietPlans: 'diet_plans',
   foods: 'foods',
   mealLogs: 'meal_logs',
+  institutions: 'institutions',
+  programs: 'programs',
+  subjects: 'subjects',
+  assessments: 'assessments',
+  courseLessons: 'course_lessons',
+  notes: 'notes',
+  deadlines: 'deadlines',
 } as const
 
 const collections = {
@@ -38,6 +52,13 @@ const collections = {
   dietPlans: collection<DietPlanRow>(TABLES.dietPlans),
   foods: collection<Food>(TABLES.foods),
   mealLogs: collection<MealLog>(TABLES.mealLogs),
+  institutions: collection<Institution>(TABLES.institutions),
+  programs: collection<Program>(TABLES.programs),
+  subjects: collection<Subject>(TABLES.subjects),
+  assessments: collection<Assessment>(TABLES.assessments),
+  courseLessons: collection<CourseLesson>(TABLES.courseLessons),
+  notes: collection<Note>(TABLES.notes),
+  deadlines: collection<Deadline>(TABLES.deadlines),
 }
 
 type CollectionName = keyof typeof collections
@@ -120,6 +141,34 @@ export function useFoods() {
 
 export function useMealLogs() {
   return useCollection<MealLog>('mealLogs')
+}
+
+export function useInstitutions() {
+  return useCollection<Institution>('institutions')
+}
+
+export function usePrograms() {
+  return useCollection<Program>('programs')
+}
+
+export function useSubjects() {
+  return useCollection<Subject>('subjects')
+}
+
+export function useAssessments() {
+  return useCollection<Assessment>('assessments')
+}
+
+export function useCourseLessons() {
+  return useCollection<CourseLesson>('courseLessons')
+}
+
+export function useNotes() {
+  return useCollection<Note>('notes')
+}
+
+export function useDeadlines() {
+  return useCollection<Deadline>('deadlines')
 }
 
 const DEFAULT_PROFILE: Omit<Profile, keyof BaseRow> = {

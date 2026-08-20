@@ -13,6 +13,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge, Progress, Stat } from '@/components/ui/misc'
 import { useActivityTypes, useProfile } from '@/data/queries'
+import { useEducation } from '@/features/education/use-education'
 import { useHealthSummary } from '@/features/health/use-health-summary'
 import { decimal, integer, longDate, signed } from '@/lib/format'
 import { addDays, today } from '@/lib/utils'
@@ -35,6 +36,23 @@ export function Dashboard({ onOpenPalette }: { onOpenPalette: () => void }) {
 
   const streak = computeStreak(summary.sessions.map((s) => s.date))
   const greeting = getGreeting()
+
+  // Faculdade e cursos livres lado a lado, só o que está em andamento.
+  const academic = useEducation('academic')
+  const courses = useEducation('course')
+  const studying = [...academic.summaries, ...courses.summaries]
+    .filter((item) => item.program.status === 'active')
+    .slice(0, 4)
+    .map((item) => ({
+      id: item.program.id,
+      name: item.program.name,
+      percent: item.percent,
+      href: `${item.program.track === 'academic' ? '/faculdade' : '/cursos'}/${item.program.id}`,
+      detail:
+        item.program.track === 'academic'
+          ? `${integer(item.progress.hoursDone)} de ${integer(item.progress.hoursTotal)} h · faltam ${item.progress.remaining.length} disciplinas`
+          : `${item.lessonsDone} de ${item.lessons.length} aulas concluídas`,
+    }))
 
   return (
     <div className="space-y-6">
@@ -178,26 +196,63 @@ export function Dashboard({ onOpenPalette }: { onOpenPalette: () => void }) {
         </Card>
 
         <Card>
-          <CardHeader title="Próximos módulos" description="O que entra nas próximas fases" />
-          <CardContent className="space-y-3">
-            <ModuleRow
-              to="/financeiro"
-              label="Financeiro"
-              detail="Gastos, orçamento, fatura de cartão e metas"
-              phase="Fase 2"
-            />
-            <ModuleRow
-              to="/faculdade"
-              label="Faculdade"
-              detail="Grade, notas, faltas, resumos e o que falta"
-              phase="Fase 3"
-            />
-            <ModuleRow
-              to="/cursos"
-              label="Cursos"
-              detail="Progresso por aula, certificados e trilhas"
-              phase="Fase 3"
-            />
+          <CardHeader
+            title="Estudos"
+            description={
+              studying.length
+                ? `${studying.length} em andamento`
+                : 'Nada em andamento'
+            }
+            action={
+              <Link to="/faculdade">
+                <Button variant="ghost" size="sm">
+                  <ArrowRight />
+                </Button>
+              </Link>
+            }
+          />
+          <CardContent className="space-y-4">
+            {studying.length === 0 ? (
+              <div className="space-y-3">
+                <p className="text-fg-muted text-sm">
+                  Cadastre sua faculdade ou um curso para acompanhar progresso, notas e faltas.
+                </p>
+                <div className="flex gap-2">
+                  <Link to="/faculdade">
+                    <Button size="sm" variant="secondary">
+                      Faculdade
+                    </Button>
+                  </Link>
+                  <Link to="/cursos">
+                    <Button size="sm" variant="secondary">
+                      Cursos
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              studying.map((item) => (
+                <Link key={item.id} to={item.href} className="block space-y-1.5">
+                  <div className="flex items-baseline justify-between gap-3">
+                    <span className="text-fg truncate text-sm font-medium">{item.name}</span>
+                    <span className="text-fg-muted shrink-0 text-xs">
+                      {integer(item.percent)}%
+                    </span>
+                  </div>
+                  <Progress value={item.percent} />
+                  <p className="text-fg-subtle text-[11px]">{item.detail}</p>
+                </Link>
+              ))
+            )}
+
+            <div className="border-border-base border-t pt-3">
+              <ModuleRow
+                to="/financeiro"
+                label="Financeiro"
+                detail="Gastos, orçamento, fatura de cartão e metas"
+                phase="Fase 2"
+              />
+            </div>
           </CardContent>
         </Card>
       </div>

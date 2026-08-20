@@ -30,8 +30,26 @@ export const NAV: NavItem[] = [
       { to: '/saude/alimentacao', label: 'Alimentação' },
     ],
   },
-  { to: '/faculdade', label: 'Faculdade', icon: GraduationCap, accent: 'accent-education' },
-  { to: '/cursos', label: 'Cursos', icon: BookOpen, accent: 'accent-courses' },
+  {
+    to: '/faculdade',
+    label: 'Faculdade',
+    icon: GraduationCap,
+    accent: 'accent-education',
+    children: [
+      { to: '/faculdade', label: 'Meus cursos' },
+      { to: '/faculdade/caderno', label: 'Caderno' },
+    ],
+  },
+  {
+    to: '/cursos',
+    label: 'Cursos',
+    icon: BookOpen,
+    accent: 'accent-courses',
+    children: [
+      { to: '/cursos', label: 'Minha lista' },
+      { to: '/cursos/caderno', label: 'Caderno' },
+    ],
+  },
   { to: '/financeiro', label: 'Financeiro', icon: Wallet, accent: 'accent-finance' },
 ]
 
