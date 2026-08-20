@@ -5,17 +5,20 @@
  * app passa a ler e gravar ali. Apontando para dentro do Google Drive ou do
  * OneDrive, a sincronização entre computadores é do próprio serviço.
  *
- * **Onde isso funciona.** A API existe no Chrome e no Edge, no desktop.
- * Firefox e Safari não a implementam, e no celular ela não existe — nem no
- * Chrome do Android. Por isso o modo pasta é uma opção, nunca o padrão: o app
- * precisa continuar inteiro em quem não pode usá-la.
+ * **Onde isso funciona.** No programa de desktop, em qualquer pasta de qualquer
+ * volume. No navegador, só no Chrome e no Edge — Firefox e Safari não
+ * implementam a API, e no celular ela não existe. Por isso o modo pasta é uma
+ * opção, nunca o padrão.
  *
- * **Permissão.** O handle sobrevive ao fechar o navegador, mas a permissão de
- * escrita não: a cada nova sessão o Chrome exige um clique para reconceder.
- * Por isso a reconexão é oferecida como um botão, e não tentada sozinha ao
- * abrir — pedir permissão sem gesto do usuário é recusado pelo navegador.
+ * **Permissão.** Só existe no navegador: o handle sobrevive ao fechar, mas a
+ * permissão de escrita não, e a cada sessão o Chrome exige um clique para
+ * reconceder. Daí a reconexão ser um botão em vez de algo tentado ao abrir —
+ * pedir permissão sem gesto do usuário é recusado. No desktop nada disso
+ * acontece: o caminho é um texto e o acesso não expira.
  */
 
+import { isTauri } from '@tauri-apps/api/core'
+import { open } from '@tauri-apps/plugin-dialog'
 import {
   MANIFEST_FILE,
   buildManifest,
@@ -25,6 +28,13 @@ import {
   serializeTable,
   tableFilename,
 } from '@/lib/workspace/files'
+import {
+  HandleBackend,
+  PathBackend,
+  folderSupported,
+  pastaExiste,
+  type FolderBackend,
+} from './folder-backend'
 
 // A tipagem do DOM ainda não cobre o seletor de pastas nem as permissões.
 interface PermissionRequest {
@@ -47,7 +57,7 @@ declare global {
 }
 
 export function isFolderSupported(): boolean {
-  return typeof window !== 'undefined' && typeof window.showDirectoryPicker === 'function'
+  return folderSupported()
 }
 
 // ---------------------------------------------------------------------------
@@ -100,10 +110,10 @@ export class FolderStore {
    *  perderiam uma das duas, porque cada uma reescreve o arquivo inteiro. */
   private queues = new Map<string, Promise<unknown>>()
 
-  constructor(readonly handle: FileSystemDirectoryHandle) {}
+  constructor(readonly backend: FolderBackend) {}
 
   get name(): string {
-    return this.handle.name
+    return this.backend.name
   }
 
   private serialize<T>(table: string, task: () => Promise<T>): Promise<T> {
@@ -117,14 +127,9 @@ export class FolderStore {
   }
 
   async readTable(table: string): Promise<unknown[]> {
-    try {
-      const file = await this.handle.getFileHandle(tableFilename(table))
-      return parseTableFile(await (await file.getFile()).text(), table)
-    } catch (error) {
-      // Arquivo que ainda não existe é tabela ainda não usada, não erro.
-      if (error instanceof DOMException && error.name === 'NotFoundError') return []
-      throw error
-    }
+    // Arquivo que ainda não existe é tabela ainda não usada, não erro.
+    const conteudo = await this.backend.read(tableFilename(table))
+    return conteudo === null ? [] : parseTableFile(conteudo, table)
   }
 
   async writeTable(table: string, rows: unknown[]): Promise<void> {
@@ -150,19 +155,13 @@ export class FolderStore {
   }
 
   private async write(table: string, rows: unknown[]): Promise<void> {
-    const file = await this.handle.getFileHandle(tableFilename(table), { create: true })
-    const writable = await file.createWritable()
-    await writable.write(serializeTable(rows))
-    await writable.close()
+    await this.backend.write(tableFilename(table), serializeTable(rows))
   }
 
   /** Grava o manifesto, marcando a pasta como pasta do Life. */
   async writeManifest(): Promise<void> {
     const manifest = buildManifest(deviceName(navigator.userAgent), new Date().toISOString())
-    const file = await this.handle.getFileHandle(MANIFEST_FILE, { create: true })
-    const writable = await file.createWritable()
-    await writable.write(`${JSON.stringify(manifest, null, 2)}\n`)
-    await writable.close()
+    await this.backend.write(MANIFEST_FILE, `${JSON.stringify(manifest, null, 2)}\n`)
   }
 
   /**
@@ -171,13 +170,11 @@ export class FolderStore {
    */
   async verify(): Promise<{ ok: true; existing: boolean } | { ok: false; error: string }> {
     try {
-      const file = await this.handle.getFileHandle(MANIFEST_FILE)
-      const check = checkManifest(JSON.parse(await (await file.getFile()).text()))
+      const conteudo = await this.backend.read(MANIFEST_FILE)
+      if (conteudo === null) return { ok: true, existing: false }
+      const check = checkManifest(JSON.parse(conteudo))
       return check.ok ? { ok: true, existing: true } : { ok: false, error: check.error }
-    } catch (error) {
-      if (error instanceof DOMException && error.name === 'NotFoundError') {
-        return { ok: true, existing: false }
-      }
+    } catch {
       return { ok: false, error: 'Não foi possível ler o arquivo life.json da pasta.' }
     }
   }
@@ -206,38 +203,62 @@ async function hasWritePermission(
   return (await handle.requestPermission(options)) === 'granted'
 }
 
+/** Onde o caminho da pasta fica lembrado no desktop. */
+const CHAVE_CAMINHO = 'life:workspace-path'
+
 /** Abre o seletor de pastas. Precisa ser chamado a partir de um clique. */
 export async function pickFolder(): Promise<FolderStore | null> {
+  if (isTauri()) {
+    const escolhido = await open({ directory: true, multiple: false, title: 'Pasta do Life' })
+    if (typeof escolhido !== 'string') return null
+    localStorage.setItem(CHAVE_CAMINHO, escolhido)
+    return new FolderStore(new PathBackend(escolhido))
+  }
+
   if (!isFolderSupported()) return null
   const handle = await window.showDirectoryPicker!({ id: 'life-workspace', mode: 'readwrite' })
   if (!(await hasWritePermission(handle, true))) return null
 
   await idbSet(handle)
-  return new FolderStore(handle)
+  return new FolderStore(new HandleBackend(handle))
 }
 
 /**
  * Recupera a pasta da sessão anterior.
  *
- * Com `request: false` só devolve algo se a permissão ainda estiver de pé —
- * serve para o boot do app, onde não há gesto do usuário. Com `true`, mostra o
- * pedido de permissão do navegador e precisa vir de um clique.
+ * No navegador, `request: false` só devolve algo se a permissão ainda estiver
+ * de pé — é o caso do boot, onde não há gesto do usuário; com `true` o pedido
+ * aparece e precisa vir de um clique. No desktop o parâmetro não tem efeito:
+ * não há permissão que expire, só o caminho, que pode ter deixado de existir se
+ * a pasta foi movida ou o pen drive saiu.
  */
 export async function restoreFolder(request: boolean): Promise<FolderStore | null> {
+  if (isTauri()) {
+    const caminho = localStorage.getItem(CHAVE_CAMINHO)
+    if (!caminho) return null
+    if (!(await pastaExiste(caminho).catch(() => false))) return null
+    return new FolderStore(new PathBackend(caminho))
+  }
+
   if (!isFolderSupported()) return null
 
   const handle = await idbGet().catch(() => null)
   if (!handle) return null
 
   if (!(await hasWritePermission(handle, request))) return null
-  return new FolderStore(handle)
+  return new FolderStore(new HandleBackend(handle))
 }
 
 /** Existe uma pasta lembrada, mesmo que ainda sem permissão nesta sessão? */
 export async function hasRememberedFolder(): Promise<boolean> {
+  if (isTauri()) return localStorage.getItem(CHAVE_CAMINHO) !== null
   return (await idbGet().catch(() => null)) !== null
 }
 
 export async function forgetFolder(): Promise<void> {
+  if (isTauri()) {
+    localStorage.removeItem(CHAVE_CAMINHO)
+    return
+  }
   await idbSet(null)
 }

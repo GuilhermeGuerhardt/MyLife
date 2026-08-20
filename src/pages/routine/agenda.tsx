@@ -1,5 +1,5 @@
 import { CalendarDays, ChevronLeft, ChevronRight, Download, Plus } from 'lucide-react'
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -8,9 +8,16 @@ import { useDeadlines } from '@/data/queries'
 import type { Deadline } from '@/data/types'
 import { DeadlineForm, type DeadlineDraft } from '@/features/routine/deadline-form'
 import { useAgenda } from '@/features/routine/use-agenda'
-import { monthRange, SOURCE_LABELS, type AgendaEvent } from '@/lib/calendar/agenda'
+import {
+  groupByDay,
+  monthRange,
+  SOURCE_LABELS,
+  type AgendaArea,
+  type AgendaEvent,
+} from '@/lib/calendar/agenda'
 import { icsFilename, toIcs } from '@/lib/calendar/ics'
 import { monthGrid, today } from '@/lib/dates'
+import { CALENDARIO_ICS, salvarArquivo } from '@/lib/salvar-arquivo'
 import { competenceLabel, addMonths } from '@/lib/finance/billing'
 import { currency, longDate, relativeDay } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -24,14 +31,34 @@ const AREA_ACCENT = {
   finance: 'accent-finance',
 } as const
 
+const AREAS: { key: AgendaArea; label: string }[] = [
+  { key: 'education', label: 'Faculdade e cursos' },
+  { key: 'health', label: 'Saúde' },
+  { key: 'finance', label: 'Financeiro' },
+]
+
 export function AgendaPage() {
   const [competence, setCompetence] = useState(() => today().slice(0, 7))
   const [selected, setSelected] = useState(() => today())
   const [editing, setEditing] = useState<Deadline | null | undefined>(undefined)
 
+  // A legenda é o filtro: com tudo junto num mês cheio, olhar só o financeiro
+  // é o gesto mais comum, e não valia uma barra de controles separada.
+  const [areas, setAreas] = useState<AgendaArea[]>(() => AREAS.map((area) => area.key))
+
   const range = monthRange(competence)
-  const { byDay } = useAgenda(range.from, range.to)
+  const { events } = useAgenda(range.from, range.to)
   const { data: deadlines, create, update, remove } = useDeadlines()
+
+  const byDay = useMemo(
+    () => groupByDay(events.filter((event) => areas.includes(event.area))),
+    [events, areas],
+  )
+
+  const toggleArea = (area: AgendaArea) =>
+    setAreas((current) =>
+      current.includes(area) ? current.filter((item) => item !== area) : [...current, area],
+    )
 
   const grid = monthGrid(competence)
   const selectedEvents = byDay.get(selected) ?? []
@@ -44,7 +71,11 @@ export function AgendaPage() {
 
   const exportIcs = () => {
     const events = [...byDay.values()].flat()
-    download(icsFilename(competence), toIcs(events, `Life · ${competenceLabel(competence)}`))
+    void salvarArquivo(
+      icsFilename(competence),
+      toIcs(events, `Life · ${competenceLabel(competence)}`),
+      CALENDARIO_ICS,
+    )
   }
 
   return (
@@ -53,8 +84,9 @@ export function AgendaPage() {
         <div>
           <h1 className="text-fg text-xl font-semibold">Agenda</h1>
           <p className="text-fg-muted mt-1 max-w-2xl text-sm">
-            Aulas, provas, treinos e vencimentos no mesmo mês. É na sobreposição que os conflitos
-            aparecem — a prova na véspera da fatura, o treino no dia da entrega.
+            Aulas, provas, treinos, vencimentos, metas e prazos de curso no mesmo mês. É na
+            sobreposição que os conflitos aparecem — a prova na véspera da fatura, o treino no dia
+            da entrega.
           </p>
         </div>
         <div className="flex gap-2">
@@ -124,10 +156,16 @@ export function AgendaPage() {
               ))}
             </div>
 
-            <div className="text-fg-subtle mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px]">
-              <Legend area="education" label="Faculdade e cursos" />
-              <Legend area="health" label="Saúde" />
-              <Legend area="finance" label="Financeiro" />
+            <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px]">
+              {AREAS.map((area) => (
+                <Legend
+                  key={area.key}
+                  area={area.key}
+                  label={area.label}
+                  active={areas.includes(area.key)}
+                  onToggle={() => toggleArea(area.key)}
+                />
+              ))}
             </div>
           </CardContent>
         </Card>
@@ -295,21 +333,37 @@ function EventRow({
   return <div className="-mx-2 px-2 py-1.5">{body}</div>
 }
 
-function Legend({ area, label }: { area: keyof typeof AREA_ACCENT; label: string }) {
+function Legend({
+  area,
+  label,
+  active,
+  onToggle,
+}: {
+  area: keyof typeof AREA_ACCENT
+  label: string
+  active: boolean
+  onToggle: () => void
+}) {
   return (
-    <span className="flex items-center gap-1.5">
-      <span className={cn('bg-accent size-1.5 rounded-full', AREA_ACCENT[area])} />
+    <button
+      type="button"
+      onClick={onToggle}
+      aria-pressed={active}
+      className={cn(
+        'flex items-center gap-1.5 rounded-full px-1.5 py-0.5 transition-colors',
+        'hover:bg-surface-2',
+        active ? 'text-fg-subtle' : 'text-fg-subtle/50',
+      )}
+    >
+      <span
+        className={cn(
+          'size-1.5 rounded-full',
+          AREA_ACCENT[area],
+          active ? 'bg-accent' : 'ring-fg-subtle/40 bg-transparent ring-1',
+        )}
+      />
       {label}
-    </span>
+    </button>
   )
 }
 
-function download(filename: string, content: string): void {
-  const blob = new Blob([content], { type: 'text/calendar;charset=utf-8' })
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = filename
-  anchor.click()
-  URL.revokeObjectURL(url)
-}

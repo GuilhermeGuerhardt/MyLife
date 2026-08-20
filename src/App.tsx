@@ -1,68 +1,72 @@
+import { isTauri } from '@tauri-apps/api/core'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { Suspense, lazy, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { AppShell } from './components/layout/app-shell'
 import { QuickAdd } from './components/quick-add'
 import { setFolderStore } from './data/adapters'
+import { migrarDoLocalStorage } from './data/sqlite-store'
 import { restoreFolder } from './data/folder-store'
 import { ensureSeed } from './data/queries'
-import { AuthProvider, useAuth } from './features/auth/auth-context'
+import { lazyRoute } from './lib/lazy-route'
 
 // Rotas em lazy: os gráficos (Recharts) só chegam ao navegador na tela que os usa.
-const Dashboard = lazy(() => import('./pages/dashboard').then((m) => ({ default: m.Dashboard })))
-const HealthOverview = lazy(() =>
+const Dashboard = lazyRoute(() => import('./pages/dashboard').then((m) => ({ default: m.Dashboard })))
+const HealthOverview = lazyRoute(() =>
   import('./pages/health/overview').then((m) => ({ default: m.HealthOverview })),
 )
-const ActivitiesPage = lazy(() =>
+const ActivitiesPage = lazyRoute(() =>
   import('./pages/health/activities').then((m) => ({ default: m.ActivitiesPage })),
 )
-const DietPlanPage = lazy(() =>
+const DietPlanPage = lazyRoute(() =>
   import('./pages/health/diet-plan').then((m) => ({ default: m.DietPlanPage })),
 )
-const NutritionPage = lazy(() =>
+const NutritionPage = lazyRoute(() =>
   import('./pages/health/nutrition').then((m) => ({ default: m.NutritionPage })),
 )
-const ProfilePage = lazy(() => import('./pages/profile').then((m) => ({ default: m.ProfilePage })))
-const AcademicPrograms = lazy(() =>
+const ProfilePage = lazyRoute(() => import('./pages/profile').then((m) => ({ default: m.ProfilePage })))
+const AcademicPrograms = lazyRoute(() =>
   import('./pages/education/programs').then((m) => ({ default: m.AcademicPrograms })),
 )
-const CoursePrograms = lazy(() =>
+const CoursePrograms = lazyRoute(() =>
   import('./pages/education/programs').then((m) => ({ default: m.CoursePrograms })),
 )
-const ProgramDetail = lazy(() =>
+const ProgramDetail = lazyRoute(() =>
   import('./pages/education/program-detail').then((m) => ({ default: m.ProgramDetail })),
 )
-const CourseDetail = lazy(() =>
+const CourseDetail = lazyRoute(() =>
   import('./pages/education/course-detail').then((m) => ({ default: m.CourseDetail })),
 )
-const AcademicNotebook = lazy(() =>
+const AcademicNotebook = lazyRoute(() =>
   import('./pages/education/notebook').then((m) => ({ default: m.AcademicNotebook })),
 )
-const CourseNotebook = lazy(() =>
+const CourseNotebook = lazyRoute(() =>
   import('./pages/education/notebook').then((m) => ({ default: m.CourseNotebook })),
 )
-const FinanceOverview = lazy(() =>
+const FinanceOverview = lazyRoute(() =>
   import('./pages/finance/overview').then((m) => ({ default: m.FinanceOverview })),
 )
-const TransactionsPage = lazy(() =>
+const TransactionsPage = lazyRoute(() =>
   import('./pages/finance/transactions').then((m) => ({ default: m.TransactionsPage })),
 )
-const AccountsPage = lazy(() =>
+const AccountsPage = lazyRoute(() =>
   import('./pages/finance/accounts').then((m) => ({ default: m.AccountsPage })),
 )
-const BudgetPage = lazy(() =>
+const ImportPage = lazyRoute(() =>
+  import('./pages/finance/import').then((m) => ({ default: m.ImportPage })),
+)
+const BudgetPage = lazyRoute(() =>
   import('./pages/finance/budget').then((m) => ({ default: m.BudgetPage })),
 )
-const HabitsPage = lazy(() =>
+const HabitsPage = lazyRoute(() =>
   import('./pages/routine/habits').then((m) => ({ default: m.HabitsPage })),
 )
-const AgendaPage = lazy(() =>
+const AgendaPage = lazyRoute(() =>
   import('./pages/routine/agenda').then((m) => ({ default: m.AgendaPage })),
 )
-const InsightsPage = lazy(() =>
+const InsightsPage = lazyRoute(() =>
   import('./pages/routine/insights').then((m) => ({ default: m.InsightsPage })),
 )
-const LoginPage = lazy(() => import('./pages/login').then((m) => ({ default: m.LoginPage })))
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -71,37 +75,14 @@ const queryClient = new QueryClient({
 })
 
 export function App() {
-  return (
-    <AuthProvider>
-      <Gate />
-    </AuthProvider>
-  )
-}
-
-/**
- * Segura o app enquanto a sessão é verificada e manda para o login quando ela
- * não existe. Sem isso, a tela pisca o dashboard vazio antes de descobrir que
- * o usuário nem entrou.
- */
-function Gate() {
-  const auth = useAuth()
-
-  if (auth.loading) return <Splash />
-  if (auth.required && !auth.session) {
-    return (
-      <Suspense fallback={<Splash />}>
-        <LoginPage />
-      </Suspense>
-    )
-  }
-  return <AuthenticatedApp />
+  return <Boot />
 }
 
 function Splash() {
   return <div className="bg-bg min-h-dvh" />
 }
 
-function AuthenticatedApp() {
+function Boot() {
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [ready, setReady] = useState(false)
 
@@ -112,6 +93,11 @@ function AuthenticatedApp() {
       // nascer pela metade, sem o catálogo de atividades e alimentos.
       const store = await restoreFolder(false).catch(() => null)
       if (store) setFolderStore(store)
+
+      // Antes da semeadura: quem já usava o Life no navegador tem os registros
+      // no localStorage, e semear primeiro criaria catálogos duplicados ao lado
+      // dos que vieram de lá.
+      if (isTauri()) await migrarDoLocalStorage().catch(() => 0)
 
       await ensureSeed()
       setReady(true)
@@ -153,6 +139,7 @@ function AuthenticatedApp() {
             <Route path="financeiro/transacoes" element={<TransactionsPage />} />
             <Route path="financeiro/contas" element={<AccountsPage />} />
             <Route path="financeiro/orcamento" element={<BudgetPage />} />
+            <Route path="financeiro/importar" element={<ImportPage />} />
             <Route path="rotina" element={<HabitsPage />} />
             <Route path="rotina/agenda" element={<AgendaPage />} />
             <Route path="rotina/insights" element={<InsightsPage />} />

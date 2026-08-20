@@ -308,6 +308,13 @@ pronto para Static Site.
 - Migração `supabase/migrations/0004_routine.sql`
 - 155 testes no total
 
+**Fase 5 (em andamento).**
+- **Importação de planilha (CSV)** com mapeamento de coluna deduzido do cabeçalho e corrigível,
+  palpite de categoria pelas palavras-chave que já existiam, criação de conta e categoria a partir
+  do arquivo, parcela lida do nome (`(5/48)`) e deduplicação por ocorrência
+- **Calendário unificado completo**: metas financeiras, início e término de cursos e graduações e
+  as datas do plano de saúde entram na mesma grade, com filtro por área
+
 **Decisão de modelagem da Fase 4.** A agenda não ganhou tabela: ela é uma leitura sobre o que já
 existe. Duplicar disciplina, deadline, sessão e transação num "eventos" próprio criaria duas
 verdades para o mesmo compromisso, e a segunda envelheceria em silêncio. Os insights, pelo mesmo

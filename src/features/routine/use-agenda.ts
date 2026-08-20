@@ -4,6 +4,9 @@ import {
   useActivityTypes,
   useAssessments,
   useDeadlines,
+  useDietPlans,
+  useGoals,
+  usePrograms,
   useRecurring,
   useSessions,
   useSubjects,
@@ -14,8 +17,11 @@ import {
   billEvents,
   classEvents,
   deadlineEvents,
+  dietPlanEvents,
+  goalEvents,
   groupByDay,
   invoiceEvents,
+  programEvents,
   recurringEvents,
   sortAgenda,
   workoutEvents,
@@ -23,7 +29,7 @@ import {
 } from '@/lib/calendar/agenda'
 
 /**
- * Monta a agenda do intervalo pedido juntando as cinco origens.
+ * Monta a agenda do intervalo pedido juntando todas as origens do app.
  *
  * O intervalo é parâmetro em vez de fixo no mês: o dashboard pede sete dias, a
  * tela do mês pede seis semanas, e nenhum dos dois precisa carregar o resto.
@@ -37,6 +43,9 @@ export function useAgenda(from: string, to: string) {
   const { data: transactions } = useTransactions()
   const { data: accounts } = useAccounts()
   const { data: recurring } = useRecurring()
+  const { data: goals } = useGoals()
+  const { data: programs } = usePrograms()
+  const { data: dietPlans } = useDietPlans()
 
   return useMemo(() => {
     const subjectById = new Map(subjects.map((s) => [s.id, s]))
@@ -63,10 +72,27 @@ export function useAgenda(from: string, to: string) {
       ...billEvents(transactions, accounts, from, to),
       ...invoiceEvents(accounts, transactions, from, to),
       ...recurringEvents(recurring, from, to),
+      ...goalEvents(goals, from, to),
+      ...programEvents(programs, from, to),
+      ...dietPlanEvents(dietPlans, from, to),
     ])
 
     return { events, byDay: groupByDay(events) }
-  }, [subjects, deadlines, assessments, sessions, activities, transactions, accounts, recurring, from, to])
+  }, [
+    subjects,
+    deadlines,
+    assessments,
+    sessions,
+    activities,
+    transactions,
+    accounts,
+    recurring,
+    goals,
+    programs,
+    dietPlans,
+    from,
+    to,
+  ])
 }
 
 export type { AgendaEvent }

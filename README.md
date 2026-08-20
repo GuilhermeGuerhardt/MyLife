@@ -12,6 +12,8 @@ registro rápido em linguagem natural e PWA instalável. O que ainda falta está
 
 ## Stack
 
+- **Tauri 2** — programa de desktop para Windows. A janela é WebView2 (já vem no
+  Windows 11), então o instalador fica na casa dos poucos MB em vez dos ~150 de um Electron
 - **React 19 + Vite + TypeScript** — rotas em lazy loading, bundle inicial ~108 kB gzip
 - **Tailwind CSS v4** com design system próprio em tokens semânticos (tema claro/escuro)
 - **TanStack Query** para estado de servidor, **Recharts** para gráficos (carregado sob demanda)
@@ -26,9 +28,66 @@ registro rápido em linguagem natural e PWA instalável. O que ainda falta está
 npm install && npm run dev
 ```
 
+Isso abre o **programa de desktop**. Exige Rust e as Build Tools da Microsoft
+(veja [Pré-requisitos](#pré-requisitos)). Para mexer só na interface, sem o
+toolchain nativo, `npm run dev:web` sobe o Vite em `http://localhost:5174` e o
+app roda no navegador com o `localStorage` como destino.
+
+### Pré-requisitos
+
+| O quê | Como | Tamanho |
+|---|---|---|
+| WebView2 | Já vem no Windows 11 | — |
+| Rust | `winget install Rustlang.Rustup` | ~200 MB |
+| Build Tools MSVC | `winget install Microsoft.VisualStudio.2022.BuildTools --override "--wait --passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended"` | 3–7 GB |
+
+`npx tauri info` diz o que ainda falta.
+
+### Gerando o instalador
+
+```bash
+npm run build
+```
+
+Sai em `src-tauri/target/release/bundle/nsis/Life_0.1.0_x64-setup.exe`. O
+instalador é NSIS por usuário — não pede administrador e não toca em `Program
+Files`.
+
 Sem `.env`, o app usa um adaptador `localStorage` e funciona por completo offline — útil para
 desenvolver antes de existir projeto no Supabase. O indicador no rodapé da sidebar mostra
 qual modo está ativo.
+
+### No Windows, sem terminal
+
+Um arquivo na raiz, `Life.cmd`, com menu: atualizar o app, instalar ou remover a
+inicialização automática, abrir o log e subir o modo desenvolvimento. Ele mostra o estado
+do servidor logo ao abrir, que é o que se quer saber quando algo não funciona.
+
+Eram quatro arquivos antes. Três serviam a ações de uso único ou raro e cada um repetia a
+detecção do Node e o `chcp` — um menu com o estado no topo cobre tudo com menos superfície.
+
+**Por que o modo dev usa a porta 5174.** O app instalado vive em `localhost:5173` e, com o
+service worker ativo, é o cache quem responde naquela origem. Subir o dev na mesma porta faria
+o cache atender no lugar do servidor e as mudanças simplesmente não apareceriam.
+
+`server/` guarda a parte que fica ligada:
+
+- **`static-server.mjs`** — servidor de arquivos em `node:http` puro, sem dependência alguma.
+  O app não tem backend: isto só entrega `dist/`, com fallback de rota para o React Router,
+  `no-cache` no `sw.js` (senão o app trava numa versão antiga para sempre) e cache de um ano
+  nos arquivos com hash no nome. Lê do disco a cada requisição, então gerar o build publica a
+  versão nova sem reiniciar nada. Escuta só em `127.0.0.1` — para alcançar do celular,
+  `LIFE_HOST=0.0.0.0` e uma regra no firewall.
+- **`supervisor.mjs`** — mantém o servidor de pé e o religa se ele cair, com espera que dobra
+  a cada queda rápida. Sem essa espera, um erro que mata o servidor no primeiro segundo viraria
+  um laço girando o processador e enchendo o log. Porta ocupada três vezes seguidas significa
+  que já existe outra instância, e aí o supervisor sai em vez de insistir.
+- **`launch-hidden.vbs`** — inicia tudo sem janela. O Agendador até roda tarefa "conectado ou
+  não", mas isso exige guardar a senha da conta; estilo de janela 0 resolve sem senha.
+- **`install-task.ps1`** — registra a tarefa *ao fazer logon*, sem elevação, com limite de
+  execução infinito (o padrão do Windows mata tarefa que passa de três dias) e instância única.
+
+O log fica em `server/life-server.log`.
 
 Scripts:
 
@@ -63,11 +122,12 @@ guardada no navegador seria encenação, contornável por qualquer um que abriss
 Três destinos possíveis. O app escolhe em tempo de execução e nenhuma tela sabe qual está ativo —
 a lógica vive em `src/data/adapters.ts`.
 
-| Modo | Onde grava | Sincroniza entre máquinas | Exige login |
-|---|---|---|---|
-| **Local** | `localStorage` do navegador | Não | Não |
-| **Pasta** | Arquivos JSON numa pasta do disco | Pelo Drive/OneDrive, se a pasta estiver lá | Não |
-| **Supabase** | Postgres com RLS | Sim, inclusive no celular | Sim |
+| Modo | Onde grava | Sincroniza entre máquinas |
+|---|---|---|
+| **Banco local** | SQLite em `%APPDATA%/app.life.desktop/life.db` | Não |
+| **Pasta** | Arquivos JSON numa pasta do disco | Pelo Drive/OneDrive, se a pasta estiver lá |
+| **Navegador** | `localStorage` (só no `npm run dev:web`) | Não |
+
 
 ### Pasta de trabalho
 
@@ -206,7 +266,17 @@ inteiro.
 somar algumas centenas de lançamentos e o saldo fechar com uns centavos que ninguém explica.
 
 **Categoria adivinhada pela descrição.** "DELIVERY *LANCHE" cai em Delivery, "POSTO 24H" em
-Transporte. As mesmas palavras-chave vão servir à importação de OFX.
+Transporte. As mesmas palavras-chave servem à importação de planilha.
+
+**Importação de planilha (CSV).** Quem já mantém as contas em outro app não vai redigitar seis
+meses de lançamento. O cabeçalho é reconhecido sozinho — e quando não é, dá para apontar coluna
+por coluna, então formato desconhecido é trabalho de dois cliques, não pedido de funcionalidade.
+Parcela escrita no nome (`Geladeira (5/48)`) vira parcelamento de verdade, com as linhas do mesmo
+financiamento no mesmo grupo. A conta e a categoria que o arquivo cita e o app não tem podem ser
+criadas na hora. **Deduplicação por data, valor, tipo e descrição**: reimportar o mesmo extrato não
+duplica nada, e duas viagens de metrô de R$ 5,40 no mesmo dia continuam sendo dois lançamentos —
+a contagem é por ocorrência, não por conjunto. Tudo acontece no navegador; nada é gravado antes da
+prévia.
 
 **Orçamento envelope** por categoria e mês, com alerta em 80% e 100% e cópia dos limites do mês
 anterior. **Metas** calculam o aporte mensal necessário para o prazo.
@@ -228,11 +298,23 @@ dias restantes ("faltam 2 em 2 dias") e quando não cabe mais.
 **Heatmap clicável.** Seis meses de consistência em uma tira; clicar numa célula corrige o
 passado, porque ninguém marca hábito no dia certo por 180 dias seguidos.
 
-**Agenda unificada de verdade.** Aulas projetadas da grade semanal, provas e entregas, treinos
-registrados, contas a pagar e o vencimento de cada fatura, no mesmo mês. Compra no cartão não vira
-"conta a pagar" — quem vence é a fatura, e ela aparece com o total do período certo. Export `.ics`
-com horário flutuante: aula das 19h continua às 19h em qualquer fuso, sem andar no horário de
-verão.
+**Agenda unificada de verdade.** Um calendário só, com tudo: aulas projetadas da grade semanal,
+provas e entregas, treinos registrados, contas a pagar, o vencimento de cada fatura, as recorrentes
+previstas, a data-alvo das metas financeiras, o início e o término previsto de cada curso e
+graduação, e as duas datas do plano de emagrecimento — a escolhida e a que o ritmo atual promete.
+Compra no cartão não vira "conta a pagar" — quem vence é a fatura, e ela aparece com o total do
+período certo. A legenda é o filtro: clicar em "Financeiro" tira a área da grade, porque num mês
+cheio olhar uma coisa de cada vez é o gesto mais comum. Export `.ics` com horário flutuante: aula
+das 19h continua às 19h em qualquer fuso, sem andar no horário de verão.
+
+**Rota que sobrevive a um build novo.** Depois de uma atualização os chunks mudam de nome, e
+uma aba aberta desde antes continua executando o bundle antigo — que pede arquivos já apagados.
+A casca segue funcionando, porque já está carregada, e **toda página interna dá branco**: é o
+`import()` dela que falha. O service worker não resolve sozinho, já que a página em execução não
+recarrega por conta própria. `lazyRoute` percebe a falha e se recupera em degraus — recarrega,
+depois descarta service worker e caches, e só então mostra uma tela com explicação e um botão.
+Duas falhas dentro de vinte segundos param a escada: tela piscando para sempre é pior do que uma
+mensagem de erro.
 
 **Insights que sabem calar a boca.** Toda regra passa por três travas antes de virar frase: pelo
 menos 3 semanas de cada lado da comparação, efeito de no mínimo 10%, e linguagem descritiva — "nas
