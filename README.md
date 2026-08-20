@@ -1,0 +1,108 @@
+# Life
+
+Dashboard da vida: saúde, alimentação, faculdade, cursos e finanças em um lugar só.
+
+**Fase 1 entregue:** módulo de Saúde completo (atividades, medidas, plano de emagrecimento
+adaptativo e diário alimentar), registro rápido em linguagem natural e PWA instalável.
+As demais fases estão descritas em [docs/PLANO.md](docs/PLANO.md).
+
+---
+
+## Stack
+
+- **React 19 + Vite + TypeScript** — rotas em lazy loading, bundle inicial ~108 kB gzip
+- **Tailwind CSS v4** com design system próprio em tokens semânticos (tema claro/escuro)
+- **TanStack Query** para estado de servidor, **Recharts** para gráficos (carregado sob demanda)
+- **Supabase** (Postgres + Auth + RLS) — opcional: o app roda 100% local sem ele
+- **PWA** via vite-plugin-pwa
+
+## Rodando
+
+```bash
+npm install && npm run dev
+```
+
+Sem `.env`, o app usa um adaptador `localStorage` e funciona por completo offline — útil para
+desenvolver antes de existir projeto no Supabase. O indicador no rodapé da sidebar mostra
+qual modo está ativo.
+
+Scripts:
+
+| Comando | O que faz |
+|---|---|
+| `npm run dev` | Servidor de desenvolvimento em http://localhost:5173 |
+| `npm run build` | Typecheck + build de produção em `dist/` |
+| `npm test` | Testes unitários (fórmulas de saúde, plano, parser, formatação) |
+| `npm run typecheck` | Só a checagem de tipos |
+
+## Conectando ao Supabase
+
+1. Crie o projeto no [Supabase](https://supabase.com).
+2. Rode a migração `supabase/migrations/0001_health.sql` no SQL Editor (ou via `supabase db push`).
+3. Copie `.env.example` para `.env` e preencha:
+
+```bash
+VITE_SUPABASE_URL=https://xxxx.supabase.co
+VITE_SUPABASE_ANON_KEY=eyJhbGciOi...
+```
+
+A anon key é pública por design — quem protege os dados é o **RLS**, e toda tabela da migração
+já vem com a policy `user_id = auth.uid()`. Nenhuma linha é visível sem sessão autenticada.
+
+> A tela de login ainda não existe: enquanto o módulo de auth não entra (Fase 1.1), configurar
+> o `.env` faz as escritas exigirem um usuário autenticado. Para uso imediato, deixe sem `.env`
+> e o modo local cobre tudo. O backup em JSON fica em **Perfil → Exportar backup**.
+
+## Deploy no Render
+
+O `render.yaml` já descreve um Static Site com rewrite de SPA e cache dos assets:
+
+1. Conecte o repositório no Render e escolha **Blueprint** (ele lê o `render.yaml`).
+2. Defina `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` em Environment.
+3. Deploy. Build: `npm ci && npm run build`, publish: `dist`.
+
+## Estrutura
+
+```
+src/
+├─ components/         # design system (button, card, field, modal…) e layout
+├─ data/               # tipos, adaptadores (local/Supabase), hooks de query, seeds
+├─ features/health/    # composição da lógica de saúde (resumo, gráfico de peso)
+├─ lib/
+│  ├─ health/          # TMB, TDEE, IMC, média móvel, plano e recalibração (puro + testado)
+│  ├─ quick-add/       # interpretador do Ctrl+K
+│  ├─ format.ts        # formatação pt-BR
+│  └─ supabase.ts
+├─ pages/              # uma rota por arquivo
+└─ index.css           # tokens de tema
+supabase/migrations/   # SQL versionado
+```
+
+A regra que mantém o projeto sustentável: **nada de lógica de cálculo dentro de componente**.
+As fórmulas vivem em `src/lib` como funções puras com teste, e as telas só as consomem.
+
+## Destaques da Fase 1
+
+**Plano de emagrecimento com travas de segurança.** O plano não obedece cegamente ao prazo
+pedido: o ritmo fica entre 0,5% e 1% do peso por semana, o déficit não passa de 25% do gasto
+(20% quando não há prazo definido), há piso calórico por sexo e a meta nunca desce abaixo do
+IMC 18,5. Quando o pedido é inviável, ele avisa e devolve a data realista.
+
+**Recalibração adaptativa.** A cada duas semanas o app compara a perda real com a projetada
+(usando média dos 3 primeiros e 3 últimos registros, para não reagir a ruído) e sugere um
+ajuste calórico limitado a ±250 kcal.
+
+**TDEE medido, não declarado.** Se há treinos registrados na semana, o gasto vem deles
+(`MET × peso × horas`) em vez de um fator de atividade chutado.
+
+**Média móvel de 7 dias.** O peso exibido é sempre a média, não a pesagem do dia — que oscila
+1–2 kg por água e sal.
+
+**Registro rápido (Ctrl+K).** `peso 84,2`, `corri 5km em 28min`, `futvolei 1h30`, `dormi 7h30`,
+`agua 500ml`. Regex pura: instantâneo e offline.
+
+## Aviso
+
+Os cálculos de saúde usam equações populacionais publicadas (Mifflin-St Jeor, fatores de
+atividade, valores MET do Compendium of Physical Activities) e são estimativas com margem de
+erro individual. **Não substituem nutricionista ou médico.**
