@@ -2,11 +2,61 @@
 
 Dashboard da vida: saúde, alimentação, faculdade, cursos e finanças em um lugar só.
 
+Programa de desktop para Windows. Funciona **inteiramente offline**, sem conta, sem servidor e
+sem mensalidade — seus dados ficam na sua máquina.
+
 **Entregue até aqui:** módulos de **Saúde** (atividades, medidas, plano de emagrecimento
 adaptativo e diário alimentar), **Faculdade**, **Cursos**, **Caderno**, **Financeiro** e
 **Rotina** (hábitos, agenda unificada e insights entre módulos), com dashboard configurável,
-registro rápido em linguagem natural e PWA instalável. O que ainda falta está em
-[docs/PLANO.md](docs/PLANO.md).
+registro rápido em linguagem natural e importação de extrato em planilha. O que ainda falta
+está em [docs/PLANO.md](docs/PLANO.md).
+
+---
+
+## Usando o app
+
+Esta seção é para quem quer **usar** o Life. Para mexer no código, pule para
+[Desenvolvendo](#desenvolvendo).
+
+### O que você precisa
+
+| Requisito | Detalhe |
+|---|---|
+| **Windows 10 ou 11**, 64 bits | No Windows 10, versão 1803 ou mais nova |
+| **WebView2** | Já vem no Windows 11. No Windows 10 mais antigo, baixe o [Evergreen Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) (gratuito, ~2 MB) |
+| **~15 MB de disco** | 3 MB o instalador, ~6 MB instalado, o resto é o seu banco crescendo |
+
+**O que você não precisa:** internet, conta de usuário, senha, privilégio de administrador,
+Node.js, Rust ou qualquer outra ferramenta. Nada disso é usado em tempo de execução.
+
+### Instalando
+
+1. Baixe `Life_0.1.0_x64-setup.exe`.
+2. Execute o arquivo.
+3. O Windows provavelmente vai mostrar uma tela azul do **SmartScreen** dizendo que não
+   reconhece o programa. Isso acontece porque o executável não tem assinatura digital —
+   assiná-lo exige um certificado pago. Clique em **Mais informações → Executar assim mesmo**.
+4. O Life aparece no menu Iniciar como qualquer outro programa.
+
+A instalação é **por usuário**: não pede administrador e não escreve em `Program Files`.
+
+### Onde ficam seus dados
+
+Por padrão, num arquivo SQLite em `%APPDATA%\app.life.desktop\life.db`. Cole esse caminho no
+Explorador de Arquivos para chegar lá.
+
+Em **Perfil → Pasta de trabalho** você pode trocar para uma pasta do disco à sua escolha, onde
+cada tabela vira um `.json` legível. Apontando para dentro do OneDrive ou do Google Drive, seus
+dados acompanham você entre computadores — a sincronização é do próprio serviço, sem servidor
+no meio.
+
+De qualquer forma, **exporte um backup de vez em quando** em Perfil → Backup. Desinstalar o
+programa pode levar o banco junto, e o backup é o que sobrevive a isso.
+
+### Atualizando
+
+Baixe o instalador da versão nova e execute por cima. Seus dados não são tocados: o banco vive
+fora da pasta do programa.
 
 ---
 
@@ -17,12 +67,12 @@ registro rápido em linguagem natural e PWA instalável. O que ainda falta está
 - **React 19 + Vite + TypeScript** — rotas em lazy loading, bundle inicial ~108 kB gzip
 - **Tailwind CSS v4** com design system próprio em tokens semânticos (tema claro/escuro)
 - **TanStack Query** para estado de servidor, **Recharts** para gráficos (carregado sob demanda)
-- **Supabase** (Postgres + Auth + RLS) — opcional: o app roda 100% local sem ele
-- **PWA** via vite-plugin-pwa — instalável de verdade: ícones PNG 192/512, versão `maskable` para
-  o Android não desenhar um adesivo quadrado dentro do círculo, `apple-touch-icon` para o iOS
-  (que ignora o manifest) e as fontes em cache de um ano
+- **SQLite** via `tauri-plugin-sql` — banco local, sem servidor e sem conta
+- **PWA** via vite-plugin-pwa, só no build web — o app segue instalável pelo navegador para quem
+  quiser essa via; no build do desktop o plugin é desligado, porque um cache entre o app e ele
+  mesmo só cria problema quando os arquivos já estão em disco
 
-## Rodando
+## Desenvolvendo
 
 ```bash
 npm install && npm run dev
@@ -53,9 +103,8 @@ Sai em `src-tauri/target/release/bundle/nsis/Life_0.1.0_x64-setup.exe`. O
 instalador é NSIS por usuário — não pede administrador e não toca em `Program
 Files`.
 
-Sem `.env`, o app usa um adaptador `localStorage` e funciona por completo offline — útil para
-desenvolver antes de existir projeto no Supabase. O indicador no rodapé da sidebar mostra
-qual modo está ativo.
+O indicador no rodapé da barra lateral mostra qual destino de gravação está ativo: **Banco
+local**, **Pasta** ou **Navegador**.
 
 ### No Windows, sem terminal
 
@@ -98,25 +147,6 @@ Scripts:
 | `npm test` | Testes unitários (fórmulas de saúde, plano, parser, formatação) |
 | `npm run typecheck` | Só a checagem de tipos |
 
-## Conectando ao Supabase
-
-1. Crie o projeto no [Supabase](https://supabase.com).
-2. Rode as migrações de `supabase/migrations/` em ordem no SQL Editor (ou via `supabase db push`).
-3. Copie `.env.example` para `.env` e preencha:
-
-```bash
-VITE_SUPABASE_URL=https://xxxx.supabase.co
-VITE_SUPABASE_ANON_KEY=eyJhbGciOi...
-```
-
-A anon key é pública por design — quem protege os dados é o **RLS**, e toda tabela da migração
-já vem com a policy `user_id = auth.uid()`. Nenhuma linha é visível sem sessão autenticada.
-
-Com o `.env` preenchido, o app pede login: entrar, criar conta e recuperar senha, em
-`src/pages/login.tsx`. Habilite o provedor **Email** em Authentication → Providers no painel do
-Supabase. Sem `.env`, não há servidor capaz de verificar senha e o app abre direto — uma senha
-guardada no navegador seria encenação, contornável por qualquer um que abrisse o console.
-
 ## Onde os dados ficam
 
 Três destinos possíveis. O app escolhe em tempo de execução e nenhuma tela sabe qual está ativo —
@@ -124,7 +154,7 @@ a lógica vive em `src/data/adapters.ts`.
 
 | Modo | Onde grava | Sincroniza entre máquinas |
 |---|---|---|
-| **Banco local** | SQLite em `%APPDATA%/app.life.desktop/life.db` | Não |
+| **Banco local** | SQLite em `%APPDATA%\app.life.desktop\life.db` | Não |
 | **Pasta** | Arquivos JSON numa pasta do disco | Pelo Drive/OneDrive, se a pasta estiver lá |
 | **Navegador** | `localStorage` (só no `npm run dev:web`) | Não |
 
@@ -155,7 +185,7 @@ Trocar para uma pasta vazia com dados já no navegador pergunta antes se você q
 Em **Perfil → Dados e sincronização**:
 
 - **Exportar backup** gera um JSON com todas as tabelas. Ele lê pelo adaptador ativo, então
-  funciona igual no modo local e no Supabase.
+  funciona igual no banco local e na pasta de trabalho.
 - **Restaurar backup** lê o arquivo de volta. Antes de gravar, valida o conteúdo e mostra a
   contagem por tabela para conferência.
 
@@ -167,24 +197,16 @@ O formato é versionado (`app`, `version`, `exported_at`, `tables`), e o import 
 backups do formato antigo, sem cabeçalho. Arquivo de outro app, versão futura ou tabela
 corrompida são recusados inteiros, em vez de gravados pela metade.
 
-No modo local os dados vivem no `localStorage` **daquele navegador, naquela máquina** — formatar
-o computador ou limpar os dados do site apaga tudo. Enquanto a tela de login não existe, exportar
-de vez em quando é o que garante levar os dados para outro computador.
-
-## Deploy no Render
-
-O `render.yaml` já descreve um Static Site com rewrite de SPA e cache dos assets:
-
-1. Conecte o repositório no Render e escolha **Blueprint** (ele lê o `render.yaml`).
-2. Defina `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY` em Environment.
-3. Deploy. Build: `npm ci && npm run build`, publish: `dist`.
+Os dados vivem **nesta máquina** — no banco do aplicativo ou na pasta que você escolheu.
+Formatar o computador, ou desinstalar o programa sem cuidado, apaga tudo. Não há servidor
+guardando uma cópia: exportar de vez em quando é o que garante levar os dados adiante.
 
 ## Estrutura
 
 ```
 src/
 ├─ components/         # design system (button, card, field, modal…) e layout
-├─ data/               # tipos, adaptadores (local/Supabase), hooks de query, seeds
+├─ data/               # tipos, adaptadores (SQLite/pasta/local), hooks de query, seeds
 ├─ features/
 │  ├─ health/          # composição da lógica de saúde (resumo, gráfico de peso)
 │  └─ education/       # formulários de curso/disciplina, cartão do semestre, Markdown
@@ -198,10 +220,11 @@ src/
 │  ├─ quick-add/       # interpretador do Ctrl+K
 │  ├─ dates.ts         # aritmética de datas em ISO local
 │  ├─ format.ts        # formatação pt-BR
-│  └─ supabase.ts
+│  └─ salvar-arquivo.ts # salvar backup e .ics, nativo ou no navegador
 ├─ pages/              # uma rota por arquivo
 └─ index.css           # tokens de tema
-supabase/migrations/   # SQL versionado
+src-tauri/             # processo nativo: janela, migração SQL e acesso a disco
+supabase/migrations/   # SQL versionado, guardado caso a sincronização volte
 ```
 
 A regra que mantém o projeto sustentável: **nada de lógica de cálculo dentro de componente**.
