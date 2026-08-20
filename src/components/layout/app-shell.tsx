@@ -1,7 +1,8 @@
-import { Cloud, CloudOff, Command, User } from 'lucide-react'
+import { Cloud, CloudOff, Command, FolderSync, LogOut, User } from 'lucide-react'
 import { Suspense } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { isCloudEnabled } from '@/lib/supabase'
+import { storageMode } from '@/data/adapters'
+import { useAuth } from '@/features/auth/auth-context'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from '../theme-toggle'
 import { Badge } from '../ui/misc'
@@ -28,6 +29,8 @@ function RouteFallback() {
 export function AppShell({ onOpenPalette }: { onOpenPalette: () => void }) {
   const { pathname } = useLocation()
   const accent = accentForPath(pathname)
+  const auth = useAuth()
+  const mode = storageMode()
   const section = NAV.find((item) => item.to !== '/' && pathname.startsWith(item.to))
 
   return (
@@ -96,10 +99,29 @@ export function AppShell({ onOpenPalette }: { onOpenPalette: () => void }) {
             <User className="size-4" />
             Perfil
           </NavLink>
+
+          {auth.user && (
+            <button
+              type="button"
+              onClick={() => void auth.signOut()}
+              title={auth.user.email ?? undefined}
+              className="text-fg-muted hover:bg-surface-2 hover:text-fg flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors"
+            >
+              <LogOut className="size-4" />
+              <span className="min-w-0 flex-1 truncate text-left">Sair</span>
+            </button>
+          )}
+
           <div className="flex items-center justify-between px-1">
-            <Badge tone={isCloudEnabled ? 'positive' : 'neutral'}>
-              {isCloudEnabled ? <Cloud className="size-3" /> : <CloudOff className="size-3" />}
-              {isCloudEnabled ? 'Supabase' : 'Local'}
+            <Badge tone={mode === 'local' ? 'neutral' : 'positive'}>
+              {mode === 'cloud' ? (
+                <Cloud className="size-3" />
+              ) : mode === 'folder' ? (
+                <FolderSync className="size-3" />
+              ) : (
+                <CloudOff className="size-3" />
+              )}
+              {mode === 'cloud' ? 'Supabase' : mode === 'folder' ? 'Pasta' : 'Local'}
             </Badge>
             <ThemeToggle />
           </div>

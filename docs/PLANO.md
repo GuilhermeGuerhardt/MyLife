@@ -319,9 +319,25 @@ avisar), import com validação, resumo por tabela antes de gravar e compatibili
 do formato antigo. Restaurar deixa o app igual ao arquivo, inclusive removendo o que sobrou.
 13 testes.
 
-**Pendente na Fase 1.1:** tela de login (Supabase Auth) — hoje o app roda no adaptador local
-quando não há `.env` configurado. É o que falta para os dados seguirem a pessoa entre máquinas
-sem depender de exportar e importar à mão.
+**Login — concluído.** Entrar, criar conta e recuperar senha com Supabase Auth, guarda de rota
+segurando o app até a sessão carregar, sair na barra lateral e mensagens de erro traduzidas. O
+login só é exigido quando há Supabase configurado: nos modos local e pasta os dados estão no disco
+do próprio usuário, e uma senha guardada no navegador seria encenação contornável pelo console.
+
+**Pasta de trabalho — concluída.** Terceiro destino de dados, ao lado de local e Supabase: uma
+pasta do disco escolhida pelo usuário, com um arquivo JSON por tabela. Apontando para dentro do
+Drive ou do OneDrive, a sincronização entre computadores é do próprio serviço — sem servidor e sem
+conta. Handle guardado em IndexedDB, reconexão por clique (o navegador exige gesto para reconceder
+escrita) e migração dos dados do navegador ao conectar uma pasta vazia.
+
+Limitação assumida: a File System Access API existe só no Chrome e no Edge, no computador. Por
+isso o modo é opcional e a interface diz isso quando o navegador não suporta, em vez de esconder o
+recurso.
+
+**PWA — agora instalável.** O manifest tinha só um SVG, e Chrome exige PNG 192 e 512 para oferecer
+a instalação; sem `maskable`, o Android desenha o quadrado inteiro dentro de um círculo branco.
+Ícones gerados, `apple-touch-icon` para o iOS (que ignora o manifest) e a fonte externa passou a
+carregar sem bloquear o primeiro paint, com cache de um ano no service worker.
 
 **Próximas (Fase 5):** importação de OFX, transações recorrentes geradas automaticamente,
 flashcards com repetição espaçada, investimentos, bot no Telegram e notificações push.
