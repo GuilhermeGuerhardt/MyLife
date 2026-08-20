@@ -4,7 +4,10 @@ import {
   billEvents,
   classEvents,
   deadlineEvents,
+  dietPlanEvents,
+  goalEvents,
   invoiceEvents,
+  programEvents,
   monthRange,
   recurringEvents,
   sortAgenda,
@@ -361,5 +364,115 @@ describe('export .ics', () => {
     expect(lines.every((line) => encoder.encode(line).length <= 75)).toBe(true)
     // Desdobrar devolve o texto original.
     expect(folded.replace(/\r\n /g, '')).toContain(long.title)
+  })
+})
+
+
+describe('metas financeiras na agenda', () => {
+  const goal = {
+    id: 'g1',
+    name: 'Reserva de emergência',
+    target_cents: 1_000_000,
+    current_cents: 250_000,
+    target_date: '2026-09-15',
+    done: false,
+  }
+
+  it('mostra a data-alvo com o que ainda falta', () => {
+    const [event] = goalEvents([goal], '2026-09-01', '2026-09-30')
+    expect(event).toMatchObject({
+      date: '2026-09-15',
+      title: 'Meta: Reserva de emergência',
+      source: 'goal',
+      area: 'finance',
+      done: false,
+      amountCents: 750_000,
+    })
+  })
+
+  it('ignora meta sem prazo', () => {
+    expect(goalEvents([{ ...goal, target_date: null }], '2026-01-01', '2026-12-31')).toEqual([])
+  })
+
+  it('meta alcançada aparece riscada e sem valor pendente', () => {
+    const [event] = goalEvents(
+      [{ ...goal, current_cents: goal.target_cents }],
+      '2026-09-01',
+      '2026-09-30',
+    )
+    expect(event!.done).toBe(true)
+    expect(event!.amountCents).toBeUndefined()
+  })
+})
+
+describe('cursos e faculdade na agenda', () => {
+  const program = {
+    id: 'p9',
+    name: 'Análise e Desenvolvimento de Sistemas',
+    track: 'academic' as const,
+    status: 'active',
+    start_date: '2026-02-10',
+    expected_end: '2026-12-18',
+  }
+
+  it('marca início e término previsto', () => {
+    const events = programEvents([program], '2026-01-01', '2026-12-31')
+    expect(events.map((event) => [event.date, event.detail])).toEqual([
+      ['2026-02-10', 'Início'],
+      ['2026-12-18', 'Término previsto'],
+    ])
+    expect(events[0]!.href).toBe('/faculdade/p9')
+  })
+
+  it('curso livre aponta para a outra rota', () => {
+    const [event] = programEvents(
+      [{ ...program, track: 'course' }],
+      '2026-02-01',
+      '2026-02-28',
+    )
+    expect(event!.href).toBe('/cursos/p9')
+  })
+
+  it('curso abandonado não vira compromisso', () => {
+    expect(programEvents([{ ...program, status: 'dropped' }], '2026-01-01', '2026-12-31')).toEqual([])
+  })
+
+  it('respeita o intervalo pedido', () => {
+    const events = programEvents([program], '2026-02-01', '2026-02-28')
+    expect(events).toHaveLength(1)
+    expect(events[0]!.detail).toBe('Início')
+  })
+})
+
+describe('plano de saúde na agenda', () => {
+  const plan = {
+    id: 'd1',
+    target_weight_kg: 78.5,
+    target_date: '2026-11-01',
+    estimated_date: '2026-12-20',
+    status: 'active' as const,
+  }
+
+  it('mostra a data escolhida e a que o ritmo promete', () => {
+    const events = dietPlanEvents([plan], '2026-01-01', '2026-12-31')
+    expect(events.map((event) => [event.date, event.title])).toEqual([
+      ['2026-11-01', 'Meta de peso: 78,5 kg'],
+      ['2026-12-20', 'Previsão: 78,5 kg'],
+    ])
+    expect(events.every((event) => event.area === 'health')).toBe(true)
+  })
+
+  it('não repete a data quando o plano está em dia', () => {
+    const events = dietPlanEvents(
+      [{ ...plan, estimated_date: plan.target_date! }],
+      '2026-01-01',
+      '2026-12-31',
+    )
+    expect(events).toHaveLength(1)
+    expect(events[0]!.detail).toBe('No ritmo')
+  })
+
+  it('plano arquivado fica fora', () => {
+    expect(dietPlanEvents([{ ...plan, status: 'archived' }], '2026-01-01', '2026-12-31')).toEqual([])
   })
 })

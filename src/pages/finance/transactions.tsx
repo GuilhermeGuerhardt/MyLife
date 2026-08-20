@@ -1,6 +1,7 @@
-import { Plus, Search } from 'lucide-react'
+import { Plus, Search, Upload } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { Link } from 'react-router-dom'
+import { Button, buttonStyles } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Field, Input, Select } from '@/components/ui/field'
 import { Segmented, Stat } from '@/components/ui/misc'
@@ -67,6 +68,10 @@ export function TransactionsPage() {
         </div>
         <div className="flex items-center gap-2">
           <MonthNav competence={competence} onChange={setCompetence} />
+          <Link to="/financeiro/importar" className={buttonStyles({ variant: 'secondary' })}>
+            <Upload />
+            Importar
+          </Link>
           <Button onClick={() => setAdding(true)} disabled={!finance.hasAccounts}>
             <Plus />
             Lançamento

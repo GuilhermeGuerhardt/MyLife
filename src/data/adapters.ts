@@ -1,15 +1,17 @@
 /**
  * Camada de persistência.
  *
- * Uma única interface (`Collection`) com duas implementações: localStorage e
- * Supabase. A aplicação nunca sabe qual está ativa — isso permite rodar o app
- * inteiro offline antes de existir projeto no Supabase, e trocar depois sem
- * mexer em nenhuma tela.
+ * Uma única interface (`Collection`) com três implementações: SQLite (o
+ * programa de desktop), `localStorage` (o app aberto no navegador) e a pasta de
+ * trabalho em disco. Nenhuma tela sabe qual está ativa, e é justamente isso que
+ * permitiu trocar o destino padrão de nuvem para banco local sem tocar em
+ * nenhuma delas.
  */
 
-import { supabase } from '@/lib/supabase'
+import { isTauri } from '@tauri-apps/api/core'
 import { uid } from '@/lib/utils'
 import type { FolderStore } from './folder-store'
+import { sqliteCollection } from './sqlite-store'
 import type { BaseRow } from './types'
 
 export interface Collection<T extends BaseRow> {
@@ -69,42 +71,6 @@ function localCollection<T extends BaseRow>(table: string): Collection<T> {
   }
 }
 
-function cloudCollection<T extends BaseRow>(table: string): Collection<T> {
-  const client = supabase!
-  return {
-    async list() {
-      const { data, error } = await client.from(table).select('*')
-      if (error) throw error
-      return (data ?? []) as T[]
-    },
-    async insert(item) {
-      const { data: auth } = await client.auth.getUser()
-      const payload = { ...item, user_id: auth.user?.id ?? null }
-      const { data, error } = await client.from(table).insert(payload).select().single()
-      if (error) throw error
-      return data as T
-    },
-    async update(id, patch) {
-      const { data, error } = await client
-        .from(table)
-        .update({ ...patch, updated_at: new Date().toISOString() })
-        .eq('id', id)
-        .select()
-        .single()
-      if (error) throw error
-      return data as T
-    },
-    async remove(id) {
-      const { error } = await client.from(table).delete().eq('id', id)
-      if (error) throw error
-    },
-    async replaceAll(items) {
-      const { error } = await client.from(table).upsert(items)
-      if (error) throw error
-    },
-  }
-}
-
 /**
  * Pasta de trabalho no disco. Terceiro destino possível, ligado em tempo de
  * execução — o usuário escolhe a pasta depois que o app já subiu.
@@ -142,7 +108,15 @@ function folderCollection<T extends BaseRow>(table: string, store: FolderStore):
   }
 }
 
-export type StorageMode = 'folder' | 'cloud' | 'local'
+export type StorageMode = 'folder' | 'sqlite' | 'local'
+
+/**
+ * Roda dentro do programa de desktop?
+ *
+ * Avaliado uma vez: a resposta não muda durante a execução, e chamar a cada
+ * operação de banco colocaria a checagem no caminho quente de toda tela.
+ */
+const NO_DESKTOP = isTauri()
 
 let folderStore: FolderStore | null = null
 const listeners = new Set<() => void>()
@@ -162,7 +136,7 @@ export function currentFolder(): FolderStore | null {
 
 export function storageMode(): StorageMode {
   if (folderStore) return 'folder'
-  return supabase ? 'cloud' : 'local'
+  return NO_DESKTOP ? 'sqlite' : 'local'
 }
 
 export function subscribeStorage(listener: () => void): () => void {
@@ -177,10 +151,12 @@ export function subscribeStorage(listener: () => void): () => void {
  */
 export function collection<T extends BaseRow>(table: string): Collection<T> {
   const local = localCollection<T>(table)
-  const cloud = supabase ? cloudCollection<T>(table) : null
+  // O módulo do SQLite só é carregado no desktop: no navegador ele importaria
+  // o plugin do Tauri, que não existe ali.
+  const banco = NO_DESKTOP ? sqliteCollection<T>(table) : null
 
   const active = (): Collection<T> =>
-    folderStore ? folderCollection<T>(table, folderStore) : (cloud ?? local)
+    folderStore ? folderCollection<T>(table, folderStore) : (banco ?? local)
 
   return {
     list: () => active().list(),

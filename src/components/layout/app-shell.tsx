@@ -1,12 +1,25 @@
-import { Cloud, CloudOff, Command, FolderSync, LogOut, User } from 'lucide-react'
+import { Command, Database, FolderSync, Globe, User } from 'lucide-react'
 import { Suspense } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
-import { storageMode } from '@/data/adapters'
-import { useAuth } from '@/features/auth/auth-context'
+import { RouteBoundary } from '@/components/route-boundary'
+import { storageMode, type StorageMode } from '@/data/adapters'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from '../theme-toggle'
 import { Badge } from '../ui/misc'
 import { NAV, accentForPath } from './nav'
+
+/**
+ * Os três destinos possíveis de gravação.
+ *
+ * Numa tabela e não num ternário: quando isto era ternário, uma edição
+ * transformou três estados em dois e o app passou a dizer "Banco local"
+ * também no navegador, onde os dados vão para o `localStorage`.
+ */
+const MODE_LABEL: Record<StorageMode, string> = {
+  sqlite: 'Banco local',
+  folder: 'Pasta',
+  local: 'Navegador',
+}
 
 /** Esqueleto exibido enquanto o chunk da rota é baixado. */
 function RouteFallback() {
@@ -29,7 +42,6 @@ function RouteFallback() {
 export function AppShell({ onOpenPalette }: { onOpenPalette: () => void }) {
   const { pathname } = useLocation()
   const accent = accentForPath(pathname)
-  const auth = useAuth()
   const mode = storageMode()
   const section = NAV.find((item) => item.to !== '/' && pathname.startsWith(item.to))
 
@@ -100,28 +112,17 @@ export function AppShell({ onOpenPalette }: { onOpenPalette: () => void }) {
             Perfil
           </NavLink>
 
-          {auth.user && (
-            <button
-              type="button"
-              onClick={() => void auth.signOut()}
-              title={auth.user.email ?? undefined}
-              className="text-fg-muted hover:bg-surface-2 hover:text-fg flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors"
-            >
-              <LogOut className="size-4" />
-              <span className="min-w-0 flex-1 truncate text-left">Sair</span>
-            </button>
-          )}
 
           <div className="flex items-center justify-between px-1">
             <Badge tone={mode === 'local' ? 'neutral' : 'positive'}>
-              {mode === 'cloud' ? (
-                <Cloud className="size-3" />
-              ) : mode === 'folder' ? (
+              {mode === 'folder' ? (
                 <FolderSync className="size-3" />
+              ) : mode === 'sqlite' ? (
+                <Database className="size-3" />
               ) : (
-                <CloudOff className="size-3" />
+                <Globe className="size-3" />
               )}
-              {mode === 'cloud' ? 'Supabase' : mode === 'folder' ? 'Pasta' : 'Local'}
+              {MODE_LABEL[mode]}
             </Badge>
             <ThemeToggle />
           </div>
@@ -158,9 +159,16 @@ export function AppShell({ onOpenPalette }: { onOpenPalette: () => void }) {
         </header>
 
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 pb-24 lg:px-8 lg:pb-10">
-          <Suspense fallback={<RouteFallback />}>
-            <Outlet />
-          </Suspense>
+          {/*
+            O limite fica por dentro da casca, envolvendo só o miolo: se uma
+            página falhar, o menu continua clicável e dá para ir para outra em
+            vez de o app inteiro sumir.
+          */}
+          <RouteBoundary>
+            <Suspense fallback={<RouteFallback />}>
+              <Outlet />
+            </Suspense>
+          </RouteBoundary>
         </main>
       </div>
 

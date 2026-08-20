@@ -22,6 +22,9 @@ export type AgendaSource =
   | 'bill'
   | 'invoice'
   | 'recurring'
+  | 'goal'
+  | 'term'
+  | 'plan'
 
 export type AgendaArea = 'health' | 'education' | 'finance'
 
@@ -50,6 +53,9 @@ export const SOURCE_LABELS: Record<AgendaSource, string> = {
   bill: 'Conta',
   invoice: 'Fatura',
   recurring: 'Recorrente',
+  goal: 'Meta',
+  term: 'Curso',
+  plan: 'Plano',
 }
 
 const AREA_OF: Record<AgendaSource, AgendaArea> = {
@@ -60,6 +66,9 @@ const AREA_OF: Record<AgendaSource, AgendaArea> = {
   bill: 'finance',
   invoice: 'finance',
   recurring: 'finance',
+  goal: 'finance',
+  term: 'education',
+  plan: 'health',
 }
 
 // ---------------------------------------------------------------------------
@@ -364,6 +373,171 @@ export function recurringEvents(
         })
       }
       competence = addMonths(competence, 1)
+    }
+  }
+
+  return events
+}
+
+// ---------------------------------------------------------------------------
+// Metas financeiras
+// ---------------------------------------------------------------------------
+
+export interface GoalLike {
+  id: string
+  name: string
+  target_cents: number
+  current_cents: number
+  target_date: string | null
+  done: boolean
+}
+
+/**
+ * A data-alvo de cada meta.
+ *
+ * Meta sem prazo é intenção, não compromisso — e não tem onde cair no
+ * calendário. `amountCents` carrega o que ainda falta juntar, que é o número
+ * que interessa ao olhar a data se aproximando.
+ */
+export function goalEvents(goals: GoalLike[], from: string, to: string): AgendaEvent[] {
+  return goals
+    .filter((goal) => goal.target_date !== null && goal.target_date >= from && goal.target_date <= to)
+    .map((goal) => {
+      const missing = Math.max(0, goal.target_cents - goal.current_cents)
+      const reached = goal.done || missing === 0
+      return {
+        id: `goal:${goal.id}`,
+        date: goal.target_date!,
+        time: null,
+        endTime: null,
+        title: `Meta: ${goal.name}`,
+        detail: reached ? 'Alcançada' : 'Ainda falta',
+        source: 'goal' as const,
+        area: 'finance' as const,
+        href: '/financeiro/orcamento',
+        done: reached,
+        ...(reached ? {} : { amountCents: missing }),
+      }
+    })
+}
+
+// ---------------------------------------------------------------------------
+// Faculdade e cursos: início e término
+// ---------------------------------------------------------------------------
+
+export interface ProgramLike {
+  id: string
+  name: string
+  track: 'academic' | 'course'
+  status: string
+  start_date: string | null
+  expected_end: string | null
+}
+
+/**
+ * Marcos de cada curso e graduação.
+ *
+ * Abandonado fica de fora: a data de término prevista de algo que a pessoa
+ * largou não é um compromisso, é lembrança ruim. Concluído continua aparecendo,
+ * já riscado — some do "próximos" e permanece no histórico do mês.
+ */
+export function programEvents(programs: ProgramLike[], from: string, to: string): AgendaEvent[] {
+  const events: AgendaEvent[] = []
+
+  for (const program of programs) {
+    if (program.status === 'dropped') continue
+    const href = program.track === 'academic' ? `/faculdade/${program.id}` : `/cursos/${program.id}`
+
+    if (program.start_date && program.start_date >= from && program.start_date <= to) {
+      events.push({
+        id: `program-start:${program.id}`,
+        date: program.start_date,
+        time: null,
+        endTime: null,
+        title: program.name,
+        detail: 'Início',
+        source: 'term',
+        area: 'education',
+        href,
+        done: program.status !== 'planned',
+      })
+    }
+
+    if (program.expected_end && program.expected_end >= from && program.expected_end <= to) {
+      events.push({
+        id: `program-end:${program.id}`,
+        date: program.expected_end,
+        time: null,
+        endTime: null,
+        title: program.name,
+        detail: program.status === 'done' ? 'Concluído' : 'Término previsto',
+        source: 'term',
+        area: 'education',
+        href,
+        done: program.status === 'done',
+      })
+    }
+  }
+
+  return events
+}
+
+// ---------------------------------------------------------------------------
+// Saúde: as datas do plano de emagrecimento
+// ---------------------------------------------------------------------------
+
+export interface DietPlanLike {
+  id: string
+  target_weight_kg: number
+  target_date: string | null
+  /** Data em que o ritmo atual chega ao peso-alvo. */
+  estimated_date: string
+  status: 'active' | 'archived'
+}
+
+/**
+ * A data que a pessoa escolheu e a que o ritmo atual promete.
+ *
+ * As duas juntas são o ponto: a distância entre elas é o atraso do plano, e
+ * vê-la no calendário é mais honesto do que só mostrar a meta. Quando coincidem
+ * vira um evento só — repetir a mesma data com dois rótulos seria ruído.
+ */
+export function dietPlanEvents(plans: DietPlanLike[], from: string, to: string): AgendaEvent[] {
+  const events: AgendaEvent[] = []
+  const inRange = (date: string) => date >= from && date <= to
+
+  for (const plan of plans) {
+    if (plan.status !== 'active') continue
+    const weight = `${plan.target_weight_kg.toLocaleString('pt-BR')} kg`
+
+    if (plan.target_date && inRange(plan.target_date)) {
+      events.push({
+        id: `plan-target:${plan.id}`,
+        date: plan.target_date,
+        time: null,
+        endTime: null,
+        title: `Meta de peso: ${weight}`,
+        detail: plan.estimated_date === plan.target_date ? 'No ritmo' : 'Data escolhida',
+        source: 'plan',
+        area: 'health',
+        href: '/saude/plano',
+        done: false,
+      })
+    }
+
+    if (inRange(plan.estimated_date) && plan.estimated_date !== plan.target_date) {
+      events.push({
+        id: `plan-estimate:${plan.id}`,
+        date: plan.estimated_date,
+        time: null,
+        endTime: null,
+        title: `Previsão: ${weight}`,
+        detail: 'No ritmo atual',
+        source: 'plan',
+        area: 'health',
+        href: '/saude/plano',
+        done: false,
+      })
     }
   }
 

@@ -1,7 +1,8 @@
-import { Cloud, CloudOff, Download, FolderSync, Trash2, Upload } from 'lucide-react'
+import { CloudOff, Download, FolderSync, Trash2, Upload } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { BACKUP_JSON, salvarArquivo } from '@/lib/salvar-arquivo'
 import { Badge } from '@/components/ui/misc'
 import { Modal } from '@/components/ui/modal'
 import { BACKUP_TABLES, exportAll, importAll } from '@/data/queries'
@@ -22,13 +23,14 @@ import { integer, longDate } from '@/lib/format'
 const LAST_BACKUP_KEY = 'life:last-backup'
 
 const MODE_TITLE: Record<StorageMode, string> = {
-  cloud: 'Conectado ao Supabase',
+  sqlite: 'Gravando no banco do aplicativo',
   folder: 'Gravando numa pasta do disco',
-  local: 'Rodando em modo local',
+  local: 'Rodando no navegador',
 }
 
 const MODE_DETAIL: Record<StorageMode, string> = {
-  cloud: 'Os registros vão para o Postgres e são protegidos por RLS.',
+  sqlite:
+    'Os registros ficam num arquivo SQLite dentro da pasta do aplicativo, nesta máquina. Desinstalar o programa pode levar o arquivo junto — o backup é o que sobrevive.',
   folder:
     'Os arquivos ficam na pasta escolhida. Se ela estiver dentro do Drive ou do OneDrive, a sincronização entre computadores é do próprio serviço.',
   local:
@@ -36,9 +38,9 @@ const MODE_DETAIL: Record<StorageMode, string> = {
 }
 
 const MODE_BADGE: Record<StorageMode, string> = {
-  cloud: 'Supabase',
+  sqlite: 'Banco local',
   folder: 'Pasta',
-  local: 'Local',
+  local: 'Navegador',
 }
 
 export function BackupCard() {
@@ -56,7 +58,7 @@ export function BackupCard() {
     try {
       const tables = await exportAll()
       const file = buildBackup(tables, new Date().toISOString())
-      download(backupFilename(today()), JSON.stringify(file, null, 2))
+      void salvarArquivo(backupFilename(today()), JSON.stringify(file, null, 2), BACKUP_JSON)
 
       localStorage.setItem(LAST_BACKUP_KEY, today())
       setLastBackup(today())
@@ -118,9 +120,7 @@ export function BackupCard() {
             <p className="text-fg-muted mt-1 text-xs">{MODE_DETAIL[mode]}</p>
           </div>
           <Badge tone={mode === 'local' ? 'neutral' : 'positive'}>
-            {mode === 'cloud' ? (
-              <Cloud className="size-3" />
-            ) : mode === 'folder' ? (
+            {mode === 'folder' ? (
               <FolderSync className="size-3" />
             ) : (
               <CloudOff className="size-3" />
@@ -275,12 +275,3 @@ const TABLE_LABELS: Record<string, string> = {
   dashboard_widgets: 'Layout do dashboard',
 }
 
-function download(filename: string, content: string): void {
-  const blob = new Blob([content], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const anchor = document.createElement('a')
-  anchor.href = url
-  anchor.download = filename
-  anchor.click()
-  URL.revokeObjectURL(url)
-}

@@ -11,25 +11,6 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Life" />
     <title>Life</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <!--
-      Carregada sem bloquear o primeiro paint: offline, ou com o Google fora do
-      ar, a página aparece na hora com a fonte do sistema em vez de esperar o
-      timeout da requisição. O `onload` promove a folha a `all` quando ela chega.
-    -->
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-      rel="stylesheet"
-      media="print"
-      onload="this.media='all'"
-    />
-    <noscript>
-      <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
-        rel="stylesheet"
-      />
-    </noscript>
     <script>
       // Aplica o tema antes do primeiro paint para não piscar branco.
       (() => {
