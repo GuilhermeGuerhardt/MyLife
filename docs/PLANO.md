@@ -313,8 +313,15 @@ existe. Duplicar disciplina, deadline, sessão e transação num "eventos" próp
 verdades para o mesmo compromisso, e a segunda envelheceria em silêncio. Os insights, pelo mesmo
 motivo, são calculados a cada abertura em vez de materializados.
 
+**Backup e restauração — concluído.** Formato JSON versionado, export pelo adaptador ativo (o
+anterior lia o `localStorage` direto e devolvia arquivo vazio para quem estava no Supabase, sem
+avisar), import com validação, resumo por tabela antes de gravar e compatibilidade com os backups
+do formato antigo. Restaurar deixa o app igual ao arquivo, inclusive removendo o que sobrou.
+13 testes.
+
 **Pendente na Fase 1.1:** tela de login (Supabase Auth) — hoje o app roda no adaptador local
-quando não há `.env` configurado.
+quando não há `.env` configurado. É o que falta para os dados seguirem a pessoa entre máquinas
+sem depender de exportar e importar à mão.
 
 **Próximas (Fase 5):** importação de OFX, transações recorrentes geradas automaticamente,
 flashcards com repetição espaçada, investimentos, bot no Telegram e notificações push.
