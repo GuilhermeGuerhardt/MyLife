@@ -191,7 +191,7 @@ export function TransactionForm({
                 <option value="">Sem categoria</option>
                 {available.map((category) => (
                   <option key={category.id} value={category.id}>
-                    {category.icon} {category.name}
+                    {category.name}
                   </option>
                 ))}
               </Select>

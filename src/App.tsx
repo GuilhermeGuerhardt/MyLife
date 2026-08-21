@@ -58,6 +58,9 @@ const ImportPage = lazyRoute(() =>
 const BudgetPage = lazyRoute(() =>
   import('./pages/finance/budget').then((m) => ({ default: m.BudgetPage })),
 )
+const CategoriesPage = lazyRoute(() =>
+  import('./pages/finance/categories').then((m) => ({ default: m.CategoriesPage })),
+)
 const HabitsPage = lazyRoute(() =>
   import('./pages/routine/habits').then((m) => ({ default: m.HabitsPage })),
 )
@@ -139,6 +142,7 @@ function Boot() {
             <Route path="financeiro/transacoes" element={<TransactionsPage />} />
             <Route path="financeiro/contas" element={<AccountsPage />} />
             <Route path="financeiro/orcamento" element={<BudgetPage />} />
+            <Route path="financeiro/categorias" element={<CategoriesPage />} />
             <Route path="financeiro/importar" element={<ImportPage />} />
             <Route path="rotina" element={<HabitsPage />} />
             <Route path="rotina/agenda" element={<AgendaPage />} />

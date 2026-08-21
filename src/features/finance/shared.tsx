@@ -2,6 +2,7 @@ import { ChevronLeft, ChevronRight, Repeat, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge, EmptyState } from '@/components/ui/misc'
 import type { Account, Category, Transaction } from '@/data/types'
+import { CategoryIcon } from './category-icons'
 import { addMonths, competenceLabel, type Competence } from '@/lib/finance/billing'
 import { formatCents } from '@/lib/finance/money'
 import { shortDate } from '@/lib/format'
@@ -115,7 +116,7 @@ export function TransactionList({
               {transaction.kind === 'transfer' ? (
                 <Repeat className="text-fg-muted size-3.5" />
               ) : (
-                (category?.icon ?? '•')
+                <CategoryIcon icon={category?.icon} color={category?.color} className="size-4" />
               )}
             </span>
 

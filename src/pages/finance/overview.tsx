@@ -7,12 +7,14 @@ import { Badge, EmptyState, Progress, SectionTitle, Stat } from '@/components/ui
 import { useAccounts, useCategories } from '@/data/queries'
 import { AccountForm } from '@/features/finance/account-form'
 import { useCreateTransaction, useRemoveTransaction } from '@/features/finance/actions'
+import { CategoryIcon } from '@/features/finance/category-icons'
 import { CashFlowChart, CategoryDonut } from '@/features/finance/charts'
 import { MonthNav, TransactionList } from '@/features/finance/shared'
 import { TransactionForm } from '@/features/finance/transaction-form'
 import { useFinance } from '@/features/finance/use-finance'
 import { addMonths, competenceLabel, toCompetence } from '@/lib/finance/billing'
 import { formatCents } from '@/lib/finance/money'
+import { resolveSliceColors } from '@/lib/finance/palette'
 import { monthlySeries } from '@/lib/finance/reports'
 import { percent } from '@/lib/format'
 import { today } from '@/lib/utils'
@@ -70,14 +72,25 @@ export function FinanceOverview() {
     label: competenceLabel(point.competence).slice(0, 3),
   }))
 
-  const donut = finance.expensesByCategory.slice(0, 8).map((item) => {
-    const category = item.categoryId ? finance.categoryById.get(item.categoryId) : null
-    return {
-      name: category?.name ?? 'Sem categoria',
-      value: item.total,
-      color: category?.color ?? '#71717a',
-    }
-  })
+  /**
+   * Fatias do gráfico e da legenda, resolvidas de uma vez só.
+   *
+   * Antes o donut lia as 8 maiores e a legenda as 5 maiores por conta própria,
+   * cada um resolvendo a cor do seu lado — o que abria espaço para a bolinha da
+   * legenda não bater com a fatia que ela nomeia.
+   */
+  const donut = resolveSliceColors(
+    finance.expensesByCategory.slice(0, 8).map((item) => {
+      const category = item.categoryId ? finance.categoryById.get(item.categoryId) : null
+      return {
+        key: item.categoryId ?? 'none',
+        name: category?.name ?? 'Sem categoria',
+        value: item.total,
+        percent: item.percent,
+        color: category?.color ?? null,
+      }
+    }),
+  )
 
   return (
     <div className="space-y-6">
@@ -171,27 +184,19 @@ export function FinanceOverview() {
               <>
                 <CategoryDonut data={donut} />
                 <div className="mt-3 space-y-1.5">
-                  {finance.expensesByCategory.slice(0, 5).map((item) => {
-                    const category = item.categoryId
-                      ? finance.categoryById.get(item.categoryId)
-                      : null
-                    return (
-                      <div
-                        key={item.categoryId ?? 'none'}
-                        className="flex items-center gap-2 text-xs"
-                      >
-                        <span
-                          className="size-2 shrink-0 rounded-full"
-                          style={{ background: category?.color ?? '#71717a' }}
-                        />
-                        <span className="text-fg-muted flex-1 truncate">
-                          {category?.name ?? 'Sem categoria'}
-                        </span>
-                        <span className="text-fg-subtle">{percent(item.percent, 0)}</span>
-                        <span className="text-fg font-medium">{formatCents(item.total)}</span>
-                      </div>
-                    )
-                  })}
+                  {donut.map((slice) => (
+                    <div key={slice.key} className="flex items-center gap-2 text-xs">
+                      <span
+                        className="size-2 shrink-0 rounded-full"
+                        style={{ background: slice.color }}
+                      />
+                      <span className="text-fg-muted flex-1 truncate">{slice.name}</span>
+                      <span className="text-fg-subtle">{percent(slice.percent, 0)}</span>
+                      <span className="text-fg font-medium tabular-nums">
+                        {formatCents(slice.value)}
+                      </span>
+                    </div>
+                  ))}
                 </div>
               </>
             )}
@@ -295,8 +300,9 @@ export function FinanceOverview() {
                   {finance.budgets.slice(0, 4).map(({ budget, category, progress }) => (
                     <div key={budget.id} className="space-y-1">
                       <div className="flex justify-between text-xs">
-                        <span className="text-fg-muted truncate">
-                          {category?.icon} {category?.name ?? 'Categoria'}
+                        <span className="text-fg-muted flex min-w-0 items-center gap-1.5 truncate">
+                          <CategoryIcon icon={category?.icon} color={category?.color} className="size-3.5 shrink-0" />
+                          {category?.name ?? 'Categoria'}
                         </span>
                         <Badge
                           tone={

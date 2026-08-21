@@ -60,8 +60,9 @@ export const NAV: NavItem[] = [
       { to: '/financeiro', label: 'Visão geral' },
       { to: '/financeiro/transacoes', label: 'Lançamentos' },
       { to: '/financeiro/contas', label: 'Contas e cartões' },
+      { to: '/financeiro/categorias', label: 'Categorias' },
       { to: '/financeiro/orcamento', label: 'Orçamento e metas' },
-      { to: '/financeiro/importar', label: 'Importar planilha' },
+      { to: '/financeiro/importar', label: 'Importar e exportar' },
     ],
   },
   {

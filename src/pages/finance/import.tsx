@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Field, Select } from '@/components/ui/field'
 import { Badge, EmptyState, Segmented, Stat } from '@/components/ui/misc'
 import { useAccounts, useCategories, useTransactions } from '@/data/queries'
+import { ExportCard } from '@/features/finance/export-card'
 import {
   CREATE,
   IGNORE,
@@ -153,12 +154,12 @@ export function ImportPage() {
             <Link to="/financeiro/transacoes" className="text-fg-subtle hover:text-fg">
               <ArrowLeft className="size-4" />
             </Link>
-            <h1 className="text-fg text-xl font-semibold">Importar planilha</h1>
+            <h1 className="text-fg text-xl font-semibold">Planilhas</h1>
           </div>
           <p className="text-fg-muted mt-1 max-w-2xl text-sm">
-            Traga o extrato exportado de outro app em vez de redigitar. O arquivo é lido no seu
-            navegador — nada é enviado para lugar nenhum — e nada é gravado até você conferir a
-            prévia.
+            Traga o extrato exportado de outro app em vez de redigitar, ou leve os seus
+            lançamentos para fora. Tudo acontece no seu navegador — nada é enviado para lugar
+            nenhum — e nada é gravado até você conferir a prévia.
           </p>
         </div>
         {fileName && (
@@ -169,7 +170,10 @@ export function ImportPage() {
       </div>
 
       {!fileName ? (
-        <FilePicker onPick={loadFile} error={readError} />
+        <>
+          <ExportCard />
+          <FilePicker onPick={loadFile} error={readError} />
+        </>
       ) : (
         <>
           <Card>
@@ -290,7 +294,7 @@ export function ImportPage() {
                               .filter((category) => category.kind === kind)
                               .map((category) => (
                                 <option key={category.id} value={category.id}>
-                                  {category.icon} {category.name}
+                                  {category.name}
                                 </option>
                               ))}
                           </Select>

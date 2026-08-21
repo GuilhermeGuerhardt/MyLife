@@ -135,7 +135,7 @@ export function TransactionsPage() {
                 .sort((a, b) => a.name.localeCompare(b.name))
                 .map((category) => (
                   <option key={category.id} value={category.id}>
-                    {category.icon} {category.name}
+                    {category.name}
                   </option>
                 ))}
             </Select>
