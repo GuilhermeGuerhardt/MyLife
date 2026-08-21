@@ -6,12 +6,13 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge, EmptyState, Progress, SectionTitle, Stat } from '@/components/ui/misc'
 import { useAccounts, useCategories } from '@/data/queries'
 import { AccountForm } from '@/features/finance/account-form'
-import { useCreateTransaction, useRemoveTransaction } from '@/features/finance/actions'
+import { useCreateTransaction, useSetTransactionPaid } from '@/features/finance/actions'
 import { CategoryIcon } from '@/features/finance/category-icons'
 import { CashFlowChart, CategoryDonut } from '@/features/finance/charts'
 import { MonthNav, TransactionList } from '@/features/finance/shared'
 import { TransactionForm } from '@/features/finance/transaction-form'
 import { useFinance } from '@/features/finance/use-finance'
+import { useTransactionEditor } from '@/features/finance/use-transaction-editor'
 import { addMonths, competenceLabel, toCompetence } from '@/lib/finance/billing'
 import { formatCents } from '@/lib/finance/money'
 import { resolveSliceColors } from '@/lib/finance/palette'
@@ -25,7 +26,8 @@ export function FinanceOverview() {
   const { create: createAccount } = useAccounts()
   const { data: categories } = useCategories()
   const createTransaction = useCreateTransaction()
-  const removeTransaction = useRemoveTransaction()
+  const setPaid = useSetTransactionPaid()
+  const { open: openEditor, editor } = useTransactionEditor()
 
   const [addingAccount, setAddingAccount] = useState(false)
   const [addingTransaction, setAddingTransaction] = useState(false)
@@ -222,7 +224,8 @@ export function FinanceOverview() {
               transactions={finance.monthTransactions.slice(0, 8)}
               accounts={finance.accounts}
               categoryById={finance.categoryById}
-              onRemove={(transaction) => void removeTransaction(transaction)}
+              onEdit={openEditor}
+              onSetPaid={(transaction, paid) => void setPaid(transaction, paid)}
               emptyTitle="Nada lançado neste mês"
               emptyDescription='Use o botão acima ou o registro rápido (Ctrl+K): "gastei 35 no mercado".'
             />
@@ -346,6 +349,8 @@ export function FinanceOverview() {
           }}
         />
       )}
+
+      {editor}
     </div>
   )
 }

@@ -5,12 +5,13 @@ import { Button, buttonStyles } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Field, Input, Select } from '@/components/ui/field'
 import { Segmented, Stat } from '@/components/ui/misc'
-import { useCategories, useTransactions } from '@/data/queries'
-import type { Transaction, TransactionKind } from '@/data/types'
-import { useCreateTransaction, useRemoveTransaction } from '@/features/finance/actions'
+import { useCategories } from '@/data/queries'
+import type { TransactionKind } from '@/data/types'
+import { useCreateTransaction, useSetTransactionPaid } from '@/features/finance/actions'
 import { MonthNav, TransactionList } from '@/features/finance/shared'
 import { TransactionForm } from '@/features/finance/transaction-form'
 import { useFinance } from '@/features/finance/use-finance'
+import { useTransactionEditor } from '@/features/finance/use-transaction-editor'
 import { toCompetence } from '@/lib/finance/billing'
 import { formatCents } from '@/lib/finance/money'
 import { normalize } from '@/lib/quick-add/parser'
@@ -22,9 +23,9 @@ export function TransactionsPage() {
   const [competence, setCompetence] = useState(toCompetence(today()))
   const finance = useFinance(competence)
   const { data: categories } = useCategories()
-  const { update } = useTransactions()
   const createTransaction = useCreateTransaction()
-  const removeTransaction = useRemoveTransaction()
+  const setPaid = useSetTransactionPaid()
+  const { open: openEditor, editor } = useTransactionEditor()
 
   const [filter, setFilter] = useState<Filter>('all')
   const [search, setSearch] = useState('')
@@ -45,17 +46,6 @@ export function TransactionsPage() {
     (sum, t) => sum + (t.kind === 'income' ? t.amount_cents : t.kind === 'expense' ? -t.amount_cents : 0),
     0,
   )
-
-  async function handleRemove(transaction: Transaction) {
-    if (transaction.installment_group_id && transaction.installment_total) {
-      const all = confirm(
-        `Este lançamento é parcelado (${transaction.installment_n}/${transaction.installment_total}).\n\nOK remove todas as parcelas. Cancelar remove só esta.`,
-      )
-      await removeTransaction(transaction, all ? 'group' : 'single')
-      return
-    }
-    await removeTransaction(transaction)
-  }
 
   return (
     <div className="space-y-5">
@@ -148,10 +138,8 @@ export function TransactionsPage() {
           transactions={filtered}
           accounts={finance.accounts}
           categoryById={finance.categoryById}
-          onRemove={(transaction) => void handleRemove(transaction)}
-          onTogglePaid={(transaction) =>
-            update.mutate({ id: transaction.id, patch: { paid: true } })
-          }
+          onEdit={openEditor}
+          onSetPaid={(transaction, paid) => void setPaid(transaction, paid)}
           emptyTitle="Nenhum lançamento com esses filtros"
           emptyDescription="Ajuste o mês, os filtros ou lance algo novo."
         />
@@ -168,6 +156,8 @@ export function TransactionsPage() {
           }}
         />
       )}
+
+      {editor}
     </div>
   )
 }

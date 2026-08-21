@@ -6,9 +6,10 @@ import { Badge, EmptyState, Progress, SectionTitle, Stat } from '@/components/ui
 import { useAccounts } from '@/data/queries'
 import { ACCOUNT_KIND_LABELS, type Account } from '@/data/types'
 import { AccountForm } from '@/features/finance/account-form'
-import { useRemoveTransaction } from '@/features/finance/actions'
+import { useSetTransactionPaid } from '@/features/finance/actions'
 import { MonthNav, TransactionList } from '@/features/finance/shared'
 import { useFinance } from '@/features/finance/use-finance'
+import { useTransactionEditor } from '@/features/finance/use-transaction-editor'
 import { competenceLabel, statementPeriod, toCompetence } from '@/lib/finance/billing'
 import { formatCents } from '@/lib/finance/money'
 import { longDate, percent, relativeDay, shortDate } from '@/lib/format'
@@ -18,7 +19,8 @@ export function AccountsPage() {
   const [competence, setCompetence] = useState(toCompetence(today()))
   const finance = useFinance(competence)
   const { create, update } = useAccounts()
-  const removeTransaction = useRemoveTransaction()
+  const setPaid = useSetTransactionPaid()
+  const { open: openEditor, editor: transactionEditor } = useTransactionEditor()
   const [editing, setEditing] = useState<Account | null>(null)
   const [adding, setAdding] = useState(false)
 
@@ -233,7 +235,8 @@ export function AccountsPage() {
                             transactions={items}
                             accounts={finance.accounts}
                             categoryById={finance.categoryById}
-                            onRemove={(transaction) => void removeTransaction(transaction)}
+                            onEdit={openEditor}
+                            onSetPaid={(transaction, paid) => void setPaid(transaction, paid)}
                             emptyTitle="Fatura sem lançamentos"
                             emptyDescription="Compras feitas depois do fechamento aparecem na fatura seguinte."
                           />
@@ -263,6 +266,8 @@ export function AccountsPage() {
           }}
         />
       )}
+
+      {transactionEditor}
     </div>
   )
 }
