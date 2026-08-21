@@ -328,7 +328,19 @@ function AgendaWidget() {
                 {relativeDay(event.date)}
               </span>
               <span className="text-fg min-w-0 flex-1 truncate text-sm">{event.title}</span>
-              <Badge>{SOURCE_LABELS[event.source]}</Badge>
+              {/*
+                Tendo valor, ele vale mais que a origem: cinco linhas marcadas
+                "Conta" não informam nada, e o que se quer saber de relance é
+                quanto vai sair. Sem valor — prova, entrega, meta já atingida —
+                o rótulo continua sendo a única pista do que é aquilo.
+              */}
+              {event.amountCents ? (
+                <span className="text-fg-muted shrink-0 text-xs font-medium tabular-nums">
+                  {currency(event.amountCents / 100)}
+                </span>
+              ) : (
+                <Badge>{SOURCE_LABELS[event.source]}</Badge>
+              )}
             </div>
           ))
         )}
