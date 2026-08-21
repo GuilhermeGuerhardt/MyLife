@@ -8,7 +8,7 @@ import {
   Search,
   Trash2,
 } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -41,6 +41,43 @@ const TEMPLATE = `## Resumo
 ## Para revisar
 `
 
+type NoteMode = 'edit' | 'preview'
+
+/** Onde a escolha entre escrever e ler fica lembrada. */
+const MODE_KEY = 'life:caderno-modo'
+
+function readMode(): NoteMode {
+  try {
+    return localStorage.getItem(MODE_KEY) === 'preview' ? 'preview' : 'edit'
+  } catch {
+    return 'edit'
+  }
+}
+
+/**
+ * Editar ou visualizar é preferência de leitura, não estado de uma anotação.
+ *
+ * Por isso mora aqui, acima do editor: o `NoteEditor` é montado com `key` na
+ * anotação e remonta a cada troca, o que zerava o modo e jogava de volta no
+ * texto cru justo quando a pessoa queria ler o caderno formatado. Guardado
+ * também no navegador, para sobreviver a sair da página e a fechar o app.
+ */
+function useNoteMode(): [NoteMode, (mode: NoteMode) => void] {
+  const [mode, setMode] = useState<NoteMode>(readMode)
+
+  const change = useCallback((next: NoteMode) => {
+    setMode(next)
+    try {
+      localStorage.setItem(MODE_KEY, next)
+    } catch {
+      // Sem localStorage a escolha vale só nesta sessão — não é motivo para
+      // impedir a troca de modo.
+    }
+  }, [])
+
+  return [mode, change]
+}
+
 function Notebook({ track }: { track: Track }) {
   const academic = track === 'academic'
   const { data: allNotes, create, update, remove } = useNotes()
@@ -48,6 +85,7 @@ function Notebook({ track }: { track: Track }) {
   const { data: subjects } = useSubjects()
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [mode, setMode] = useNoteMode()
   const [search, setSearch] = useState('')
   const [programFilter, setProgramFilter] = useState('')
   const [tagFilter, setTagFilter] = useState<string | null>(null)
@@ -91,6 +129,9 @@ function Notebook({ track }: { track: Track }) {
       pinned: false,
     })
     setSelectedId(note.id)
+    // A única exceção ao modo lembrado: anotação recém-criada só tem o modelo
+    // em branco, e quem clicou em "Nova anotação" quer escrever, não ler.
+    setMode('edit')
   }
 
   const base = academic ? '/faculdade' : '/cursos'
@@ -229,6 +270,8 @@ function Notebook({ track }: { track: Track }) {
             key={selected.id}
             note={selected}
             track={track}
+            mode={mode}
+            onModeChange={setMode}
             programs={trackPrograms}
             subjects={subjects.filter((s) => s.program_id === selected.program_id)}
             onBack={() => setSelectedId(null)}
@@ -255,6 +298,8 @@ function Notebook({ track }: { track: Track }) {
 function NoteEditor({
   note,
   track,
+  mode,
+  onModeChange,
   programs,
   subjects,
   onBack,
@@ -263,6 +308,9 @@ function NoteEditor({
 }: {
   note: Note
   track: Track
+  /** Vem de fora: o editor remonta a cada troca de anotação, o modo não. */
+  mode: NoteMode
+  onModeChange: (mode: NoteMode) => void
   programs: Array<{ id: string; name: string }>
   subjects: Array<{ id: string; name: string }>
   onBack: () => void
@@ -276,7 +324,6 @@ function NoteEditor({
     subject_id: note.subject_id ?? '',
     tags: note.tags.join(', '),
   })
-  const [mode, setMode] = useState<'edit' | 'preview'>('edit')
   const [saved, setSaved] = useState(true)
 
   const patch = useMemo(
@@ -293,16 +340,24 @@ function NoteEditor({
     [form],
   )
 
+  // `onSave` é recriado a cada render do caderno — trocar de modo, um refetch
+  // da lista. Deixá-lo nas dependências do temporizador faria cada um desses
+  // renders reiniciar a contagem, e o salvamento ficaria sempre 800 ms adiante.
+  const salvar = useRef(onSave)
+  useEffect(() => {
+    salvar.current = onSave
+  }, [onSave])
+
   // Salva sozinho depois de uma pausa na digitação — anotação perdida por
   // esquecer de salvar é a forma mais rápida de abandonar um caderno.
   useEffect(() => {
     if (saved) return
     const timer = setTimeout(() => {
-      onSave(patch)
+      salvar.current(patch)
       setSaved(true)
     }, 800)
     return () => clearTimeout(timer)
-  }, [patch, saved, onSave])
+  }, [patch, saved])
 
   const set = (values: Partial<typeof form>) => {
     setForm((prev) => ({ ...prev, ...values }))
@@ -323,7 +378,7 @@ function NoteEditor({
         />
         <Segmented
           value={mode}
-          onChange={setMode}
+          onChange={onModeChange}
           options={[
             { value: 'edit', label: <Pen className="size-3.5" />, ariaLabel: 'Editar' },
             { value: 'preview', label: <Eye className="size-3.5" />, ariaLabel: 'Visualizar' },
