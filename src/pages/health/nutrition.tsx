@@ -1,5 +1,15 @@
-import { ChevronLeft, ChevronRight, Copy, Plus, Search, Star, Trash2, Utensils } from 'lucide-react'
-import { useEffect, useMemo, useState } from 'react'
+import {
+  ChevronLeft,
+  ChevronRight,
+  Copy,
+  Pencil,
+  Plus,
+  Search,
+  Star,
+  Trash2,
+  Utensils,
+} from 'lucide-react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -7,7 +17,7 @@ import { Field, Input } from '@/components/ui/field'
 import { Badge, EmptyState, Progress, Stat } from '@/components/ui/misc'
 import { Modal } from '@/components/ui/modal'
 import { useFoods, useMealLogs } from '@/data/queries'
-import { MEAL_SLOTS, type Food, type MealSlot } from '@/data/types'
+import { MEAL_SLOTS, type BaseRow, type Food, type MealSlot } from '@/data/types'
 import { useHealthSummary } from '@/features/health/use-health-summary'
 import { decimal, integer, longDate, relativeDay } from '@/lib/format'
 import { normalize } from '@/lib/quick-add/parser'
@@ -18,7 +28,12 @@ export function NutritionPage() {
   const [date, setDate] = useState(today())
   const [adding, setAdding] = useState<MealSlot | null>(null)
 
-  const { data: foods, update: updateFood } = useFoods()
+  const {
+    data: foods,
+    create: createFood,
+    update: updateFood,
+    remove: removeFood,
+  } = useFoods()
   const { data: logs, create, remove } = useMealLogs()
   const summary = useHealthSummary()
 
@@ -198,6 +213,9 @@ export function NutritionPage() {
           onToggleFavorite={(food) =>
             updateFood.mutate({ id: food.id, patch: { favorite: !food.favorite } })
           }
+          onCreateFood={(draft) => createFood.mutateAsync(draft)}
+          onUpdateFood={(id, draft) => updateFood.mutateAsync({ id, patch: draft })}
+          onRemoveFood={(id) => removeFood.mutateAsync(id)}
           onClose={() => {
             setAdding(null)
             if (initialQuery) {
@@ -250,6 +268,34 @@ function MacroRow({
   )
 }
 
+export type FoodDraft = Omit<Food, keyof BaseRow>
+
+/**
+ * As três telas do modal.
+ *
+ * União em vez de dois estados soltos: "escolhendo a quantidade" e "editando o
+ * alimento" nunca acontecem ao mesmo tempo, e o tipo impede a combinação.
+ */
+type View =
+  | { kind: 'search' }
+  | { kind: 'quantity'; food: Food }
+  /** `food` nulo = cadastrando um alimento novo. */
+  | { kind: 'form'; food: Food | null }
+
+/** Liga o botão do rodapé ao `<form>`, que fica fora dele no DOM. */
+const FORM_ID = 'formulario-alimento'
+
+/** Lê número digitado à brasileira; valor inválido ou negativo vira zero. */
+function decimalInput(value: string): number {
+  const parsed = Number(value.replace(',', '.').trim())
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 0
+}
+
+/** Calorias implícitas nos macros: 4 kcal por grama de proteína e carboidrato, 9 de gordura. */
+function kcalFromMacros(proteinG: number, carbG: number, fatG: number): number {
+  return Math.round(proteinG * 4 + carbG * 4 + fatG * 9)
+}
+
 function AddFoodModal({
   slot,
   foods,
@@ -257,6 +303,9 @@ function AddFoodModal({
   onClose,
   onAdd,
   onToggleFavorite,
+  onCreateFood,
+  onUpdateFood,
+  onRemoveFood,
 }: {
   slot: MealSlot
   foods: Food[]
@@ -264,54 +313,104 @@ function AddFoodModal({
   onClose: () => void
   onAdd: (food: Food, quantityG: number) => Promise<void>
   onToggleFavorite: (food: Food) => void
+  onCreateFood: (draft: FoodDraft) => Promise<Food>
+  onUpdateFood: (id: string, draft: FoodDraft) => Promise<Food>
+  onRemoveFood: (id: string) => Promise<void>
 }) {
   const [query, setQuery] = useState(initialQuery)
-  const [selected, setSelected] = useState<Food | null>(null)
+  const [view, setView] = useState<View>({ kind: 'search' })
   const [quantity, setQuantity] = useState('100')
 
   const results = useMemo(() => {
     const term = normalize(query)
     const list = term
-      ? foods.filter((food) => normalize(food.name).includes(term))
-      : [...foods].sort((a, b) => Number(b.favorite) - Number(a.favorite))
+      ? foods.filter(
+          (food) =>
+            normalize(food.name).includes(term) ||
+            (food.brand !== null && normalize(food.brand).includes(term)),
+        )
+      : // Sem busca, primeiro os favoritos e depois os seus: a lista da TACO é
+        // longa e o que você mesmo cadastrou é o que você mais repete.
+        [...foods].sort(
+          (a, b) =>
+            Number(b.favorite) - Number(a.favorite) ||
+            Number(b.source === 'custom') - Number(a.source === 'custom'),
+        )
     return list.slice(0, 40)
   }, [foods, query])
 
   const label = MEAL_SLOTS.find((s) => s.id === slot)?.label ?? ''
-  const factor = (Number(quantity.replace(',', '.')) || 0) / 100
+  const factor = decimalInput(quantity) / 100
+
+  /** Vai para a quantidade já com a porção usual preenchida. */
+  const escolher = (food: Food) => {
+    setQuantity(String(food.serving_g))
+    setView({ kind: 'quantity', food })
+  }
+
+  const salvarAlimento = async (draft: FoodDraft) => {
+    const editando = view.kind === 'form' ? view.food : null
+    const food = editando ? await onUpdateFood(editando.id, draft) : await onCreateFood(draft)
+    // Quem cadastrou está no meio de registrar uma refeição: cair direto na
+    // quantidade poupa ter que procurar na lista o que acabou de criar.
+    escolher(food)
+  }
+
+  const removerAlimento = async (food: Food) => {
+    const aviso =
+      `Remover "${food.name}" da sua lista de alimentos?\n\n` +
+      'O que você já registrou no diário continua lá — cada registro guarda a própria cópia dos valores.'
+    if (!confirm(aviso)) return
+    await onRemoveFood(food.id)
+    setView({ kind: 'search' })
+  }
+
+  const descricao =
+    view.kind === 'form'
+      ? 'Os valores são por 100 g ou 100 ml, como vêm no rótulo.'
+      : 'Valores por 100 g da TACO. O que não estiver na lista, você cadastra.'
 
   return (
     <Modal
       open
       onClose={onClose}
-      title={`Adicionar em ${label}`}
-      description="Valores por 100 g conforme a TACO. Na Fase 2 entra o scanner de código de barras."
+      title={view.kind === 'form' && view.food ? 'Editar alimento' : `Adicionar em ${label}`}
+      description={descricao}
       footer={
-        selected ? (
+        view.kind === 'quantity' ? (
           <>
-            <Button variant="ghost" onClick={() => setSelected(null)}>
+            <Button variant="ghost" onClick={() => setView({ kind: 'search' })}>
               Voltar
             </Button>
             <Button
               onClick={async () => {
-                await onAdd(selected, Number(quantity.replace(',', '.')))
-                setSelected(null)
+                await onAdd(view.food, decimalInput(quantity))
+                setView({ kind: 'search' })
                 setQuery('')
               }}
             >
-              Adicionar · {integer(selected.kcal * factor)} kcal
+              Adicionar · {integer(view.food.kcal * factor)} kcal
+            </Button>
+          </>
+        ) : view.kind === 'form' ? (
+          <>
+            <Button variant="ghost" onClick={() => setView({ kind: 'search' })}>
+              Cancelar
+            </Button>
+            <Button type="submit" form={FORM_ID}>
+              {view.food ? 'Salvar alterações' : 'Cadastrar e usar'}
             </Button>
           </>
         ) : undefined
       }
     >
-      {selected ? (
+      {view.kind === 'quantity' ? (
         <div className="space-y-4">
           <div>
-            <p className="text-fg text-sm font-medium">{selected.name}</p>
+            <p className="text-fg text-sm font-medium">{view.food.name}</p>
             <p className="text-fg-subtle text-xs">
-              Por 100 g: {integer(selected.kcal)} kcal · P {decimal(selected.protein_g, 1)} · C{' '}
-              {decimal(selected.carb_g, 1)} · G {decimal(selected.fat_g, 1)}
+              Por 100 g: {integer(view.food.kcal)} kcal · P {decimal(view.food.protein_g, 1)} · C{' '}
+              {decimal(view.food.carb_g, 1)} · G {decimal(view.food.fat_g, 1)}
             </p>
           </div>
 
@@ -327,10 +426,10 @@ function AddFoodModal({
           <div className="flex flex-wrap gap-1.5">
             <button
               type="button"
-              onClick={() => setQuantity(String(selected.serving_g))}
+              onClick={() => setQuantity(String(view.food.serving_g))}
               className="border-border-base bg-surface-2 text-fg-muted hover:text-fg rounded-md border px-2 py-1 text-xs"
             >
-              {selected.serving_label} ({selected.serving_g} g)
+              {view.food.serving_label} ({view.food.serving_g} g)
             </button>
             {[50, 100, 150, 200].map((amount) => (
               <button
@@ -345,12 +444,20 @@ function AddFoodModal({
           </div>
 
           <div className="bg-surface-2 grid grid-cols-4 gap-2 rounded-lg px-3 py-2.5 text-center text-xs">
-            <Macro label="kcal" value={integer(selected.kcal * factor)} />
-            <Macro label="Prot" value={`${decimal(selected.protein_g * factor, 1)} g`} />
-            <Macro label="Carb" value={`${decimal(selected.carb_g * factor, 1)} g`} />
-            <Macro label="Gord" value={`${decimal(selected.fat_g * factor, 1)} g`} />
+            <Macro label="kcal" value={integer(view.food.kcal * factor)} />
+            <Macro label="Prot" value={`${decimal(view.food.protein_g * factor, 1)} g`} />
+            <Macro label="Carb" value={`${decimal(view.food.carb_g * factor, 1)} g`} />
+            <Macro label="Gord" value={`${decimal(view.food.fat_g * factor, 1)} g`} />
           </div>
         </div>
+      ) : view.kind === 'form' ? (
+        <FoodForm
+          id={FORM_ID}
+          initial={view.food}
+          defaultName={query}
+          onSubmit={salvarAlimento}
+          onRemove={removerAlimento}
+        />
       ) : (
         <div className="space-y-3">
           <Field>
@@ -364,11 +471,21 @@ function AddFoodModal({
             <Search className="text-fg-subtle pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
           </Field>
 
+          <Button
+            variant="secondary"
+            size="sm"
+            className="w-full"
+            onClick={() => setView({ kind: 'form', food: null })}
+          >
+            <Plus />
+            {query.trim() ? `Cadastrar "${query.trim()}"` : 'Cadastrar um alimento'}
+          </Button>
+
           {results.length === 0 ? (
             <EmptyState
               icon={<Utensils className="size-5" />}
               title="Nada encontrado"
-              description="A base local traz os alimentos mais comuns da TACO. A tabela completa e os industrializados via código de barras entram na Fase 2."
+              description="A base local traz os alimentos mais comuns da TACO. O que faltar, cadastre pelo botão acima — fica salvo para as próximas vezes."
             />
           ) : (
             <div className="divide-border-base -mx-1 divide-y">
@@ -376,18 +493,28 @@ function AddFoodModal({
                 <div key={food.id} className="flex items-center gap-2 px-1 py-2">
                   <button
                     type="button"
-                    onClick={() => {
-                      setSelected(food)
-                      setQuantity(String(food.serving_g))
-                    }}
+                    onClick={() => escolher(food)}
                     className="min-w-0 flex-1 text-left"
                   >
-                    <p className="text-fg truncate text-sm">{food.name}</p>
+                    <p className="text-fg truncate text-sm">
+                      {food.name}
+                      {food.brand && <span className="text-fg-subtle"> · {food.brand}</span>}
+                    </p>
                     <p className="text-fg-subtle text-[11px]">
                       {integer(food.kcal)} kcal/100 g · P {decimal(food.protein_g, 1)} g
                     </p>
                   </button>
                   {food.favorite && <Badge tone="accent">favorito</Badge>}
+                  {food.source === 'custom' && (
+                    <button
+                      type="button"
+                      onClick={() => setView({ kind: 'form', food })}
+                      className="text-fg-subtle hover:text-fg transition-colors"
+                      aria-label={`Editar ${food.name}`}
+                    >
+                      <Pencil className="size-3.5" />
+                    </button>
+                  )}
                   <button
                     type="button"
                     onClick={() => onToggleFavorite(food)}
@@ -407,6 +534,218 @@ function AddFoodModal({
         </div>
       )}
     </Modal>
+  )
+}
+
+interface FoodFormState {
+  name: string
+  brand: string
+  kcal: string
+  protein: string
+  carb: string
+  fat: string
+  fiber: string
+  serving_g: string
+  serving_label: string
+}
+
+/**
+ * Cadastro de um alimento que não está na TACO — a marca de whey que você usa,
+ * a marmita da esquina, a receita da sua mãe.
+ *
+ * Um `<form>` de verdade, e não um punhado de campos: o rodapé do modal fica
+ * fora dele no DOM e se liga pelo atributo `form`, e o Enter em qualquer campo
+ * salva, que é o que se espera de um formulário.
+ */
+function FoodForm({
+  id,
+  initial,
+  defaultName,
+  onSubmit,
+  onRemove,
+}: {
+  id: string
+  initial: Food | null
+  /** O que foi digitado na busca — quase sempre é o nome que a pessoa quer. */
+  defaultName: string
+  onSubmit: (draft: FoodDraft) => Promise<void>
+  onRemove: (food: Food) => Promise<void>
+}) {
+  const [form, setForm] = useState<FoodFormState>(() => ({
+    name: initial?.name ?? defaultName.trim(),
+    brand: initial?.brand ?? '',
+    kcal: initial ? String(initial.kcal) : '',
+    protein: initial ? String(initial.protein_g) : '',
+    carb: initial ? String(initial.carb_g) : '',
+    fat: initial ? String(initial.fat_g) : '',
+    fiber: initial ? String(initial.fiber_g) : '',
+    serving_g: initial ? String(initial.serving_g) : '100',
+    serving_label: initial?.serving_label ?? '1 porção',
+  }))
+  const [erro, setErro] = useState<string | null>(null)
+  const [salvando, setSalvando] = useState(false)
+
+  const set = (values: Partial<FoodFormState>) => setForm((prev) => ({ ...prev, ...values }))
+
+  const protein = decimalInput(form.protein)
+  const carb = decimalInput(form.carb)
+  const fat = decimalInput(form.fat)
+  const kcalPelosMacros = kcalFromMacros(protein, carb, fat)
+
+  async function submeter(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+
+    const name = form.name.trim()
+    if (!name) {
+      setErro('Dê um nome ao alimento.')
+      return
+    }
+
+    const serving = decimalInput(form.serving_g)
+    if (serving <= 0) {
+      setErro('A porção usual precisa ser maior que zero.')
+      return
+    }
+
+    setErro(null)
+    setSalvando(true)
+    try {
+      await onSubmit({
+        name,
+        brand: form.brand.trim() || null,
+        // Editar um alimento da TACO não é possível pela lista, mas se um dia
+        // for, a origem dele não deve virar "seu" sem querer.
+        source: initial?.source ?? 'custom',
+        barcode: initial?.barcode ?? null,
+        // Muito rótulo traz os macros e esconde a caloria. Deixando em branco,
+        // ela sai da conta dos macros em vez de virar zero.
+        kcal: form.kcal.trim() ? decimalInput(form.kcal) : kcalPelosMacros,
+        protein_g: protein,
+        carb_g: carb,
+        fat_g: fat,
+        fiber_g: decimalInput(form.fiber),
+        serving_g: serving,
+        serving_label: form.serving_label.trim() || '1 porção',
+        favorite: initial?.favorite ?? false,
+      })
+    } catch (causa) {
+      setErro(causa instanceof Error ? causa.message : 'Não foi possível salvar o alimento.')
+      setSalvando(false)
+    }
+  }
+
+  return (
+    <form id={id} onSubmit={submeter} className="space-y-4">
+      <Field label="Nome">
+        <Input
+          autoFocus
+          value={form.name}
+          onChange={(e) => set({ name: e.target.value })}
+          placeholder="Pão de queijo congelado"
+        />
+      </Field>
+
+      <Field label="Marca" hint="Opcional — ajuda a diferenciar dois parecidos">
+        <Input
+          value={form.brand}
+          onChange={(e) => set({ brand: e.target.value })}
+          placeholder="Forno de Minas"
+        />
+      </Field>
+
+      <div className="border-border-base space-y-3 rounded-lg border p-3">
+        <p className="text-fg-muted text-xs font-medium">Por 100 g (ou 100 ml)</p>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Field
+            label="Calorias"
+            suffix="kcal"
+            hint={
+              form.kcal.trim() || kcalPelosMacros === 0
+                ? undefined
+                : `Em branco vira ${integer(kcalPelosMacros)} kcal, pelos macros`
+            }
+          >
+            <Input
+              inputMode="decimal"
+              value={form.kcal}
+              onChange={(e) => set({ kcal: e.target.value })}
+              placeholder={kcalPelosMacros > 0 ? String(kcalPelosMacros) : '0'}
+            />
+          </Field>
+
+          <Field label="Proteína" suffix="g">
+            <Input
+              inputMode="decimal"
+              value={form.protein}
+              onChange={(e) => set({ protein: e.target.value })}
+              placeholder="0"
+            />
+          </Field>
+
+          <Field label="Carboidrato" suffix="g">
+            <Input
+              inputMode="decimal"
+              value={form.carb}
+              onChange={(e) => set({ carb: e.target.value })}
+              placeholder="0"
+            />
+          </Field>
+
+          <Field label="Gordura" suffix="g">
+            <Input
+              inputMode="decimal"
+              value={form.fat}
+              onChange={(e) => set({ fat: e.target.value })}
+              placeholder="0"
+            />
+          </Field>
+
+          <Field label="Fibra" suffix="g">
+            <Input
+              inputMode="decimal"
+              value={form.fiber}
+              onChange={(e) => set({ fiber: e.target.value })}
+              placeholder="0"
+            />
+          </Field>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Field label="Porção usual" suffix="g" hint="Vem preenchida ao escolher o alimento">
+          <Input
+            inputMode="decimal"
+            value={form.serving_g}
+            onChange={(e) => set({ serving_g: e.target.value })}
+          />
+        </Field>
+
+        <Field label="Como você chama">
+          <Input
+            value={form.serving_label}
+            onChange={(e) => set({ serving_label: e.target.value })}
+            placeholder="1 unidade"
+          />
+        </Field>
+      </div>
+
+      {erro && (
+        <p className="text-negative bg-negative/10 rounded-lg px-3 py-2 text-xs font-medium">
+          {erro}
+        </p>
+      )}
+
+      {salvando && <p className="text-fg-subtle text-xs">Salvando…</p>}
+
+      {/* Só o que você cadastrou pode sair: a TACO é o piso da base. */}
+      {initial?.source === 'custom' && (
+        <Button variant="ghost" size="sm" type="button" onClick={() => void onRemove(initial)}>
+          <Trash2 />
+          Remover da minha lista
+        </Button>
+      )}
+    </form>
   )
 }
 
