@@ -97,3 +97,75 @@ export function useRemoveTransaction() {
     await remove.mutateAsync(transaction.id)
   }
 }
+
+/**
+ * Edita um lançamento existente.
+ *
+ * A competência é recalculada em vez de preservada: mudar a data — ou trocar a
+ * conta por um cartão — muda a fatura em que o gasto cai, e deixar a
+ * competência velha faria o mês parar de bater com o extrato.
+ *
+ * O parcelamento fica de fora. Alterar o número de parcelas significa refazer o
+ * grupo inteiro, o que é outra operação, não uma edição.
+ */
+export function useUpdateTransaction() {
+  const { data: accounts } = useAccounts()
+  const { update } = useTransactions()
+
+  return async function updateTransaction(
+    transaction: Transaction,
+    draft: TransactionDraft,
+  ): Promise<void> {
+    const account = accounts.find((a) => a.id === draft.account_id)
+    const card = cardConfig(account)
+
+    await update.mutateAsync({
+      id: transaction.id,
+      patch: {
+        account_id: draft.account_id,
+        transfer_account_id: draft.transfer_account_id,
+        category_id: draft.category_id,
+        kind: draft.kind,
+        amount_cents: draft.amount_cents,
+        date: draft.date,
+        competence: competenceFor(draft.date, card),
+        description: draft.description,
+        tags: draft.tags,
+        paid: draft.paid,
+        notes: draft.notes,
+      },
+    })
+  }
+}
+
+/**
+ * Marca ou desmarca o pagamento.
+ *
+ * Numa compra parcelada vale só para a parcela tocada: as outras continuam
+ * previstas, que é como a fatura funciona de fato.
+ */
+export function useSetTransactionPaid() {
+  const { update } = useTransactions()
+
+  return async function setPaid(transaction: Transaction, paid: boolean): Promise<void> {
+    if (transaction.paid === paid) return
+    await update.mutateAsync({ id: transaction.id, patch: { paid } })
+  }
+}
+
+/** Converte um lançamento gravado no rascunho que o formulário edita. */
+export function toDraft(transaction: Transaction): TransactionDraft {
+  return {
+    account_id: transaction.account_id,
+    transfer_account_id: transaction.transfer_account_id,
+    category_id: transaction.category_id,
+    kind: transaction.kind,
+    amount_cents: transaction.amount_cents,
+    date: transaction.date,
+    description: transaction.description,
+    tags: transaction.tags,
+    paid: transaction.paid,
+    installments: 1,
+    notes: transaction.notes,
+  }
+}

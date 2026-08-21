@@ -1,3 +1,4 @@
+import { Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Field, Input, Select, Textarea } from '@/components/ui/field'
@@ -18,22 +19,30 @@ import { sortCategories } from './use-finance'
  * aparecem as parcelas e a fatura em que a compra vai cair — informação que
  * evita a surpresa de comprar depois do fechamento e só pagar dois meses
  * depois.
+ *
+ * Em `mode="edit"` o parcelamento some: mudar o número de parcelas de uma
+ * compra já gravada é refazer o grupo, não editar uma linha.
  */
 export function TransactionForm({
   accounts,
   categories,
   defaultKind = 'expense',
+  mode = 'create',
   initial,
   onClose,
+  onDelete,
   onSave,
 }: {
   accounts: Account[]
   categories: Category[]
   defaultKind?: TransactionKind
+  mode?: 'create' | 'edit'
   initial?: Partial<TransactionDraft>
   onClose: () => void
+  onDelete?: () => void
   onSave: (draft: TransactionDraft) => Promise<void>
 }) {
+  const editing = mode === 'edit'
   const [kind, setKind] = useState<TransactionKind>(initial?.kind ?? defaultKind)
   const [amount, setAmount] = useState(
     initial?.amount_cents ? (initial.amount_cents / 100).toFixed(2).replace('.', ',') : '',
@@ -46,7 +55,7 @@ export function TransactionForm({
   const [installments, setInstallments] = useState(initial?.installments ?? 1)
   const [paid, setPaid] = useState(initial?.paid ?? true)
   const [notes, setNotes] = useState(initial?.notes ?? '')
-  const [touchedCategory, setTouchedCategory] = useState(false)
+  const [touchedCategory, setTouchedCategory] = useState(editing)
 
   const account = accounts.find((a) => a.id === accountId)
   const card = cardConfig(account)
@@ -65,15 +74,17 @@ export function TransactionForm({
   }, [description, categories, kind, touchedCategory])
 
   // Compra no cartão não é dinheiro que saiu ainda — quem paga é a fatura.
+  // Só na criação: ao editar, a situação gravada é a que vale.
   useEffect(() => {
+    if (editing) return
     if (card && kind === 'expense') setPaid(false)
-  }, [card, kind])
+  }, [card, kind, editing])
 
   // Mesma regra que `useCreateTransaction` aplica ao salvar — a prévia não
   // pode divergir do que é gravado.
   const competence = competenceFor(date, card)
   const plan =
-    card && kind === 'expense' && installments > 1
+    !editing && card && kind === 'expense' && installments > 1
       ? buildInstallments(amountCents, installments, date, card)
       : null
 
@@ -86,10 +97,16 @@ export function TransactionForm({
     <Modal
       open
       onClose={onClose}
-      title="Novo lançamento"
+      title={editing ? 'Editar lançamento' : 'Novo lançamento'}
       description="Valores em reais. Use vírgula para os centavos."
       footer={
         <>
+          {onDelete && (
+            <Button variant="ghost" className="text-negative mr-auto" onClick={onDelete}>
+              <Trash2 />
+              Excluir
+            </Button>
+          )}
           <Button variant="ghost" onClick={onClose}>
             Cancelar
           </Button>
@@ -106,12 +123,12 @@ export function TransactionForm({
                 description: description.trim(),
                 tags: [],
                 paid,
-                installments: kind === 'expense' && card ? installments : 1,
+                installments: !editing && kind === 'expense' && card ? installments : 1,
                 notes: notes.trim() || null,
               })
             }
           >
-            Salvar
+            {editing ? 'Salvar alterações' : 'Salvar'}
           </Button>
         </>
       }
@@ -198,7 +215,7 @@ export function TransactionForm({
             </Field>
           )}
 
-          {card && kind === 'expense' && (
+          {!editing && card && kind === 'expense' && (
             <Field label="Parcelas">
               <Select
                 value={installments}
@@ -213,7 +230,7 @@ export function TransactionForm({
             </Field>
           )}
 
-          {!card && (
+          {(!card || editing) && (
             <Field label="Situação">
               <Select value={paid ? '1' : '0'} onChange={(e) => setPaid(e.target.value === '1')}>
                 <option value="1">Efetivado</option>
