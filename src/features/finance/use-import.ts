@@ -11,8 +11,10 @@ import { useAccounts, useCategories, useTransactions } from '@/data/queries'
 import { guessCategory } from '@/data/seed-finance'
 import type { Account, BaseRow, Category, Transaction } from '@/data/types'
 import { cardConfig } from '@/features/finance/actions'
+import { DEFAULT_ICON } from '@/features/finance/category-icons'
 import { competenceFor } from '@/lib/finance/billing'
 import { normalizeText, type ImportRow } from '@/lib/finance/import'
+import { CHART_PALETTE } from '@/lib/finance/palette'
 import { uid } from '@/lib/utils'
 
 /** Valor especial das listas de mapeamento. */
@@ -20,7 +22,6 @@ export const CREATE = '__create__'
 export const IGNORE = '__ignore__'
 
 const ACCOUNT_COLORS = ['#3b82f6', '#22c55e', '#f97316', '#a855f7', '#ef4444', '#14b8a6', '#eab308', '#64748b']
-const CATEGORY_COLOR = '#71717a'
 
 // ---------------------------------------------------------------------------
 // Sugestão de correspondência
@@ -178,8 +179,11 @@ export function useRunImport() {
       const draft: Omit<Category, keyof BaseRow> = {
         name: label,
         kind: kindByLabel.get(label) ?? 'expense',
-        color: CATEGORY_COLOR,
-        icon: '📦',
+        // Uma cor por categoria, girando a paleta — como as contas já faziam.
+        // Enquanto todas nasciam do mesmo cinza, o gráfico "Onde foi o
+        // dinheiro" saía monocromático e não dava para ler fatia nenhuma.
+        color: CHART_PALETTE[result.categoriesCreated % CHART_PALETTE.length]!,
+        icon: DEFAULT_ICON,
         // O próprio nome vira palavra-chave: a próxima importação (e o registro
         // rápido) já reconhecem essa categoria sozinhos.
         keywords: [normalizeText(label)],

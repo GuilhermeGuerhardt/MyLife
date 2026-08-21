@@ -7,6 +7,7 @@ import { Badge, EmptyState, Progress, SectionTitle, Stat } from '@/components/ui
 import { Modal } from '@/components/ui/modal'
 import { useBudgets, useGoals } from '@/data/queries'
 import type { FinancialGoal } from '@/data/types'
+import { CategoryIcon } from '@/features/finance/category-icons'
 import { MonthNav } from '@/features/finance/shared'
 import { sortCategories, useFinance } from '@/features/finance/use-finance'
 import { addMonths, competenceLabel, toCompetence } from '@/lib/finance/billing'
@@ -125,7 +126,12 @@ export function BudgetPage() {
                 <CardContent className="space-y-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2">
-                      <span className="text-lg">{category?.icon}</span>
+                      <span
+                        className="flex size-8 shrink-0 items-center justify-center rounded-lg"
+                        style={{ background: `${category?.color ?? '#71717a'}1f` }}
+                      >
+                        <CategoryIcon icon={category?.icon} color={category?.color} />
+                      </span>
                       <div>
                         <p className="text-fg text-sm font-medium">
                           {category?.name ?? 'Categoria'}
@@ -357,7 +363,7 @@ function BudgetForm({
           <Select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}>
             {categories.map((category) => (
               <option key={category.id} value={category.id}>
-                {category.icon} {category.name}
+                {category.name}
               </option>
             ))}
           </Select>

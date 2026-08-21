@@ -35,6 +35,12 @@ export const CALENDARIO_ICS: TipoArquivo = {
   mime: 'text/calendar;charset=utf-8',
 }
 
+export const PLANILHA_CSV: TipoArquivo = {
+  nome: 'Planilha CSV',
+  extensoes: ['csv'],
+  mime: 'text/csv;charset=utf-8',
+}
+
 /**
  * Salva o conteúdo com o nome sugerido.
  *
@@ -61,7 +67,20 @@ export async function salvarArquivo(
   const anchor = document.createElement('a')
   anchor.href = url
   anchor.download = nomeSugerido
+
+  // A âncora precisa estar no documento: o Firefox ignora o clique numa que
+  // está solta na memória, e o download não acontece nem dá erro.
+  anchor.style.display = 'none'
+  document.body.append(anchor)
   anchor.click()
-  URL.revokeObjectURL(url)
+
+  // O `revoke` só depois de o navegador ter começado a baixar. Feito na linha
+  // seguinte ao clique — como estava — ele derruba a URL antes da leitura e o
+  // arquivo chega vazio ou nem chega.
+  setTimeout(() => {
+    URL.revokeObjectURL(url)
+    anchor.remove()
+  }, 0)
+
   return true
 }
