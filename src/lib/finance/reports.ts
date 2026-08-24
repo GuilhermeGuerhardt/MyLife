@@ -55,7 +55,13 @@ export function accountBalance(account: AccountLike, transactions: TransactionLi
   return balance
 }
 
-/** Total em aberto da fatura de um cartão numa competência. */
+/**
+ * Quanto a fatura da competência somou — pago ou não.
+ *
+ * É o valor histórico do mês, o que a fatura cobrou. Para saber o que ainda
+ * falta pagar use `openInvoiceTotal`: depois de quitada, esta continua valendo
+ * o mesmo, e é isso que se quer num extrato.
+ */
 export function invoiceTotal(
   accountId: string,
   competence: Competence,
@@ -63,6 +69,23 @@ export function invoiceTotal(
 ): number {
   return transactions
     .filter((tx) => tx.account_id === accountId && tx.competence === competence)
+    .reduce((sum, tx) => sum + (tx.kind === 'income' ? -tx.amount_cents : tx.amount_cents), 0)
+}
+
+/**
+ * O que ainda falta pagar da fatura.
+ *
+ * Separado de `invoiceTotal` porque as duas perguntas são diferentes, e
+ * confundi-las faz o saldo previsto descontar duas vezes uma fatura já paga:
+ * uma no saldo da conta, que já caiu, e outra na projeção.
+ */
+export function openInvoiceTotal(
+  accountId: string,
+  competence: Competence,
+  transactions: TransactionLike[],
+): number {
+  return transactions
+    .filter((tx) => tx.account_id === accountId && tx.competence === competence && !tx.paid)
     .reduce((sum, tx) => sum + (tx.kind === 'income' ? -tx.amount_cents : tx.amount_cents), 0)
 }
 
@@ -227,4 +250,42 @@ export function monthlySeries(
       net: flow.net,
     }
   })
+}
+
+/**
+ * Um lançamento previsto cuja data já passou.
+ *
+ * O atraso é derivado, nunca gravado: uma coluna `atrasado` no banco começaria
+ * a mentir na virada da meia-noite, e passaria a exigir alguém para corrigi-la.
+ *
+ * Transferência fica de fora — dinheiro que anda entre contas suas não vence.
+ */
+export function isOverdue(transaction: TransactionLike, today: string): boolean {
+  if (transaction.paid || transaction.kind === 'transfer') return false
+  return transaction.date < today
+}
+
+export interface OverdueSummary {
+  count: number
+  /** Sempre positivo: é o quanto está em aberto, não um saldo. */
+  totalCents: number
+  /** A mais antiga primeiro — é a que costuma custar juros. */
+  oldestDate: string | null
+}
+
+/** Resumo do que venceu e não foi pago, para avisar sem precisar abrir o mês. */
+export function overdueSummary(
+  transactions: TransactionLike[],
+  today: string,
+): OverdueSummary {
+  const late = transactions.filter((t) => isOverdue(t, today))
+
+  return {
+    count: late.length,
+    totalCents: late.reduce((sum, t) => sum + t.amount_cents, 0),
+    oldestDate: late.reduce<string | null>(
+      (oldest, t) => (oldest === null || t.date < oldest ? t.date : oldest),
+      null,
+    ),
+  }
 }

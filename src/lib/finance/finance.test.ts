@@ -15,6 +15,9 @@ import {
   goalProjection,
   invoiceTotal,
   monthlyFlow,
+  isOverdue,
+  openInvoiceTotal,
+  overdueSummary,
   type AccountLike,
   type TransactionLike,
 } from './reports'
@@ -215,5 +218,85 @@ describe('metas', () => {
     const projection = goalProjection(100000, 20000, null, '2026-03')
     expect(projection.monthlyNeeded).toBeNull()
     expect(projection.percent).toBe(20)
+  })
+})
+
+describe('atraso', () => {
+  const hoje = '2026-03-15'
+
+  it('previsto com data passada está atrasado', () => {
+    expect(isOverdue(tx({ id: 'a', paid: false, date: '2026-03-10' }), hoje)).toBe(true)
+  })
+
+  it('pago nunca está atrasado, por mais velho que seja', () => {
+    expect(isOverdue(tx({ id: 'a', paid: true, date: '2020-01-01' }), hoje)).toBe(false)
+  })
+
+  it('previsto para o futuro não está atrasado', () => {
+    expect(isOverdue(tx({ id: 'a', paid: false, date: '2026-03-20' }), hoje)).toBe(false)
+  })
+
+  it('vencer hoje ainda não é atraso', () => {
+    expect(isOverdue(tx({ id: 'a', paid: false, date: hoje }), hoje)).toBe(false)
+  })
+
+  it('transferência não vence', () => {
+    expect(
+      isOverdue(tx({ id: 'a', paid: false, kind: 'transfer', date: '2026-01-01' }), hoje),
+    ).toBe(false)
+  })
+
+  it('resume quantas, quanto e desde quando', () => {
+    const resumo = overdueSummary(
+      [
+        tx({ id: 'a', paid: false, date: '2026-03-02', amount_cents: 5000 }),
+        tx({ id: 'b', paid: false, date: '2026-02-28', amount_cents: 3000 }),
+        tx({ id: 'c', paid: true, date: '2026-01-05', amount_cents: 9900 }),
+        tx({ id: 'd', paid: false, date: '2026-03-30', amount_cents: 1000 }),
+      ],
+      hoje,
+    )
+    expect(resumo.count).toBe(2)
+    expect(resumo.totalCents).toBe(8000)
+    expect(resumo.oldestDate).toBe('2026-02-28')
+  })
+
+  it('sem atrasos, resume em zero e sem data', () => {
+    const resumo = overdueSummary([tx({ id: 'a', paid: true })], hoje)
+    expect(resumo).toEqual({ count: 0, totalCents: 0, oldestDate: null })
+  })
+})
+
+describe('fatura paga', () => {
+  const compras: TransactionLike[] = [
+    tx({ id: 'a', account_id: 'card', competence: '2026-03', amount_cents: 12700, paid: false }),
+    tx({ id: 'b', account_id: 'card', competence: '2026-03', amount_cents: 8900, paid: false }),
+    tx({ id: 'c', account_id: 'card', competence: '2026-04', amount_cents: 5590, paid: false }),
+  ]
+
+  it('o total da fatura conta tudo da competência', () => {
+    expect(invoiceTotal('card', '2026-03', compras)).toBe(21600)
+  })
+
+  it('o total da fatura não muda depois de paga', () => {
+    const quitada = compras.map((t) =>
+      t.competence === '2026-03' ? { ...t, paid: true } : t,
+    )
+    expect(invoiceTotal('card', '2026-03', quitada)).toBe(21600)
+  })
+
+  it('o que falta pagar zera depois de quitada', () => {
+    expect(openInvoiceTotal('card', '2026-03', compras)).toBe(21600)
+    const quitada = compras.map((t) =>
+      t.competence === '2026-03' ? { ...t, paid: true } : t,
+    )
+    expect(openInvoiceTotal('card', '2026-03', quitada)).toBe(0)
+  })
+
+  it('quitar uma competência não mexe na fatura seguinte', () => {
+    const quitada = compras.map((t) =>
+      t.competence === '2026-03' ? { ...t, paid: true } : t,
+    )
+    expect(openInvoiceTotal('card', '2026-04', quitada)).toBe(5590)
   })
 })

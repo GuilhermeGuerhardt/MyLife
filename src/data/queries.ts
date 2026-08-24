@@ -177,6 +177,61 @@ export async function ensureSeed(): Promise<void> {
   }
 }
 
+/** Quantos registros o financeiro tem hoje, por tipo. */
+export interface FinanceCounts {
+  accounts: number
+  transactions: number
+  budgets: number
+  goals: number
+  recurring: number
+}
+
+export function totalFinanceRows(counts: FinanceCounts): number {
+  return (
+    counts.accounts + counts.transactions + counts.budgets + counts.goals + counts.recurring
+  )
+}
+
+async function financeCounts(): Promise<FinanceCounts> {
+  const [accounts, transactions, budgets, goals, recurring] = await Promise.all([
+    collections.accounts.list(),
+    collections.transactions.list(),
+    collections.budgets.list(),
+    collections.goals.list(),
+    collections.recurring.list(),
+  ])
+  return {
+    accounts: accounts.length,
+    transactions: transactions.length,
+    budgets: budgets.length,
+    goals: goals.length,
+    recurring: recurring.length,
+  }
+}
+
+/**
+ * Zera o financeiro e devolve as categorias ao catálogo padrão.
+ *
+ * As categorias não são simplesmente apagadas: sem nenhuma, não há como
+ * classificar um lançamento, e `ensureSeed` só repõe na abertura do app — a
+ * tela ficaria quebrada até alguém reiniciar. Repor aqui deixa o financeiro no
+ * estado de instalação em vez de num estado inválido.
+ *
+ * Saúde, alimentação, faculdade, cursos, caderno e rotina não são tocados.
+ */
+export async function resetFinance(): Promise<FinanceCounts> {
+  const removed = await financeCounts()
+
+  await collections.transactions.replaceAll([])
+  await collections.budgets.replaceAll([])
+  await collections.goals.replaceAll([])
+  await collections.recurring.replaceAll([])
+  await collections.accounts.replaceAll([])
+  await collections.categories.replaceAll(withMeta(CATEGORY_CATALOG) as Category[])
+
+  return removed
+}
+
 function useCollection<T extends BaseRow>(name: CollectionName, key: QueryKey = [name]) {
   const client = useQueryClient()
   const store = collections[name] as unknown as Collection<T>

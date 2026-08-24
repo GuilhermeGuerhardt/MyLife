@@ -1,4 +1,4 @@
-import { Flame, Pencil, Plus, Sparkles } from 'lucide-react'
+import { Flame, Pencil, Plus, Sparkles, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -8,6 +8,7 @@ import { HabitForm, type HabitDraft } from '@/features/routine/habit-form'
 import { Heatmap, HeatmapLegend } from '@/features/routine/heatmap'
 import { useHabitBoard, type HabitBoardItem } from '@/features/routine/use-habit-board'
 import { addDays, today, weekdayOf } from '@/lib/dates'
+import { confirmar } from '@/lib/avisos'
 import { integer } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
@@ -21,6 +22,32 @@ export function HabitsPage() {
   const save = async (draft: HabitDraft) => {
     if (editing) await board.update.mutateAsync({ id: editing.id, patch: draft })
     else await board.create.mutateAsync(draft)
+    setEditing(undefined)
+  }
+
+  /**
+   * Exclusão definitiva: o hábito e todos os dias marcados.
+   *
+   * A confirmação diz quantos dias vão embora — é o que separa apagar um hábito
+   * criado ontem de apagar um com meio ano de sequência.
+   */
+  async function excluir(habit: Habit) {
+    const dias = board.logCount(habit.id)
+    const historico =
+      dias > 0
+        ? ` Isto apaga também ${dias} dia${dias === 1 ? '' : 's'} marcado${dias === 1 ? '' : 's'}.`
+        : ''
+
+    const ok = await confirmar(
+      `Excluir "${habit.name}" de vez?${historico}
+
+` +
+        'Não tem desfazer. Para tirar da conta do dia sem perder o histórico, use Arquivar.',
+      { confirmar: 'Excluir', tom: 'error' },
+    )
+    if (!ok) return
+
+    await board.removeHabit(habit.id)
     setEditing(undefined)
   }
 
@@ -110,14 +137,26 @@ export function HabitsPage() {
           <CardHeader title="Arquivados" description="Fora da conta do dia, com o histórico intacto." />
           <CardContent className="flex flex-wrap gap-2">
             {board.archived.map((habit) => (
-              <Button
+              <div
                 key={habit.id}
-                variant="secondary"
-                size="sm"
-                onClick={() => board.update.mutate({ id: habit.id, patch: { archived: false } })}
+                className="bg-surface-2 border-border-base flex items-center gap-1 rounded-lg border pr-1"
               >
-                {habit.icon} {habit.name} · reativar
-              </Button>
+                <button
+                  type="button"
+                  onClick={() => board.update.mutate({ id: habit.id, patch: { archived: false } })}
+                  className="text-fg hover:text-accent px-3 py-1.5 text-xs font-medium transition-colors"
+                >
+                  {habit.icon} {habit.name} · reativar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void excluir(habit)}
+                  aria-label={`Excluir ${habit.name} definitivamente`}
+                  className="text-fg-subtle hover:text-negative p-1.5 transition-colors"
+                >
+                  <Trash2 className="size-3.5" />
+                </button>
+              </div>
             ))}
           </CardContent>
         </Card>
@@ -132,7 +171,7 @@ export function HabitsPage() {
           position={board.items.length}
           onClose={() => setEditing(undefined)}
           onSave={save}
-          onDelete={
+          onArchive={
             editing
               ? () => {
                   board.update.mutate({ id: editing.id, patch: { archived: true } })
@@ -140,6 +179,7 @@ export function HabitsPage() {
                 }
               : undefined
           }
+          onDelete={editing ? () => void excluir(editing) : undefined}
         />
       )}
     </div>

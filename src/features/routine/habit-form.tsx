@@ -1,3 +1,4 @@
+import { Archive, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Field, Input, Select, Textarea } from '@/components/ui/field'
@@ -25,6 +26,7 @@ export function HabitForm({
   position,
   onClose,
   onSave,
+  onArchive,
   onDelete,
 }: {
   open: boolean
@@ -33,6 +35,9 @@ export function HabitForm({
   position: number
   onClose: () => void
   onSave: (draft: HabitDraft) => void
+  /** Tira da conta do dia e guarda o histórico. Reversível. */
+  onArchive?: () => void
+  /** Apaga o hábito e o histórico. Não tem desfazer. */
   onDelete?: () => void
 }) {
   const [name, setName] = useState(habit?.name ?? '')
@@ -65,8 +70,15 @@ export function HabitForm({
       footer={
         <>
           {onDelete && (
-            <Button variant="ghost" className="mr-auto" onClick={onDelete}>
+            <Button variant="ghost" className="text-negative mr-auto" onClick={onDelete}>
+              <Trash2 />
               Excluir
+            </Button>
+          )}
+          {onArchive && (
+            <Button variant="ghost" onClick={onArchive}>
+              <Archive />
+              Arquivar
             </Button>
           )}
           <Button variant="secondary" onClick={onClose}>

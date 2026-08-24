@@ -3,6 +3,7 @@ import { useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { BACKUP_JSON, salvarArquivo } from '@/lib/salvar-arquivo'
+import { confirmar } from '@/lib/avisos'
 import { Badge } from '@/components/ui/misc'
 import { Modal } from '@/components/ui/modal'
 import { BACKUP_TABLES, exportAll, importAll } from '@/data/queries'
@@ -102,8 +103,12 @@ export function BackupCard() {
     }
   }
 
-  function resetData() {
-    if (!confirm('Isso apaga todos os dados locais deste navegador. Continuar?')) return
+  async function resetData() {
+    const ok = await confirmar('Isso apaga todos os dados locais deste navegador. Continuar?', {
+      confirmar: 'Apagar tudo',
+      tom: 'error',
+    })
+    if (!ok) return
     for (let index = localStorage.length - 1; index >= 0; index--) {
       const key = localStorage.key(index)
       if (key?.startsWith('life:table:')) localStorage.removeItem(key)

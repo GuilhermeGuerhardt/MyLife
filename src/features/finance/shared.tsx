@@ -1,4 +1,4 @@
-import { Check, ChevronLeft, ChevronRight, Clock, Pencil, Repeat } from 'lucide-react'
+import { AlertTriangle, Check, ChevronLeft, ChevronRight, Clock, Pencil, Repeat } from 'lucide-react'
 import { useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { Badge, EmptyState } from '@/components/ui/misc'
@@ -6,6 +6,7 @@ import type { Account, Category, Transaction } from '@/data/types'
 import { CategoryIcon } from './category-icons'
 import { addMonths, competenceLabel, type Competence } from '@/lib/finance/billing'
 import { formatCents } from '@/lib/finance/money'
+import { isOverdue } from '@/lib/finance/reports'
 import { shortDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { toCompetence } from '@/lib/finance/billing'
@@ -216,6 +217,37 @@ function SwipeRow({
   )
 }
 
+/**
+ * Selo de situação: pago, previsto ou vencido.
+ *
+ * O atraso é calculado na hora a partir da data — nunca gravado. Um previsto do
+ * dia 5 e um do dia 30 deixam de ter a mesma cara, que é a diferença entre um
+ * lembrete e uma conta esquecida.
+ */
+function StatusBadge({ transaction }: { transaction: Transaction }) {
+  if (transaction.paid) {
+    return (
+      <Badge tone="positive">
+        <Check className="size-3" />
+        pago
+      </Badge>
+    )
+  }
+
+  if (isOverdue(transaction, today())) {
+    // Uma despesa vence; uma receita que não caiu está atrasada. A distinção
+    // não é preciosismo: "salário vencido" lê como se você devesse o salário.
+    return (
+      <Badge tone="negative">
+        <AlertTriangle className="size-3" />
+        {transaction.kind === 'income' ? 'atrasado' : 'vencido'}
+      </Badge>
+    )
+  }
+
+  return <Badge tone="warning">previsto</Badge>
+}
+
 export function TransactionList({
   transactions,
   accounts,
@@ -301,17 +333,10 @@ export function TransactionList({
                 aria-label={transaction.paid ? 'Marcar como previsto' : 'Marcar como pago'}
                 className="shrink-0"
               >
-                {transaction.paid ? (
-                  <Badge tone="positive">
-                    <Check className="size-3" />
-                    pago
-                  </Badge>
-                ) : (
-                  <Badge tone="warning">previsto</Badge>
-                )}
+                <StatusBadge transaction={transaction} />
               </button>
             ) : (
-              !transaction.paid && <Badge tone="warning">previsto</Badge>
+              !transaction.paid && <StatusBadge transaction={transaction} />
             )}
 
             <Amount cents={transaction.amount_cents} kind={transaction.kind} />

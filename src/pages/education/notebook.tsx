@@ -1,6 +1,12 @@
 import {
   ArrowLeft,
+  ChevronDown,
+  ChevronRight,
   Eye,
+  FileText,
+  Folder,
+  FolderOpen,
+  List,
   NotebookPen,
   Pen,
   Pin,
@@ -17,6 +23,13 @@ import { Badge, EmptyState, Segmented } from '@/components/ui/misc'
 import { useNotes, usePrograms, useSubjects } from '@/data/queries'
 import type { Note, Track } from '@/data/types'
 import { Markdown } from '@/features/education/markdown'
+import { confirmar } from '@/lib/avisos'
+import {
+  allFolderKeys,
+  buildNoteTree,
+  countTreeNotes,
+  type TreeFolder,
+} from '@/lib/education/note-tree'
 import { normalize } from '@/lib/quick-add/parser'
 import { cn } from '@/lib/utils'
 
@@ -42,40 +55,72 @@ const TEMPLATE = `## Resumo
 `
 
 type NoteMode = 'edit' | 'preview'
+type NoteView = 'list' | 'tree'
 
-/** Onde a escolha entre escrever e ler fica lembrada. */
-const MODE_KEY = 'life:caderno-modo'
+/** Onde a escolha entre lista corrida e árvore de pastas fica lembrada. */
+const VIEW_KEY = 'life:caderno-vista'
+/** Pastas fechadas, por trilha — faculdade e cursos têm árvores diferentes. */
+const COLLAPSED_KEY = 'life:caderno-pastas-fechadas'
 
-function readMode(): NoteMode {
+function readCollapsed(track: Track): Set<string> {
   try {
-    return localStorage.getItem(MODE_KEY) === 'preview' ? 'preview' : 'edit'
+    const raw = localStorage.getItem(`${COLLAPSED_KEY}:${track}`)
+    const parsed: unknown = raw ? JSON.parse(raw) : []
+    return new Set(Array.isArray(parsed) ? parsed.filter((k) => typeof k === 'string') : [])
   } catch {
-    return 'edit'
+    // Preferência corrompida não pode impedir o caderno de abrir: começa tudo
+    // aberto, que é o estado padrão.
+    return new Set()
   }
 }
 
 /**
- * Editar ou visualizar é preferência de leitura, não estado de uma anotação.
+ * Guarda o que está **fechado**, não o que está aberto.
  *
- * Por isso mora aqui, acima do editor: o `NoteEditor` é montado com `key` na
- * anotação e remonta a cada troca, o que zerava o modo e jogava de volta no
- * texto cru justo quando a pessoa queria ler o caderno formatado. Guardado
- * também no navegador, para sobreviver a sair da página e a fechar o app.
+ * A diferença importa: pasta nova — curso recém-criado, disciplina que ganhou a
+ * primeira anotação — nasce aberta, em vez de nascer escondida por não constar
+ * de uma lista de abertas gravada antes de ela existir.
  */
-function useNoteMode(): [NoteMode, (mode: NoteMode) => void] {
-  const [mode, setMode] = useState<NoteMode>(readMode)
+function useCollapsedFolders(track: Track): [Set<string>, (next: Set<string>) => void] {
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => readCollapsed(track))
 
-  const change = useCallback((next: NoteMode) => {
-    setMode(next)
+  const change = useCallback(
+    (next: Set<string>) => {
+      setCollapsed(next)
+      try {
+        localStorage.setItem(`${COLLAPSED_KEY}:${track}`, JSON.stringify([...next]))
+      } catch {
+        // Sem localStorage vale só nesta sessão.
+      }
+    },
+    [track],
+  )
+
+  return [collapsed, change]
+}
+
+function readView(): NoteView {
+  try {
+    return localStorage.getItem(VIEW_KEY) === 'tree' ? 'tree' : 'list'
+  } catch {
+    return 'list'
+  }
+}
+
+/** Lista ou pastas é preferência de navegação, e sobrevive a fechar o app. */
+function useNoteView(): [NoteView, (view: NoteView) => void] {
+  const [view, setView] = useState<NoteView>(readView)
+
+  const change = useCallback((next: NoteView) => {
+    setView(next)
     try {
-      localStorage.setItem(MODE_KEY, next)
+      localStorage.setItem(VIEW_KEY, next)
     } catch {
-      // Sem localStorage a escolha vale só nesta sessão — não é motivo para
-      // impedir a troca de modo.
+      // Sem localStorage vale só nesta sessão.
     }
   }, [])
 
-  return [mode, change]
+  return [view, change]
 }
 
 function Notebook({ track }: { track: Track }) {
@@ -85,10 +130,27 @@ function Notebook({ track }: { track: Track }) {
   const { data: subjects } = useSubjects()
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [mode, setMode] = useNoteMode()
+  // Efêmero e sempre começando na leitura: abrir uma anotação é para ler. A
+  // caneta vale enquanto aquela anotação está aberta e não sobrevive à saída —
+  // voltar e encontrar o Markdown cru é o que fazia o caderno parecer um editor
+  // de texto em vez de um caderno.
+  const [mode, setMode] = useState<NoteMode>('preview')
+  const [view, setView] = useNoteView()
   const [search, setSearch] = useState('')
   const [programFilter, setProgramFilter] = useState('')
   const [tagFilter, setTagFilter] = useState<string | null>(null)
+  const [collapsed, setCollapsed] = useCollapsedFolders(track)
+
+  /** Todo caminho de abertura passa por aqui, para nenhum deles esquecer o modo. */
+  function openNote(id: string) {
+    setSelectedId(id)
+    setMode('preview')
+  }
+
+  function closeNote() {
+    setSelectedId(null)
+    setMode('preview')
+  }
 
   const trackPrograms = programs.filter((p) => p.track === track)
   const notes = useMemo(() => allNotes.filter((n) => n.track === track), [allNotes, track])
@@ -116,6 +178,27 @@ function Notebook({ track }: { track: Track }) {
       })
   }, [notes, search, programFilter, tagFilter])
 
+  // A árvore é montada sobre `filtered`: busca e etiquetas continuam valendo, e
+  // uma pasta sem resultado simplesmente não é desenhada.
+  const tree = useMemo(
+    () => buildNoteTree(filtered, trackPrograms, subjects),
+    [filtered, trackPrograms, subjects],
+  )
+
+  // Buscando, tudo abre: esconder o resultado atrás de uma pasta fechada faria
+  // a busca parecer quebrada.
+  const searching = search.trim().length > 0 || tagFilter !== null
+  const isOpen = (key: string) => searching || !collapsed.has(key)
+
+  const toggleFolder = (key: string) => {
+    const next = new Set(collapsed)
+    if (next.has(key)) next.delete(key)
+    else next.add(key)
+    setCollapsed(next)
+  }
+
+  const allOpen = tree.length > 0 && allFolderKeys(tree).every((key) => !collapsed.has(key))
+
   const selected = notes.find((n) => n.id === selectedId) ?? null
 
   async function createNote() {
@@ -129,7 +212,7 @@ function Notebook({ track }: { track: Track }) {
       pinned: false,
     })
     setSelectedId(note.id)
-    // A única exceção ao modo lembrado: anotação recém-criada só tem o modelo
+    // A única exceção à regra da leitura: anotação recém-criada só tem o modelo
     // em branco, e quem clicou em "Nova anotação" quer escrever, não ler.
     setMode('edit')
   }
@@ -163,6 +246,29 @@ function Notebook({ track }: { track: Track }) {
       <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
         {/* Lista */}
         <div className={cn('space-y-3', selected && 'hidden lg:block')}>
+          <div className="flex items-center gap-2">
+            <Segmented
+              className="flex-1"
+              value={view}
+              onChange={setView}
+              options={[
+                { value: 'list' as const, label: <ListLabel /> },
+                { value: 'tree' as const, label: <TreeLabel /> },
+              ]}
+            />
+            {view === 'tree' && tree.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() =>
+                  setCollapsed(allOpen ? new Set(allFolderKeys(tree)) : new Set())
+                }
+              >
+                {allOpen ? 'Fechar tudo' : 'Abrir tudo'}
+              </Button>
+            )}
+          </div>
+
           <Field>
             <Input
               value={search}
@@ -173,7 +279,7 @@ function Notebook({ track }: { track: Track }) {
             <Search className="text-fg-subtle pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
           </Field>
 
-          {trackPrograms.length > 0 && (
+          {view === 'list' && trackPrograms.length > 0 && (
             <Select
               value={programFilter}
               onChange={(e) => setProgramFilter(e.target.value)}
@@ -207,7 +313,7 @@ function Notebook({ track }: { track: Track }) {
             </div>
           )}
 
-          {filtered.length === 0 ? (
+          {(view === 'tree' ? countTreeNotes(tree) : filtered.length) === 0 ? (
             <Card>
               <EmptyState
                 icon={<NotebookPen className="size-5" />}
@@ -219,6 +325,20 @@ function Notebook({ track }: { track: Track }) {
                 }
               />
             </Card>
+          ) : view === 'tree' ? (
+            <div className="space-y-0.5">
+              {tree.map((folder) => (
+                <FolderNode
+                  key={folder.key}
+                  folder={folder}
+                  depth={0}
+                  isOpen={isOpen}
+                  onToggle={toggleFolder}
+                  selectedId={selectedId}
+                  onSelect={openNote}
+                />
+              ))}
+            </div>
           ) : (
             <div className="space-y-1.5">
               {filtered.map((note) => {
@@ -228,7 +348,7 @@ function Notebook({ track }: { track: Track }) {
                   <button
                     key={note.id}
                     type="button"
-                    onClick={() => setSelectedId(note.id)}
+                    onClick={() => openNote(note.id)}
                     className={cn(
                       'block w-full rounded-lg border px-3 py-2.5 text-left transition-colors',
                       note.id === selectedId
@@ -274,11 +394,11 @@ function Notebook({ track }: { track: Track }) {
             onModeChange={setMode}
             programs={trackPrograms}
             subjects={subjects.filter((s) => s.program_id === selected.program_id)}
-            onBack={() => setSelectedId(null)}
+            onBack={closeNote}
             onSave={(patch) => update.mutate({ id: selected.id, patch })}
             onRemove={() => {
               remove.mutate(selected.id)
-              setSelectedId(null)
+              closeNote()
             }}
           />
         ) : (
@@ -291,6 +411,111 @@ function Notebook({ track }: { track: Track }) {
           </Card>
         )}
       </div>
+    </div>
+  )
+}
+
+/** Rótulos do seletor: ícone e palavra, porque só o ícone não diz o que faz. */
+function ListLabel() {
+  return (
+    <span className="flex items-center justify-center gap-1.5">
+      <List className="size-3.5" />
+      Lista
+    </span>
+  )
+}
+
+function TreeLabel() {
+  return (
+    <span className="flex items-center justify-center gap-1.5">
+      <Folder className="size-3.5" />
+      Pastas
+    </span>
+  )
+}
+
+/**
+ * Uma pasta da árvore e o que há dentro dela.
+ *
+ * O recuo é calculado a partir da profundidade em vez de aninhar `padding`:
+ * assim a linha inteira continua clicável de ponta a ponta, e não só o texto.
+ */
+function FolderNode({
+  folder,
+  depth,
+  isOpen,
+  onToggle,
+  selectedId,
+  onSelect,
+}: {
+  folder: TreeFolder
+  depth: number
+  isOpen: (key: string) => boolean
+  onToggle: (key: string) => void
+  selectedId: string | null
+  onSelect: (id: string) => void
+}) {
+  const open = isOpen(folder.key)
+
+  return (
+    <div>
+      <button
+        type="button"
+        onClick={() => onToggle(folder.key)}
+        aria-expanded={open}
+        className="hover:bg-surface-2 flex w-full items-center gap-1.5 rounded-md py-1.5 pr-2 text-left transition-colors"
+        style={{ paddingLeft: `${8 + depth * 14}px` }}
+      >
+        {open ? (
+          <ChevronDown className="text-fg-subtle size-3.5 shrink-0" />
+        ) : (
+          <ChevronRight className="text-fg-subtle size-3.5 shrink-0" />
+        )}
+        {open ? (
+          <FolderOpen className="text-accent size-3.5 shrink-0" />
+        ) : (
+          <Folder className="text-accent size-3.5 shrink-0" />
+        )}
+        <span className="text-fg truncate text-[13px] font-medium">{folder.label}</span>
+        <span className="text-fg-subtle ml-auto shrink-0 text-[11px] tabular-nums">
+          {folder.count}
+        </span>
+      </button>
+
+      {open && (
+        <>
+          {folder.children.map((child) => (
+            <FolderNode
+              key={child.key}
+              folder={child}
+              depth={depth + 1}
+              isOpen={isOpen}
+              onToggle={onToggle}
+              selectedId={selectedId}
+              onSelect={onSelect}
+            />
+          ))}
+
+          {folder.notes.map((note) => (
+            <button
+              key={note.id}
+              type="button"
+              onClick={() => onSelect(note.id)}
+              className={cn(
+                'flex w-full items-center gap-1.5 rounded-md py-1.5 pr-2 text-left transition-colors',
+                note.id === selectedId
+                  ? 'bg-accent-soft text-accent'
+                  : 'text-fg hover:bg-surface-2',
+              )}
+              style={{ paddingLeft: `${8 + (depth + 1) * 14 + 14}px` }}
+            >
+              <FileText className="size-3.5 shrink-0 opacity-60" />
+              <span className="truncate text-[13px]">{note.title || 'Sem título'}</span>
+              {note.pinned && <Pin className="text-accent ml-auto size-3 shrink-0" />}
+            </button>
+          ))}
+        </>
+      )}
     </div>
   )
 }
@@ -397,7 +622,9 @@ function NoteEditor({
           variant="ghost"
           size="icon"
           onClick={() => {
-            if (confirm('Remover esta anotação?')) onRemove()
+            void confirmar('Remover esta anotação?', { confirmar: 'Remover' }).then((ok) => {
+              if (ok) onRemove()
+            })
           }}
           aria-label="Remover anotação"
         >

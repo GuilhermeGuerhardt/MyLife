@@ -64,5 +64,39 @@ export function useHabitBoard(heatmapDays = 182) {
   const isDone = (habitId: string, date: string) =>
     logs.some((log) => log.habit_id === habitId && log.date === date)
 
-  return { ...board, logs, isLoading, toggle, isDone, create, update, remove }
+  /** Quantos dias marcados o hábito tem — o que se perde ao excluí-lo. */
+  const logCount = (habitId: string) =>
+    logs.filter((log) => log.habit_id === habitId).length
+
+  /**
+   * Apaga o hábito e todo o histórico dele.
+   *
+   * Os registros vão junto porque ninguém os cruza com a tabela de hábitos:
+   * `insights.ts` soma `habitLogs` cru para a média semanal e a correlação com
+   * o humor. Um log órfão não aparece em tela nenhuma e continuaria contando
+   * ali para sempre.
+   *
+   * Os logs saem primeiro: se a operação falhar no meio, sobra um hábito com
+   * histórico incompleto — visível e corrigível — em vez de registros invisíveis
+   * sem dono.
+   */
+  const removeHabit = async (habitId: string) => {
+    for (const log of logs.filter((log) => log.habit_id === habitId)) {
+      await removeLog.mutateAsync(log.id)
+    }
+    await remove.mutateAsync(habitId)
+  }
+
+  return {
+    ...board,
+    logs,
+    isLoading,
+    toggle,
+    isDone,
+    logCount,
+    removeHabit,
+    create,
+    update,
+    remove,
+  }
 }

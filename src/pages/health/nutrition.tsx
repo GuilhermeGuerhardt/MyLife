@@ -22,6 +22,7 @@ import { useHealthSummary } from '@/features/health/use-health-summary'
 import { decimal, integer, longDate, relativeDay } from '@/lib/format'
 import { normalize } from '@/lib/quick-add/parser'
 import { addDays, today } from '@/lib/utils'
+import { confirmar } from '@/lib/avisos'
 
 export function NutritionPage() {
   const [params, setParams] = useSearchParams()
@@ -360,7 +361,7 @@ function AddFoodModal({
     const aviso =
       `Remover "${food.name}" da sua lista de alimentos?\n\n` +
       'O que você já registrou no diário continua lá — cada registro guarda a própria cópia dos valores.'
-    if (!confirm(aviso)) return
+    if (!(await confirmar(aviso, { confirmar: 'Remover' }))) return
     await onRemoveFood(food.id)
     setView({ kind: 'search' })
   }

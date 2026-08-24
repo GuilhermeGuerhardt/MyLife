@@ -9,6 +9,7 @@ import { CategoryForm, type CategoryDraft } from '@/features/finance/category-fo
 import { CategoryIcon } from '@/features/finance/category-icons'
 import { formatCents } from '@/lib/finance/money'
 import { integer } from '@/lib/format'
+import { confirmar } from '@/lib/avisos'
 
 /**
  * Categorias do financeiro.
@@ -55,7 +56,7 @@ export function CategoriesPage() {
     const aviso = usos
       ? `Remover "${category.name}"?\n\n${usos} lançamento${usos > 1 ? 's ficam' : ' fica'} sem categoria — o valor continua no total do mês, mas deixa de aparecer separado no gráfico.`
       : `Remover "${category.name}"?`
-    if (!confirm(aviso)) return
+    if (!(await confirmar(aviso, { confirmar: 'Remover' }))) return
     await remove.mutateAsync(category.id)
     setEditing(null)
   }

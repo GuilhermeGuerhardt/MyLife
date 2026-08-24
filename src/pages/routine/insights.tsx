@@ -167,12 +167,12 @@ function WeekBars({ weeks }: { weeks: WeekStats[] }) {
             <div className="flex h-24 w-full items-end justify-center gap-0.5">
               <span
                 title={`${week.workouts} treinos`}
-                className="bg-accent w-1/2 rounded-t-sm"
+                className="bg-series-workout w-1/2 rounded-t-sm"
                 style={{ height: `${(week.workouts / maxWorkouts) * 100}%` }}
               />
               <span
                 title={`R$ ${integer(week.expenseCents / 100)} em gastos`}
-                className="bg-fg-subtle/40 w-1/2 rounded-t-sm"
+                className="bg-negative w-1/2 rounded-t-sm"
                 style={{ height: `${(week.expenseCents / maxExpense) * 100}%` }}
               />
             </div>
@@ -184,11 +184,11 @@ function WeekBars({ weeks }: { weeks: WeekStats[] }) {
       </div>
       <div className="text-fg-subtle flex items-center gap-4 text-[11px]">
         <span className="flex items-center gap-1.5">
-          <span className="bg-accent size-2 rounded-sm" />
+          <span className="bg-series-workout size-2 rounded-sm" />
           Treinos
         </span>
         <span className="flex items-center gap-1.5">
-          <span className="bg-fg-subtle/40 size-2 rounded-sm" />
+          <span className="bg-negative size-2 rounded-sm" />
           Gasto da semana
         </span>
       </div>

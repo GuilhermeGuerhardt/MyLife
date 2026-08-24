@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAccounts, useCategories } from '@/data/queries'
 import type { Transaction } from '@/data/types'
+import { confirmar } from '@/lib/avisos'
 import { toDraft, useRemoveTransaction, useUpdateTransaction } from './actions'
 import { TransactionForm } from './transaction-form'
 
@@ -23,8 +24,9 @@ export function useTransactionEditor() {
 
   async function handleRemove(transaction: Transaction) {
     if (transaction.installment_group_id && transaction.installment_total) {
-      const all = confirm(
-        `Este lançamento é parcelado (${transaction.installment_n}/${transaction.installment_total}).\n\nOK remove todas as parcelas. Cancelar remove só esta.`,
+      const all = await confirmar(
+        `Este lançamento é parcelado (${transaction.installment_n}/${transaction.installment_total}).`,
+        { confirmar: 'Remover todas as parcelas', cancelar: 'Remover só esta' },
       )
       await removeTransaction(transaction, all ? 'group' : 'single')
       return

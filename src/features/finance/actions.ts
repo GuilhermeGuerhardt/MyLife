@@ -1,6 +1,12 @@
 import { useAccounts, useTransactions } from '@/data/queries'
 import type { Account, BaseRow, Transaction, TransactionKind } from '@/data/types'
-import { buildInstallments, competenceFor, type CardConfig } from '@/lib/finance/billing'
+import {
+  buildInstallments,
+  competenceFor,
+  type CardConfig,
+  type Competence,
+} from '@/lib/finance/billing'
+import type { PendingOccurrence } from '@/lib/finance/recurring'
 import { uid } from '@/lib/utils'
 
 export interface TransactionDraft {
@@ -167,5 +173,99 @@ export function toDraft(transaction: Transaction): TransactionDraft {
     paid: transaction.paid,
     installments: 1,
     notes: transaction.notes,
+  }
+}
+
+/**
+ * Transforma em lançamento as recorrentes que ainda não caíram no mês.
+ *
+ * Nascem como **previstas**: a regra sabe que a conta existe, não que ela foi
+ * paga. Quem paga é a pessoa, com o gesto na linha.
+ *
+ * A competência sai de `competenceFor`, igual à criação normal — uma assinatura
+ * no cartão precisa cair na fatura certa, não no mês do calendário.
+ */
+export function useMaterializeRecurring() {
+  const { data: accounts } = useAccounts()
+  const { create } = useTransactions()
+
+  return async function materialize(pending: PendingOccurrence[]): Promise<number> {
+    for (const { rule, date } of pending) {
+      const card = cardConfig(accounts.find((a) => a.id === rule.account_id))
+      await create.mutateAsync({
+        account_id: rule.account_id,
+        transfer_account_id: null,
+        category_id: rule.category_id,
+        kind: rule.kind,
+        amount_cents: rule.amount_cents,
+        date,
+        competence: competenceFor(date, card),
+        description: rule.description,
+        tags: [],
+        paid: false,
+        installment_group_id: null,
+        installment_n: null,
+        installment_total: null,
+        recurring_id: rule.id,
+        notes: null,
+      })
+    }
+    return pending.length
+  }
+}
+
+/**
+ * Quita a fatura do cartão: marca as compras da competência como pagas e
+ * registra a transferência que saiu da conta.
+ *
+ * São duas coisas distintas e as duas importam. Marcar só as compras deixaria o
+ * saldo da conta intacto, como se a fatura tivesse sido perdoada; lançar só a
+ * transferência deixaria as compras eternamente previstas.
+ */
+export function usePayInvoice() {
+  const { data: transactions, create, update } = useTransactions()
+
+  return async function payInvoice(
+    card: Account,
+    competence: Competence,
+    fromAccountId: string,
+    date: string,
+  ): Promise<{ paid: number; amountCents: number }> {
+    const items = transactions.filter(
+      (t) => t.account_id === card.id && t.competence === competence && !t.paid,
+    )
+
+    // O sinal segue o mesmo critério do resto do financeiro: despesa soma na
+    // fatura, estorno abate.
+    const amountCents = items.reduce(
+      (total, t) => total + (t.kind === 'income' ? -t.amount_cents : t.amount_cents),
+      0,
+    )
+
+    for (const item of items) {
+      await update.mutateAsync({ id: item.id, patch: { paid: true } })
+    }
+
+    if (amountCents > 0) {
+      await create.mutateAsync({
+        account_id: fromAccountId,
+        transfer_account_id: card.id,
+        category_id: null,
+        kind: 'transfer',
+        amount_cents: amountCents,
+        date,
+        competence: competenceFor(date, null),
+        description: `Pagamento da fatura ${card.name}`,
+        tags: [],
+        paid: true,
+        installment_group_id: null,
+        installment_n: null,
+        installment_total: null,
+        recurring_id: null,
+        notes: null,
+      })
+    }
+
+    return { paid: items.length, amountCents }
   }
 }
