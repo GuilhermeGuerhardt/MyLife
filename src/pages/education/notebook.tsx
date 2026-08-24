@@ -243,7 +243,7 @@ function Notebook({ track }: { track: Track }) {
         </Button>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
+      <div className="grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
         {/* Lista */}
         <div className={cn('space-y-3', selected && 'hidden lg:block')}>
           <div className="flex items-center gap-2">

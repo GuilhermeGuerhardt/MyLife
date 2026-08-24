@@ -1,5 +1,13 @@
-import { Command, Database, FolderSync, Globe, User } from 'lucide-react'
-import { Suspense } from 'react'
+import {
+  Command,
+  Database,
+  FolderSync,
+  Globe,
+  PanelLeftClose,
+  PanelLeftOpen,
+  User,
+} from 'lucide-react'
+import { Suspense, useCallback, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { RouteBoundary } from '@/components/route-boundary'
 import { storageMode, type StorageMode } from '@/data/adapters'
@@ -21,6 +29,41 @@ const MODE_LABEL: Record<StorageMode, string> = {
   local: 'Navegador',
 }
 
+/** Onde a largura escolhida para a barra lateral fica lembrada. */
+const SIDEBAR_KEY = 'life:menu-recolhido'
+
+function readCollapsed(): boolean {
+  try {
+    return localStorage.getItem(SIDEBAR_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Barra larga ou só de ícones.
+ *
+ * Some com 176 px de menu, que é o que falta numa tela de 1366 para o caderno
+ * caber sem apertar a coluna do texto.
+ */
+function useCollapsedSidebar(): [boolean, () => void] {
+  const [collapsed, setCollapsed] = useState(readCollapsed)
+
+  const toggle = useCallback(() => {
+    setCollapsed((prev) => {
+      const next = !prev
+      try {
+        localStorage.setItem(SIDEBAR_KEY, next ? '1' : '0')
+      } catch {
+        // Sem localStorage a escolha vale só nesta sessão.
+      }
+      return next
+    })
+  }, [])
+
+  return [collapsed, toggle]
+}
+
 /** Esqueleto exibido enquanto o chunk da rota é baixado. */
 function RouteFallback() {
   return (
@@ -39,19 +82,38 @@ function RouteFallback() {
   )
 }
 
+function ModeIcon({ mode }: { mode: StorageMode }) {
+  if (mode === 'folder') return <FolderSync className="size-3" />
+  if (mode === 'sqlite') return <Database className="size-3" />
+  return <Globe className="size-3" />
+}
+
 export function AppShell({ onOpenPalette }: { onOpenPalette: () => void }) {
   const { pathname } = useLocation()
   const accent = accentForPath(pathname)
   const mode = storageMode()
   const section = NAV.find((item) => item.to !== '/' && pathname.startsWith(item.to))
+  const [collapsed, toggleSidebar] = useCollapsedSidebar()
 
   return (
     <div className="bg-bg flex min-h-dvh">
       {/* Sidebar — desktop */}
-      <aside className="border-border-base bg-surface sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r lg:flex">
-        <div className="flex h-14 items-center gap-2 px-5">
-          <span className="bg-accent size-6 rounded-md" />
-          <span className="text-fg text-sm font-semibold tracking-tight">Life</span>
+      <aside
+        className={cn(
+          'border-border-base bg-surface sticky top-0 hidden h-dvh shrink-0 flex-col border-r transition-[width] duration-200 lg:flex',
+          collapsed ? 'w-16' : 'w-60',
+        )}
+      >
+        <div
+          className={cn(
+            'flex h-14 items-center gap-2',
+            collapsed ? 'justify-center px-0' : 'px-5',
+          )}
+        >
+          <span className="bg-accent size-6 shrink-0 rounded-md" />
+          {!collapsed && (
+            <span className="text-fg text-sm font-semibold tracking-tight">Life</span>
+          )}
         </div>
 
         <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-2">
@@ -60,20 +122,24 @@ export function AppShell({ onOpenPalette }: { onOpenPalette: () => void }) {
               <NavLink
                 to={item.to}
                 end={item.to === '/'}
+                // Recolhida, o rótulo vira dica do sistema: sem ele o ícone
+                // sozinho obriga a adivinhar para onde cada um leva.
+                title={collapsed ? item.label : undefined}
                 className={({ isActive }) =>
                   cn(
-                    'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors',
+                    'flex items-center rounded-lg py-2 text-sm font-medium transition-colors',
+                    collapsed ? 'justify-center px-0' : 'gap-2.5 px-2.5',
                     isActive || (item.to !== '/' && pathname.startsWith(item.to))
                       ? cn(item.accent, 'bg-accent-soft text-accent')
                       : 'text-fg-muted hover:bg-surface-2 hover:text-fg',
                   )
                 }
               >
-                <item.icon className="size-4" />
-                {item.label}
+                <item.icon className="size-4 shrink-0" />
+                {!collapsed && item.label}
               </NavLink>
 
-              {item.children && pathname.startsWith(item.to) && (
+              {!collapsed && item.children && pathname.startsWith(item.to) && (
                 <div className="border-border-base mt-0.5 mb-1 ml-5 space-y-0.5 border-l pl-3">
                   {item.children.map((child) => (
                     <NavLink
@@ -101,31 +167,65 @@ export function AppShell({ onOpenPalette }: { onOpenPalette: () => void }) {
         <div className="border-border-base space-y-2 border-t p-3">
           <NavLink
             to="/perfil"
+            title={collapsed ? 'Perfil' : undefined}
             className={({ isActive }) =>
               cn(
-                'flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium transition-colors',
+                'flex items-center rounded-lg py-2 text-sm font-medium transition-colors',
+                collapsed ? 'justify-center px-0' : 'gap-2.5 px-2.5',
                 isActive ? 'bg-surface-2 text-fg' : 'text-fg-muted hover:bg-surface-2 hover:text-fg',
               )
             }
           >
-            <User className="size-4" />
-            Perfil
+            <User className="size-4 shrink-0" />
+            {!collapsed && 'Perfil'}
           </NavLink>
 
-
-          <div className="flex items-center justify-between px-1">
-            <Badge tone={mode === 'local' ? 'neutral' : 'positive'}>
-              {mode === 'folder' ? (
-                <FolderSync className="size-3" />
-              ) : mode === 'sqlite' ? (
-                <Database className="size-3" />
-              ) : (
-                <Globe className="size-3" />
-              )}
-              {MODE_LABEL[mode]}
-            </Badge>
+          <div
+            className={cn(
+              'flex items-center gap-2',
+              collapsed ? 'flex-col' : 'justify-between px-1',
+            )}
+          >
+            {collapsed ? (
+              // Recolhida, sobra espaço para o ícone e não para o texto — o
+              // rótulo continua acessível como dica.
+              <span
+                title={`Gravando em: ${MODE_LABEL[mode]}`}
+                className={cn(
+                  'flex size-7 items-center justify-center rounded-md',
+                  mode === 'local' ? 'text-fg-muted bg-surface-2' : 'text-positive bg-positive/10',
+                )}
+              >
+                <ModeIcon mode={mode} />
+              </span>
+            ) : (
+              <Badge tone={mode === 'local' ? 'neutral' : 'positive'}>
+                <ModeIcon mode={mode} />
+                {MODE_LABEL[mode]}
+              </Badge>
+            )}
             <ThemeToggle />
           </div>
+
+          <button
+            type="button"
+            onClick={toggleSidebar}
+            aria-label={collapsed ? 'Expandir menu' : 'Recolher menu'}
+            title={collapsed ? 'Expandir menu' : 'Recolher menu'}
+            className={cn(
+              'text-fg-subtle hover:bg-surface-2 hover:text-fg flex w-full items-center rounded-lg py-2 text-xs font-medium transition-colors',
+              collapsed ? 'justify-center px-0' : 'gap-2.5 px-2.5',
+            )}
+          >
+            {collapsed ? (
+              <PanelLeftOpen className="size-4 shrink-0" />
+            ) : (
+              <>
+                <PanelLeftClose className="size-4 shrink-0" />
+                Recolher menu
+              </>
+            )}
+          </button>
         </div>
       </aside>
 

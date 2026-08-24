@@ -133,7 +133,7 @@ export function DietPlanPage() {
         </p>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[340px_1fr]">
+      <div className="grid gap-4 lg:grid-cols-[340px_minmax(0,1fr)]">
         <Card className="h-fit">
           <CardHeader title="Sua meta" description={`Peso atual: ${decimal(weight, 1)} kg (média 7 dias)`} />
           <CardContent className="space-y-4">
