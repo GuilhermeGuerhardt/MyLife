@@ -6,7 +6,8 @@ import { Badge, EmptyState, Progress, SectionTitle, Stat } from '@/components/ui
 import { useAccounts } from '@/data/queries'
 import { ACCOUNT_KIND_LABELS, type Account } from '@/data/types'
 import { AccountForm } from '@/features/finance/account-form'
-import { useSetTransactionPaid } from '@/features/finance/actions'
+import { usePayInvoice, useSetTransactionPaid } from '@/features/finance/actions'
+import { PayInvoiceForm } from '@/features/finance/pay-invoice-form'
 import { MonthNav, TransactionList } from '@/features/finance/shared'
 import { useFinance } from '@/features/finance/use-finance'
 import { useTransactionEditor } from '@/features/finance/use-transaction-editor'
@@ -20,9 +21,17 @@ export function AccountsPage() {
   const finance = useFinance(competence)
   const { create, update } = useAccounts()
   const setPaid = useSetTransactionPaid()
+  const payInvoice = usePayInvoice()
   const { open: openEditor, editor: transactionEditor } = useTransactionEditor()
   const [editing, setEditing] = useState<Account | null>(null)
+  const [payingCard, setPayingCard] = useState<Account | null>(null)
   const [adding, setAdding] = useState(false)
+
+  /** Total ainda previsto na fatura da competência — o que o botão vai quitar. */
+  const faturaEmAberto = (accountId: string) =>
+    finance.monthTransactions
+      .filter((t) => t.account_id === accountId && !t.paid)
+      .reduce((total, t) => total + (t.kind === 'income' ? -t.amount_cents : t.amount_cents), 0)
 
   const cards = finance.summaries.filter((s) => s.account.kind === 'credit')
   const others = finance.summaries.filter((s) => s.account.kind !== 'credit')
@@ -151,6 +160,7 @@ export function AccountsPage() {
                   const items = finance.monthTransactions.filter(
                     (t) => t.account_id === summary.account.id,
                   )
+                  const emAberto = items.filter((t) => !t.paid)
                   const limit = summary.account.credit_limit_cents
                   const used = limit && summary.available !== null ? limit - summary.available : 0
 
@@ -183,17 +193,36 @@ export function AccountsPage() {
                           <Stat
                             label="Total da fatura"
                             value={formatCents(summary.invoice ?? 0)}
+                            hint={
+                              (summary.invoice ?? 0) > 0 && (summary.openInvoice ?? 0) === 0 ? (
+                                <Badge tone="positive">fatura paga</Badge>
+                              ) : (summary.openInvoice ?? 0) > 0 &&
+                                summary.openInvoice !== summary.invoice ? (
+                                `${formatCents(summary.openInvoice ?? 0)} ainda em aberto`
+                              ) : undefined
+                            }
                           />
-                          <div className="flex items-center gap-2">
-                            <CalendarClock className="text-fg-subtle size-3.5" />
-                            <div>
-                              <p className="text-fg text-sm font-medium">
-                                Vence {longDate(period.dueDate)}
-                              </p>
-                              <p className="text-fg-subtle text-[11px] first-letter:uppercase">
-                                {relativeDay(period.dueDate)}
-                              </p>
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2">
+                              <CalendarClock className="text-fg-subtle size-3.5" />
+                              <div>
+                                <p className="text-fg text-sm font-medium">
+                                  Vence {longDate(period.dueDate)}
+                                </p>
+                                <p className="text-fg-subtle text-[11px] first-letter:uppercase">
+                                  {relativeDay(period.dueDate)}
+                                </p>
+                              </div>
                             </div>
+                            {emAberto.length > 0 && (
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => setPayingCard(summary.account)}
+                              >
+                                Quitar fatura
+                              </Button>
+                            )}
                           </div>
                         </div>
 
@@ -263,6 +292,26 @@ export function AccountsPage() {
             else await create.mutateAsync(values)
             setAdding(false)
             setEditing(null)
+          }}
+        />
+      )}
+
+      {payingCard && (
+        <PayInvoiceForm
+          card={payingCard}
+          competence={competence}
+          amountCents={faturaEmAberto(payingCard.id)}
+          count={
+            finance.monthTransactions.filter(
+              (t) => t.account_id === payingCard.id && !t.paid,
+            ).length
+          }
+          accounts={finance.accounts.filter((a) => a.kind !== 'credit')}
+          defaultDate={today()}
+          onClose={() => setPayingCard(null)}
+          onConfirm={async (fromAccountId, date) => {
+            await payInvoice(payingCard, competence, fromAccountId, date)
+            setPayingCard(null)
           }}
         />
       )}

@@ -13,11 +13,15 @@ import { MonthNav, TransactionList } from '@/features/finance/shared'
 import { TransactionForm } from '@/features/finance/transaction-form'
 import { useFinance } from '@/features/finance/use-finance'
 import { useTransactionEditor } from '@/features/finance/use-transaction-editor'
+import { useMaterializeRecurring } from '@/features/finance/actions'
+import { pendingOccurrences } from '@/lib/finance/recurring'
+import { overdueSummary } from '@/lib/finance/reports'
+import { useRecurring } from '@/data/queries'
 import { addMonths, competenceLabel, toCompetence } from '@/lib/finance/billing'
 import { formatCents } from '@/lib/finance/money'
 import { resolveSliceColors } from '@/lib/finance/palette'
 import { monthlySeries } from '@/lib/finance/reports'
-import { percent } from '@/lib/format'
+import { percent, shortDate } from '@/lib/format'
 import { today } from '@/lib/utils'
 
 export function FinanceOverview() {
@@ -28,9 +32,17 @@ export function FinanceOverview() {
   const createTransaction = useCreateTransaction()
   const setPaid = useSetTransactionPaid()
   const { open: openEditor, editor } = useTransactionEditor()
+  const { data: rules } = useRecurring()
+  const materialize = useMaterializeRecurring()
 
   const [addingAccount, setAddingAccount] = useState(false)
   const [addingTransaction, setAddingTransaction] = useState(false)
+  const [lancando, setLancando] = useState(false)
+
+  // Os dois avisos que valem interromper: o que venceu e o que ainda nem foi
+  // lançado. O resto da tela é consulta.
+  const atrasos = overdueSummary(finance.transactions, today())
+  const pendentes = pendingOccurrences(rules, competence, finance.transactions)
 
   if (!finance.hasAccounts) {
     return (
@@ -111,6 +123,58 @@ export function FinanceOverview() {
           </Button>
         </div>
       </div>
+
+      {(atrasos.count > 0 || pendentes.length > 0) && (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {atrasos.count > 0 && (
+            <Card className="border-negative/40">
+              <CardContent className="flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-negative text-sm font-medium">
+                    {atrasos.count} lançamento{atrasos.count === 1 ? '' : 's'} vencido
+                    {atrasos.count === 1 ? '' : 's'}
+                  </p>
+                  <p className="text-fg-muted mt-0.5 text-xs">
+                    {formatCents(atrasos.totalCents)} em aberto
+                    {atrasos.oldestDate && ` · o mais antigo de ${shortDate(atrasos.oldestDate)}`}
+                  </p>
+                </div>
+                <Link to="/financeiro/transacoes">
+                  <Button variant="secondary" size="sm">
+                    Ver
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          )}
+
+          {pendentes.length > 0 && (
+            <Card className="border-warning/40">
+              <CardContent className="flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-fg text-sm font-medium">
+                    {pendentes.length} recorrente{pendentes.length === 1 ? '' : 's'} a lançar
+                  </p>
+                  <p className="text-fg-muted mt-0.5 truncate text-xs">
+                    {pendentes.map((p) => p.rule.description).join(' · ')}
+                  </p>
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  disabled={lancando}
+                  onClick={() => {
+                    setLancando(true)
+                    void materialize(pendentes).finally(() => setLancando(false))
+                  }}
+                >
+                  {lancando ? 'Lançando…' : 'Lançar'}
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Card>

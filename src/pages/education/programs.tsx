@@ -9,6 +9,7 @@ import {
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import { confirmar } from '@/lib/avisos'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge, EmptyState, Progress, SectionTitle, Stat } from '@/components/ui/misc'
 import { useInstitutions, useNotes, usePrograms } from '@/data/queries'
@@ -202,9 +203,12 @@ function ProgramsPage({ track }: { track: Track }) {
                       variant="ghost"
                       size="sm"
                       onClick={() => {
-                        if (confirm(`Remover "${summary.program.name}" e tudo dentro dele?`)) {
-                          remove.mutate(summary.program.id)
-                        }
+                        void confirmar(
+                          `Remover "${summary.program.name}" e tudo dentro dele?`,
+                          { confirmar: 'Remover', tom: 'error' },
+                        ).then((ok) => {
+                          if (ok) remove.mutate(summary.program.id)
+                        })
                       }}
                     >
                       Remover

@@ -16,6 +16,7 @@ import {
   goalProjection,
   invoiceTotal,
   monthlyFlow,
+  openInvoiceTotal,
   type TransactionLike,
 } from '@/lib/finance/reports'
 import { today } from '@/lib/utils'
@@ -25,6 +26,8 @@ export interface AccountSummary {
   balance: number
   /** Só para cartão: total da fatura da competência e limite disponível. */
   invoice: number | null
+  /** Quanto dessa fatura ainda não foi pago. */
+  openInvoice: number | null
   available: number | null
 }
 
@@ -47,6 +50,8 @@ export function useFinance(competence: Competence = toCompetence(today())) {
       account,
       balance: accountBalance(account, rows),
       invoice: account.kind === 'credit' ? invoiceTotal(account.id, competence, rows) : null,
+      openInvoice:
+        account.kind === 'credit' ? openInvoiceTotal(account.id, competence, rows) : null,
       available: availableLimit(account, rows),
     }))
 
@@ -55,9 +60,11 @@ export function useFinance(competence: Competence = toCompetence(today())) {
       .filter((s) => s.account.kind !== 'credit')
       .reduce((sum, s) => sum + s.balance, 0)
 
+    // Só o que falta pagar: a fatura já quitada saiu do saldo da conta e não
+    // pode ser descontada de novo na projeção.
     const openInvoices = summaries
       .filter((s) => s.account.kind === 'credit')
-      .reduce((sum, s) => sum + (s.invoice ?? 0), 0)
+      .reduce((sum, s) => sum + (s.openInvoice ?? 0), 0)
 
     const categoryById = new Map(categories.map((c) => [c.id, c]))
     const flow = monthlyFlow(rows, competence)

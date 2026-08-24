@@ -7,6 +7,7 @@ import { Field, Select } from '@/components/ui/field'
 import { Badge, EmptyState, Segmented, Stat } from '@/components/ui/misc'
 import { useAccounts, useCategories, useTransactions } from '@/data/queries'
 import { ExportCard } from '@/features/finance/export-card'
+import { ResetFinanceCard } from '@/features/finance/reset-card'
 import {
   CREATE,
   IGNORE,
@@ -173,6 +174,7 @@ export function ImportPage() {
         <>
           <ExportCard />
           <FilePicker onPick={loadFile} error={readError} />
+          <ResetFinanceCard />
         </>
       ) : (
         <>

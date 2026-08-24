@@ -1,6 +1,7 @@
 import { Copy, PiggyBank, Plus, Target, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { confirmar } from '@/lib/avisos'
 import { Card, CardContent } from '@/components/ui/card'
 import { Field, Input, Select } from '@/components/ui/field'
 import { Badge, EmptyState, Progress, SectionTitle, Stat } from '@/components/ui/misc'
@@ -237,7 +238,11 @@ export function BudgetPage() {
                     <button
                       type="button"
                       onClick={() => {
-                        if (confirm(`Remover a meta "${goal.name}"?`)) removeGoal.mutate(goal.id)
+                        void confirmar(`Remover a meta "${goal.name}"?`, {
+                          confirmar: 'Remover',
+                        }).then((ok) => {
+                          if (ok) removeGoal.mutate(goal.id)
+                        })
                       }}
                       className="text-fg-subtle hover:text-negative transition-colors"
                       aria-label="Remover meta"

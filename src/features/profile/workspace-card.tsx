@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/misc'
 import { Modal } from '@/components/ui/modal'
 import { currentFolder, setFolderStore } from '@/data/adapters'
+import { confirmar } from '@/lib/avisos'
 import {
   forgetFolder,
   hasRememberedFolder,
@@ -96,7 +97,11 @@ export function WorkspaceCard() {
   }
 
   async function disconnect() {
-    if (!confirm('Desconectar a pasta? Os arquivos continuam lá; o app volta a usar este navegador.')) {
+    const ok = await confirmar(
+      'Desconectar a pasta? Os arquivos continuam lá; o app volta a usar este navegador.',
+      { confirmar: 'Desconectar' },
+    )
+    if (!ok) {
       return
     }
     await forgetFolder()
