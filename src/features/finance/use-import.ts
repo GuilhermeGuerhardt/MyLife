@@ -108,6 +108,12 @@ export interface ImportPlan {
   fallbackAccountId: string
 }
 
+/** Andamento da gravação, para a barra saber onde está. */
+export interface ImportProgress {
+  done: number
+  total: number
+}
+
 export interface ImportResult {
   transactions: number
   accountsCreated: number
@@ -135,10 +141,24 @@ function installmentGroups(rows: ImportRow[]): Map<string, string> {
 export function useRunImport() {
   const { data: accounts, create: createAccount } = useAccounts()
   const { create: createCategory } = useCategories()
-  const { create: createTransaction } = useTransactions()
+  const { createMany: createTransactions } = useTransactions()
 
-  return async function runImport(plan: ImportPlan): Promise<ImportResult> {
+  return async function runImport(
+    plan: ImportPlan,
+    onProgress?: (progress: ImportProgress) => void,
+  ): Promise<ImportResult> {
     const result: ImportResult = { transactions: 0, accountsCreated: 0, categoriesCreated: 0 }
+
+    // O total conta contas e categorias novas junto dos lançamentos: são
+    // gravações que também levam tempo, e deixá-las fora faria a barra ficar
+    // parada no zero antes de começar a andar.
+    const novasContas = Object.values(plan.accounts).filter((c) => c === CREATE).length
+    const novasCategorias = Object.values(plan.categories).filter((c) => c === CREATE).length
+    const total = novasContas + novasCategorias + plan.rows.length
+    let feitos = 0
+    const avancar = () => onProgress?.({ done: ++feitos, total })
+
+    onProgress?.({ done: 0, total })
 
     // As contas e categorias novas nascem antes do primeiro lançamento: cada
     // uma precisa do id para as linhas apontarem, e criar sob demanda dentro do
@@ -163,6 +183,7 @@ export function useRunImport() {
       const created = await createAccount.mutateAsync(draft)
       accountIds.set(label, created.id)
       result.accountsCreated++
+      avancar()
     }
 
     const kindByLabel = new Map(labelKinds(plan.rows).map((item) => [item.label, item.kind]))
@@ -191,10 +212,13 @@ export function useRunImport() {
       const created = await createCategory.mutateAsync(draft)
       categoryIds.set(label, created.id)
       result.categoriesCreated++
+      avancar()
     }
 
     const accountById = new Map(accounts.map((account) => [account.id, account]))
     const groups = installmentGroups(plan.rows)
+
+    const drafts: Array<Omit<Transaction, keyof BaseRow>> = []
 
     for (const row of plan.rows) {
       const accountId = accountIds.get(row.accountLabel) ?? plan.fallbackAccountId
@@ -226,9 +250,11 @@ export function useRunImport() {
         notes: row.detail,
       }
 
-      await createTransaction.mutateAsync(draft)
-      result.transactions++
+      drafts.push(draft)
     }
+
+    await createTransactions(drafts, (done) => onProgress?.({ done: feitos + done, total }))
+    result.transactions = drafts.length
 
     return result
   }

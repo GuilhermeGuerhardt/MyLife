@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   occurrenceDate,
+  repeatEndDate,
+  repeatTotal,
   pendingBalance,
   pendingOccurrences,
   type MaterializedLike,
@@ -118,5 +120,47 @@ describe('pendingBalance', () => {
 
   it('lista vazia soma zero', () => {
     expect(pendingBalance([])).toBe(0)
+  })
+})
+
+describe('prazo da repetição', () => {
+  it('sem fim não tem data final', () => {
+    expect(repeatEndDate('2026-09-05', null)).toBeNull()
+  })
+
+  it('doze meses termina no décimo segundo, não no décimo terceiro', () => {
+    // Setembro é a primeira ocorrência; a última é agosto do ano seguinte.
+    expect(repeatEndDate('2026-09-05', 12)).toBe('2027-08-05')
+  })
+
+  it('três meses cobre o mês inicial e mais dois', () => {
+    expect(repeatEndDate('2026-01-10', 3)).toBe('2026-03-10')
+  })
+
+  it('uma vez só termina no próprio dia', () => {
+    expect(repeatEndDate('2026-09-05', 1)).toBe('2026-09-05')
+  })
+
+  it('encolhe o dia quando o mês final é mais curto', () => {
+    // Começar em 31/12 por 3 meses termina em fevereiro, que não tem dia 31.
+    expect(repeatEndDate('2025-12-31', 3)).toBe('2026-02-28')
+  })
+
+  it('atravessa a virada do ano', () => {
+    expect(repeatEndDate('2026-11-15', 4)).toBe('2027-02-15')
+  })
+})
+
+describe('total do prazo', () => {
+  it('multiplica o valor pelos meses', () => {
+    expect(repeatTotal(180000, 12)).toBe(2160000)
+  })
+
+  it('sem fim não tem total', () => {
+    expect(repeatTotal(180000, null)).toBeNull()
+  })
+
+  it('prazo zero não tem total', () => {
+    expect(repeatTotal(180000, 0)).toBeNull()
   })
 })

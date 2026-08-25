@@ -1,9 +1,9 @@
 import { ArrowRight, CreditCard, Plus, TrendingDown, TrendingUp, Wallet } from 'lucide-react'
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Badge, EmptyState, Progress, SectionTitle, Stat } from '@/components/ui/misc'
+import { Badge, EmptyState, Progress, SectionTitle, Segmented, Stat } from '@/components/ui/misc'
 import { useAccounts, useCategories } from '@/data/queries'
 import { AccountForm } from '@/features/finance/account-form'
 import { useCreateTransaction, useSetTransactionPaid } from '@/features/finance/actions'
@@ -15,6 +15,7 @@ import { useFinance } from '@/features/finance/use-finance'
 import { useTransactionEditor } from '@/features/finance/use-transaction-editor'
 import { useMaterializeRecurring } from '@/features/finance/actions'
 import { pendingOccurrences } from '@/lib/finance/recurring'
+import { isOpen, summarizeOpenMonth } from '@/lib/finance/open-month'
 import { overdueSummary } from '@/lib/finance/reports'
 import { useRecurring } from '@/data/queries'
 import { addMonths, competenceLabel, toCompetence } from '@/lib/finance/billing'
@@ -23,6 +24,40 @@ import { resolveSliceColors } from '@/lib/finance/palette'
 import { monthlySeries } from '@/lib/finance/reports'
 import { percent, shortDate } from '@/lib/format'
 import { today } from '@/lib/utils'
+
+/** Onde a aba escolhida do painel fica lembrada. */
+const PANEL_KEY = 'life:financeiro-painel'
+
+type Panel = 'latest' | 'open'
+
+function readPanel(): Panel {
+  try {
+    return localStorage.getItem(PANEL_KEY) === 'open' ? 'open' : 'latest'
+  } catch {
+    return 'latest'
+  }
+}
+
+/**
+ * Qual metade do mês o painel mostra: o que já passou ou o que ainda falta.
+ *
+ * Começa em "Últimos lançamentos" para a tela seguir igual à de antes de quem
+ * já usava, e passa a lembrar a escolha na primeira troca.
+ */
+function usePanel(): [Panel, (panel: Panel) => void] {
+  const [panel, setPanel] = useState<Panel>(readPanel)
+
+  const change = useCallback((next: Panel) => {
+    setPanel(next)
+    try {
+      localStorage.setItem(PANEL_KEY, next)
+    } catch {
+      // Sem localStorage a escolha vale só nesta sessão.
+    }
+  }, [])
+
+  return [panel, change]
+}
 
 export function FinanceOverview() {
   const [competence, setCompetence] = useState(toCompetence(today()))
@@ -38,11 +73,20 @@ export function FinanceOverview() {
   const [addingAccount, setAddingAccount] = useState(false)
   const [addingTransaction, setAddingTransaction] = useState(false)
   const [lancando, setLancando] = useState(false)
+  const [panel, setPanel] = usePanel()
 
   // Os dois avisos que valem interromper: o que venceu e o que ainda nem foi
   // lançado. O resto da tela é consulta.
   const atrasos = overdueSummary(finance.transactions, today())
   const pendentes = pendingOccurrences(rules, competence, finance.transactions)
+
+  // O que falta no mês: o previsto que já existe, mais a regra que ainda não
+  // virou lançamento. A ordem é da data mais antiga para a mais nova, o que
+  // sobe o vencido ao topo sem precisar de regra separada.
+  const emAberto = finance.monthTransactions
+    .filter(isOpen)
+    .sort((a, b) => a.date.localeCompare(b.date))
+  const resumoAberto = summarizeOpenMonth(finance.monthTransactions, pendentes, today())
 
   if (!finance.hasAccounts) {
     return (
@@ -124,7 +168,7 @@ export function FinanceOverview() {
         </div>
       </div>
 
-      {(atrasos.count > 0 || pendentes.length > 0) && (
+      {atrasos.count > 0 && (
         <div className="grid gap-3 sm:grid-cols-2">
           {atrasos.count > 0 && (
             <Card className="border-negative/40">
@@ -144,32 +188,6 @@ export function FinanceOverview() {
                     Ver
                   </Button>
                 </Link>
-              </CardContent>
-            </Card>
-          )}
-
-          {pendentes.length > 0 && (
-            <Card className="border-warning/40">
-              <CardContent className="flex items-center justify-between gap-4">
-                <div className="min-w-0">
-                  <p className="text-fg text-sm font-medium">
-                    {pendentes.length} recorrente{pendentes.length === 1 ? '' : 's'} a lançar
-                  </p>
-                  <p className="text-fg-muted mt-0.5 truncate text-xs">
-                    {pendentes.map((p) => p.rule.description).join(' · ')}
-                  </p>
-                </div>
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  disabled={lancando}
-                  onClick={() => {
-                    setLancando(true)
-                    void materialize(pendentes).finally(() => setLancando(false))
-                  }}
-                >
-                  {lancando ? 'Lançando…' : 'Lançar'}
-                </Button>
               </CardContent>
             </Card>
           )}
@@ -272,28 +290,152 @@ export function FinanceOverview() {
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="lg:col-span-2">
-          <SectionTitle
-            action={
-              <Link to="/financeiro/transacoes">
-                <Button variant="ghost" size="sm">
-                  Ver todos <ArrowRight />
-                </Button>
-              </Link>
-            }
-          >
-            Últimos lançamentos
-          </SectionTitle>
-          <Card>
-            <TransactionList
-              transactions={finance.monthTransactions.slice(0, 8)}
-              accounts={finance.accounts}
-              categoryById={finance.categoryById}
-              onEdit={openEditor}
-              onSetPaid={(transaction, paid) => void setPaid(transaction, paid)}
-              emptyTitle="Nada lançado neste mês"
-              emptyDescription='Use o botão acima ou o registro rápido (Ctrl+K): "gastei 35 no mercado".'
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+            <Segmented
+              value={panel}
+              onChange={setPanel}
+              options={[
+                { value: 'latest' as const, label: 'Últimos lançamentos' },
+                {
+                  value: 'open' as const,
+                  label:
+                    resumoAberto.count > 0
+                      ? `Ainda esse mês (${resumoAberto.count})`
+                      : 'Ainda esse mês',
+                },
+              ]}
             />
-          </Card>
+            <Link to="/financeiro/transacoes">
+              <Button variant="ghost" size="sm">
+                Ver todos <ArrowRight />
+              </Button>
+            </Link>
+          </div>
+
+          {panel === 'latest' ? (
+            <Card>
+              <TransactionList
+                transactions={finance.monthTransactions.slice(0, 8)}
+                accounts={finance.accounts}
+                categoryById={finance.categoryById}
+                onEdit={openEditor}
+                onSetPaid={(transaction, paid) => void setPaid(transaction, paid)}
+                emptyTitle="Nada lançado neste mês"
+                emptyDescription='Use o botão acima ou o registro rápido (Ctrl+K): "gastei 35 no mercado".'
+              />
+            </Card>
+          ) : (
+            <Card>
+              {resumoAberto.count > 0 && (
+                <div className="border-border-base flex flex-wrap items-end gap-x-8 gap-y-3 border-b px-5 py-4">
+                  <Stat
+                    label="A pagar"
+                    value={formatCents(resumoAberto.toPayCents)}
+                    tone={resumoAberto.toPayCents > 0 ? 'negative' : undefined}
+                  />
+                  <Stat
+                    label="A receber"
+                    value={formatCents(resumoAberto.toReceiveCents)}
+                    tone={resumoAberto.toReceiveCents > 0 ? 'positive' : undefined}
+                  />
+                  <Stat
+                    label="Saldo do que falta"
+                    value={`${resumoAberto.balanceCents < 0 ? '−' : '+'}${formatCents(
+                      Math.abs(resumoAberto.balanceCents),
+                    )}`}
+                    tone={resumoAberto.balanceCents < 0 ? 'negative' : 'positive'}
+                  />
+                  {resumoAberto.overdueCount > 0 && (
+                    <div className="ml-auto">
+                      <Badge tone="negative">
+                        {resumoAberto.overdueCount} vencido
+                        {resumoAberto.overdueCount === 1 ? '' : 's'}
+                      </Badge>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <TransactionList
+                transactions={emAberto}
+                accounts={finance.accounts}
+                categoryById={finance.categoryById}
+                onEdit={openEditor}
+                onSetPaid={(transaction, paid) => void setPaid(transaction, paid)}
+                emptyTitle={
+                  pendentes.length > 0 ? 'Nenhum lançamento em aberto' : 'Nada em aberto'
+                }
+                emptyDescription={
+                  pendentes.length > 0
+                    ? 'Só faltam as recorrentes abaixo.'
+                    : 'Tudo deste mês já está pago.'
+                }
+              />
+
+              {pendentes.length > 0 && (
+                <div className="border-border-base border-t">
+                  <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-3">
+                    <div>
+                      <p className="text-fg text-xs font-medium">
+                        {pendentes.length} recorrente{pendentes.length === 1 ? '' : 's'} a lançar
+                      </p>
+                      <p className="text-fg-muted mt-0.5 text-[11px]">
+                        Já contam no total acima; viram lançamento previsto ao confirmar.
+                      </p>
+                    </div>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      disabled={lancando}
+                      onClick={() => {
+                        setLancando(true)
+                        void materialize(pendentes).finally(() => setLancando(false))
+                      }}
+                    >
+                      {lancando ? 'Lançando…' : 'Lançar todas'}
+                    </Button>
+                  </div>
+
+                  <div className="divide-border-base divide-y">
+                    {pendentes.map(({ rule, date }) => {
+                      const category = rule.category_id
+                        ? finance.categoryById.get(rule.category_id)
+                        : null
+                      return (
+                        <div key={rule.id} className="flex items-center gap-3 px-5 py-2.5">
+                          <span
+                            className="flex size-8 shrink-0 items-center justify-center rounded-lg"
+                            style={{ background: `${category?.color ?? '#71717a'}1f` }}
+                          >
+                            <CategoryIcon
+                              icon={category?.icon}
+                              color={category?.color}
+                              className="size-4"
+                            />
+                          </span>
+                          <div className="min-w-0 flex-1">
+                            <p className="text-fg-muted truncate text-sm">{rule.description}</p>
+                            <p className="text-fg-subtle truncate text-[11px]">
+                              {shortDate(date)} · recorrente
+                            </p>
+                          </div>
+                          <Badge>a lançar</Badge>
+                          <span
+                            className={`text-sm font-medium whitespace-nowrap ${
+                              rule.kind === 'income' ? 'text-positive' : 'text-fg'
+                            }`}
+                          >
+                            {rule.kind === 'income' ? '+' : '−'}
+                            {formatCents(rule.amount_cents)}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+            </Card>
+          )}
         </div>
 
         <div>

@@ -3,14 +3,18 @@ import { useEffect, useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Field, Input, Select, Textarea } from '@/components/ui/field'
 import { Modal } from '@/components/ui/modal'
-import { Segmented } from '@/components/ui/misc'
+import { Segmented, Toggle } from '@/components/ui/misc'
 import type { Account, Category, TransactionKind } from '@/data/types'
 import { guessCategory } from '@/data/seed-finance'
 import { competenceLabel, competenceFor, buildInstallments } from '@/lib/finance/billing'
+import { MAX_REPEAT_MONTHS, MIN_REPEAT_MONTHS, repeatEndDate, repeatTotal } from '@/lib/finance/recurring'
 import { formatCents, parseAmount } from '@/lib/finance/money'
 import { today } from '@/lib/utils'
 import { cardConfig, type TransactionDraft } from './actions'
 import { sortCategories } from './use-finance'
+
+/** Como o valor se distribui no tempo. */
+type Rhythm = 'once' | 'installments' | 'repeat'
 
 /**
  * Formulário de lançamento.
@@ -53,6 +57,13 @@ export function TransactionForm({
   const [targetId, setTargetId] = useState(initial?.transfer_account_id ?? '')
   const [categoryId, setCategoryId] = useState(initial?.category_id ?? '')
   const [installments, setInstallments] = useState(initial?.installments ?? 1)
+  const [rhythm, setRhythm] = useState<Rhythm>(
+    (initial?.installments ?? 1) > 1 ? 'installments' : 'once',
+  )
+  /** Texto do campo: o número fica cru para não brigar com quem está digitando. */
+  const [repeatInput, setRepeatInput] = useState('12')
+  const [endless, setEndless] = useState(false)
+  const [repeatDay, setRepeatDay] = useState(() => Number((initial?.date ?? today()).slice(8, 10)))
   const [paid, setPaid] = useState(initial?.paid ?? true)
   const [notes, setNotes] = useState(initial?.notes ?? '')
   const [touchedCategory, setTouchedCategory] = useState(editing)
@@ -80,18 +91,42 @@ export function TransactionForm({
     if (card && kind === 'expense') setPaid(false)
   }, [card, kind, editing])
 
+  // Parcelar divide um total; repetir multiplica um valor. Só a compra no
+  // cartão parcela, e transferência não faz nem uma coisa nem outra.
+  const canInstallment = Boolean(card) && kind === 'expense'
+  const canRepeat = kind !== 'transfer'
+  const showRhythm = !editing && (canInstallment || canRepeat)
+
+  // O ritmo escolhido pode deixar de valer quando a conta ou o tipo mudam —
+  // trocar para cartão e voltar não pode deixar "Parcelado" pendurado.
+  useEffect(() => {
+    if (rhythm === 'installments' && !canInstallment) setRhythm('once')
+    if (rhythm === 'repeat' && !canRepeat) setRhythm('once')
+  }, [rhythm, canInstallment, canRepeat])
+
+  const repeating = showRhythm && rhythm === 'repeat'
+  const parcelando = showRhythm && rhythm === 'installments' && installments > 1
+
+  const repeatMonths = endless ? null : Number(repeatInput)
+  const repeatValido =
+    endless ||
+    (Number.isInteger(repeatMonths) &&
+      repeatMonths !== null &&
+      repeatMonths >= MIN_REPEAT_MONTHS &&
+      repeatMonths <= MAX_REPEAT_MONTHS)
+
   // Mesma regra que `useCreateTransaction` aplica ao salvar — a prévia não
   // pode divergir do que é gravado.
   const competence = competenceFor(date, card)
-  const plan =
-    !editing && card && kind === 'expense' && installments > 1
-      ? buildInstallments(amountCents, installments, date, card)
-      : null
+  const plan = parcelando ? buildInstallments(amountCents, installments, date, card!) : null
+  const repeatEnd = repeating && repeatValido ? repeatEndDate(date, repeatMonths) : null
+  const repeatSum = repeating && repeatValido ? repeatTotal(amountCents, repeatMonths) : null
 
   const valid =
     amountCents > 0 &&
     accountId &&
-    (kind !== 'transfer' || (targetId && targetId !== accountId))
+    (kind !== 'transfer' || (targetId && targetId !== accountId)) &&
+    (!repeating || repeatValido)
 
   return (
     <Modal
@@ -123,12 +158,15 @@ export function TransactionForm({
                 description: description.trim(),
                 tags: [],
                 paid,
-                installments: !editing && kind === 'expense' && card ? installments : 1,
+                installments: parcelando ? installments : 1,
+                repeat: repeating
+                  ? { day_of_month: repeatDay, end_date: repeatEnd }
+                  : null,
                 notes: notes.trim() || null,
               })
             }
           >
-            {editing ? 'Salvar alterações' : 'Salvar'}
+            {editing ? 'Salvar alterações' : repeating ? 'Salvar recorrente' : 'Salvar'}
           </Button>
         </>
       }
@@ -148,6 +186,24 @@ export function TransactionForm({
             { value: 'transfer' as const, label: 'Transferência' },
           ]}
         />
+
+        {showRhythm && (
+          <Segmented
+            className="w-full"
+            value={rhythm}
+            onChange={(value) => {
+              setRhythm(value)
+              // Parcelar sem número de parcelas não parcela nada; repetir não
+              // usa o campo, mas deixá-lo sujo faria a prévia mentir ao voltar.
+              setInstallments(value === 'installments' ? 2 : 1)
+            }}
+            options={[
+              { value: 'once' as const, label: 'À vista' },
+              ...(canInstallment ? [{ value: 'installments' as const, label: 'Parcelado' }] : []),
+              ...(canRepeat ? [{ value: 'repeat' as const, label: 'Se repete' }] : []),
+            ]}
+          />
+        )}
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Valor" suffix="R$">
@@ -215,21 +271,6 @@ export function TransactionForm({
             </Field>
           )}
 
-          {!editing && card && kind === 'expense' && (
-            <Field label="Parcelas">
-              <Select
-                value={installments}
-                onChange={(e) => setInstallments(Number(e.target.value))}
-              >
-                {Array.from({ length: 24 }, (_, i) => i + 1).map((n) => (
-                  <option key={n} value={n}>
-                    {n === 1 ? 'À vista' : `${n}x`}
-                  </option>
-                ))}
-              </Select>
-            </Field>
-          )}
-
           {(!card || editing) && (
             <Field label="Situação">
               <Select value={paid ? '1' : '0'} onChange={(e) => setPaid(e.target.value === '1')}>
@@ -239,12 +280,96 @@ export function TransactionForm({
             </Field>
           )}
 
+          {repeating && (
+            <>
+              <Field
+                label="Repete por"
+                suffix="meses"
+                error={
+                  !endless && repeatInput.trim() !== '' && !repeatValido
+                    ? `Entre ${MIN_REPEAT_MONTHS} e ${MAX_REPEAT_MONTHS}`
+                    : undefined
+                }
+              >
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  min={MIN_REPEAT_MONTHS}
+                  max={MAX_REPEAT_MONTHS}
+                  step={1}
+                  disabled={endless}
+                  value={endless ? '' : repeatInput}
+                  placeholder="12"
+                  onChange={(e) => setRepeatInput(e.target.value)}
+                />
+              </Field>
+
+              <Field label="Dia do mês">
+                <Select
+                  value={repeatDay}
+                  onChange={(e) => setRepeatDay(Number(e.target.value))}
+                >
+                  {Array.from({ length: 31 }, (_, i) => i + 1).map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+
+              <div className="bg-surface-2 flex items-center justify-between gap-4 rounded-lg px-3 py-2.5 sm:col-span-2">
+                <div>
+                  <p className="text-fg text-xs font-medium">Sem fim</p>
+                  <p className="text-fg-muted text-[11px]">
+                    Aluguel e assinatura não têm data para acabar — ligue e o prazo some.
+                  </p>
+                </div>
+                <Toggle checked={endless} onChange={setEndless} label="Repetir sem fim" />
+              </div>
+            </>
+          )}
+
+          {parcelando && (
+            <Field label="Parcelas" className="sm:col-span-2">
+              <Select
+                value={installments}
+                onChange={(e) => setInstallments(Number(e.target.value))}
+              >
+                {Array.from({ length: 23 }, (_, i) => i + 2).map((n) => (
+                  <option key={n} value={n}>
+                    {n}x
+                  </option>
+                ))}
+              </Select>
+            </Field>
+          )}
+
           <Field label="Observações" className="sm:col-span-2">
             <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} />
           </Field>
         </div>
 
-        {card && kind === 'expense' && amountCents > 0 && (
+        {repeating && amountCents > 0 && repeatValido && (
+          <div className="bg-accent-soft text-accent space-y-1.5 rounded-lg px-3 py-2.5 text-xs">
+            <p className="font-medium">
+              {repeatMonths === null
+                ? `${formatCents(amountCents)} todo dia ${repeatDay}, sem data para acabar`
+                : `${repeatMonths} × ${formatCents(amountCents)} todo dia ${repeatDay}`}
+            </p>
+            {repeatSum !== null && repeatEnd && (
+              <p>
+                De {competenceLabel(competenceFor(date, null))} até{' '}
+                {competenceLabel(competenceFor(repeatEnd, null))} — {formatCents(repeatSum)} no
+                total.
+              </p>
+            )}
+            <p className="opacity-80">
+              Nada entra no extrato agora: cada mês fica pendente até você confirmar.
+            </p>
+          </div>
+        )}
+
+        {!repeating && card && kind === 'expense' && amountCents > 0 && (
           <div className="bg-surface-2 space-y-1.5 rounded-lg px-3 py-2.5 text-xs">
             {plan ? (
               <>

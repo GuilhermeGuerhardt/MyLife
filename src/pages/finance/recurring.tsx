@@ -1,5 +1,7 @@
 import { Plus, Repeat } from 'lucide-react'
 import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { buttonStyles } from '@/components/ui/button'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge, EmptyState, SectionTitle, Stat } from '@/components/ui/misc'
@@ -27,12 +29,11 @@ export function RecurringPage() {
   const [competence, setCompetence] = useState(toCompetence(today()))
   const finance = useFinance(competence)
   const { data: categories } = useCategories()
-  const { data: rules, create, update, remove } = useRecurring()
+  const { data: rules, update, remove } = useRecurring()
   const { data: transactions } = useTransactions()
   const materialize = useMaterializeRecurring()
 
   const [editing, setEditing] = useState<RecurringTransaction | null>(null)
-  const [adding, setAdding] = useState(false)
   const [lancando, setLancando] = useState(false)
 
   const accountById = useMemo(
@@ -71,15 +72,16 @@ export function RecurringPage() {
         <div>
           <h1 className="text-fg text-xl font-semibold">Recorrentes</h1>
           <p className="text-fg-muted mt-1 text-sm">
-            O que se repete todo mês. Nada é lançado sem você confirmar.
+            O que se repete todo mês. Uma recorrente nasce em Lançamentos, marcando
+            "Se repete" — aqui você acompanha, pausa e edita.
           </p>
         </div>
         <div className="flex items-center gap-2">
           <MonthNav competence={competence} onChange={setCompetence} />
-          <Button onClick={() => setAdding(true)} disabled={!finance.hasAccounts}>
+          <Link to="/financeiro/transacoes" className={buttonStyles({ variant: 'secondary' })}>
             <Plus />
-            Recorrente
-          </Button>
+            Nova pelo lançamento
+          </Link>
         </div>
       </div>
 
@@ -130,7 +132,7 @@ export function RecurringPage() {
           <EmptyState
             icon={<Repeat className="size-6" />}
             title="Nenhuma recorrente"
-            description="Cadastre aluguel, internet ou assinatura e pare de relançar todo mês."
+            description='Lance aluguel, internet ou assinatura em Lançamentos e marque "Se repete" — a regra aparece aqui.'
           />
         ) : (
           <div className="divide-border-base divide-y">
@@ -196,15 +198,12 @@ export function RecurringPage() {
         )}
       </Card>
 
-      {(adding || editing) && (
+      {editing && (
         <RecurringForm
           initial={editing}
           accounts={finance.allAccounts}
           categories={categories}
-          onClose={() => {
-            setAdding(false)
-            setEditing(null)
-          }}
+          onClose={() => setEditing(null)}
           onRemove={
             editing
               ? () => {
@@ -213,9 +212,7 @@ export function RecurringPage() {
               : null
           }
           onSave={async (draft: RecurringDraft) => {
-            if (editing) await update.mutateAsync({ id: editing.id, patch: draft })
-            else await create.mutateAsync(draft)
-            setAdding(false)
+            await update.mutateAsync({ id: editing.id, patch: draft })
             setEditing(null)
           }}
         />
