@@ -232,6 +232,29 @@ export async function resetFinance(): Promise<FinanceCounts> {
   return removed
 }
 
+/**
+ * Devolve o controle ao navegador por um instante.
+ *
+ * Usa  em vez de : o navegador limita temporizadores
+ * a cerca de um por segundo em aba de segundo plano, e uma importação de duas
+ * mil linhas que respira a cada 60 ms levaria meia hora se a pessoa minimizasse
+ * a janela no meio. A mensagem de canal não sofre esse limite.
+ */
+function respirar(): Promise<void> {
+  return new Promise((resolve) => {
+    if (typeof MessageChannel === 'undefined') {
+      setTimeout(resolve, 0)
+      return
+    }
+    const canal = new MessageChannel()
+    canal.port1.onmessage = () => {
+      canal.port1.close()
+      resolve()
+    }
+    canal.port2.postMessage(null)
+  })
+}
+
 function useCollection<T extends BaseRow>(name: CollectionName, key: QueryKey = [name]) {
   const client = useQueryClient()
   const store = collections[name] as unknown as Collection<T>
@@ -253,11 +276,47 @@ function useCollection<T extends BaseRow>(name: CollectionName, key: QueryKey = 
     onSuccess: invalidate,
   })
 
+  /**
+   * Insere vários de uma vez, invalidando o cache uma única vez no fim.
+   *
+   * `create` invalida a cada inserção, e a invalidação relê a coleção inteira:
+   * numa importação de 400 linhas isso são 400 releituras de uma lista que
+   * cresce a cada volta, e o custo sobe com o quadrado do tamanho do arquivo.
+   * Aqui a leitura acontece uma vez só, no fim.
+   *
+   * `onProgress` recebe quantos já foram — é o que alimenta a barra.
+   */
+  async function createMany(
+    items: Array<Parameters<Collection<T>['insert']>[0]>,
+    onProgress?: (done: number) => void,
+  ): Promise<T[]> {
+    const created: T[] = []
+    let ultimoRespiro = performance.now()
+
+    for (const item of items) {
+      created.push(await store.insert(item))
+      onProgress?.(created.length)
+
+      // Sem devolver o controle ao navegador, as gravações rodam numa tacada só
+      // e a barra fica parada no zero até o fim. O respiro é por tempo, não por
+      // contagem: assim se ajusta sozinho a um destino lento (banco) e quase
+      // não custa num rápido (navegador).
+      if (performance.now() - ultimoRespiro > 60) {
+        await respirar()
+        ultimoRespiro = performance.now()
+      }
+    }
+
+    await invalidate()
+    return created
+  }
+
   return {
     data: (query.data ?? []) as T[],
     isLoading: query.isLoading,
     error: query.error,
     create,
+    createMany,
     update,
     remove,
   }

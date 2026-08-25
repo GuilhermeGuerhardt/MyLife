@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Field, Select } from '@/components/ui/field'
-import { Badge, EmptyState, Segmented, Stat } from '@/components/ui/misc'
+import { Badge, EmptyState, Segmented, Stat, Progress } from '@/components/ui/misc'
 import { useAccounts, useCategories, useTransactions } from '@/data/queries'
 import { ExportCard } from '@/features/finance/export-card'
 import { ResetFinanceCard } from '@/features/finance/reset-card'
@@ -15,6 +15,7 @@ import {
   suggestAccounts,
   suggestCategories,
   useRunImport,
+  type ImportProgress,
   type ImportResult,
 } from '@/features/finance/use-import'
 import {
@@ -60,6 +61,7 @@ export function ImportPage() {
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [filter, setFilter] = useState<Filter>('all')
   const [running, setRunning] = useState(false)
+  const [progress, setProgress] = useState<ImportProgress | null>(null)
   const [result, setResult] = useState<ImportResult | null>(null)
 
   const header = cells[0] ?? []
@@ -120,16 +122,21 @@ export function ImportPage() {
 
   const importNow = async () => {
     setRunning(true)
+    setProgress({ done: 0, total: 0 })
     try {
-      const outcome = await runImport({
-        rows: rows.filter((row) => selected.has(row.line) && !row.error),
-        accounts: accountChoice,
-        categories: categoryChoice,
-        fallbackAccountId: fallbackAccount,
-      })
+      const outcome = await runImport(
+        {
+          rows: rows.filter((row) => selected.has(row.line) && !row.error),
+          accounts: accountChoice,
+          categories: categoryChoice,
+          fallbackAccountId: fallbackAccount,
+        },
+        setProgress,
+      )
       setResult(outcome)
     } finally {
       setRunning(false)
+      setProgress(null)
     }
   }
 
@@ -362,6 +369,23 @@ export function ImportPage() {
                 </CardContent>
               </Card>
 
+              {running && progress && progress.total > 0 && (
+                <Card>
+                  <CardContent className="space-y-2">
+                    <div className="text-fg-muted flex items-center justify-between text-xs">
+                      <span>Gravando lançamentos…</span>
+                      <span className="tabular-nums">
+                        {progress.done} de {progress.total}
+                      </span>
+                    </div>
+                    <Progress value={progress.done} max={progress.total} />
+                    <p className="text-fg-subtle text-[11px]">
+                      Não feche a janela: o que já foi gravado permanece, mas o resto não entra.
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+
               <div className="flex flex-wrap items-center justify-end gap-3">
                 <p className="text-fg-subtle mr-auto text-xs">
                   {summary.ready} de {rows.length} linhas serão gravadas.
@@ -371,7 +395,11 @@ export function ImportPage() {
                 </Button>
                 <Button onClick={importNow} disabled={summary.ready === 0 || running}>
                   {running ? <Loader2 className="animate-spin" /> : <Check />}
-                  {running ? 'Importando…' : `Importar ${summary.ready}`}
+                  {running
+                    ? progress && progress.total > 0
+                      ? `Gravando ${progress.done} de ${progress.total}`
+                      : 'Importando…'
+                    : `Importar ${summary.ready}`}
                 </Button>
               </div>
             </>

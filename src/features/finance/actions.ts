@@ -1,4 +1,4 @@
-import { useAccounts, useTransactions } from '@/data/queries'
+import { useAccounts, useRecurring, useTransactions } from '@/data/queries'
 import type { Account, BaseRow, Transaction, TransactionKind } from '@/data/types'
 import {
   buildInstallments,
@@ -8,6 +8,13 @@ import {
 } from '@/lib/finance/billing'
 import type { PendingOccurrence } from '@/lib/finance/recurring'
 import { uid } from '@/lib/utils'
+
+/** Quando o lançamento é, na verdade, uma regra que se repete todo mês. */
+export interface RepeatDraft {
+  day_of_month: number
+  /** `null` = sem fim. */
+  end_date: string | null
+}
 
 export interface TransactionDraft {
   account_id: string
@@ -20,6 +27,8 @@ export interface TransactionDraft {
   tags: string[]
   paid: boolean
   installments: number
+  /** Presente = não grava lançamento, grava a regra. */
+  repeat?: RepeatDraft | null
   notes: string | null
 }
 
@@ -40,8 +49,26 @@ export function cardConfig(account: Account | undefined | null): CardConfig | nu
 export function useCreateTransaction() {
   const { data: accounts } = useAccounts()
   const { create } = useTransactions()
+  const { create: createRule } = useRecurring()
 
   return async function createTransaction(draft: TransactionDraft): Promise<void> {
+    // "Se repete" não cria linha nenhuma no extrato: cria a regra, e ela vira
+    // pendente no mês. Lançar sozinho é justamente o que o app evita.
+    if (draft.repeat && draft.kind !== 'transfer') {
+      await createRule.mutateAsync({
+        description: draft.description || 'Recorrente',
+        account_id: draft.account_id,
+        category_id: draft.category_id,
+        kind: draft.kind,
+        amount_cents: draft.amount_cents,
+        day_of_month: draft.repeat.day_of_month,
+        start_date: draft.date,
+        end_date: draft.repeat.end_date,
+        active: true,
+      })
+      return
+    }
+
     const account = accounts.find((a) => a.id === draft.account_id)
     const card = cardConfig(account)
     const base: Omit<Transaction, keyof BaseRow> = {
@@ -172,6 +199,7 @@ export function toDraft(transaction: Transaction): TransactionDraft {
     tags: transaction.tags,
     paid: transaction.paid,
     installments: 1,
+    repeat: null,
     notes: transaction.notes,
   }
 }

@@ -8,7 +8,7 @@
  * confere o saldo.
  */
 
-import { dateInCompetence, type Competence } from './billing'
+import { addMonths, dateInCompetence, lastDayOfMonth, toCompetence, type Competence } from './billing'
 
 export interface RecurringLike {
   id: string
@@ -88,4 +88,31 @@ export function pendingBalance(pending: PendingOccurrence[]): number {
       total + (rule.kind === 'income' ? rule.amount_cents : -rule.amount_cents),
     0,
   )
+}
+
+/** Limites do prazo de repetição, em meses. */
+export const MIN_REPEAT_MONTHS = 2
+export const MAX_REPEAT_MONTHS = 300
+
+/**
+ * Onde a repetição termina.
+ *
+ * `null` é sem fim — a maioria das contas de casa não tem data para acabar, e
+ * obrigar a escolher um prazo faria a pessoa chutar um número.
+ */
+export function repeatEndDate(startDate: string, months: number | null): string | null {
+  if (months === null || months <= 1) return months === null ? null : startDate
+
+  const day = Number(startDate.slice(8, 10))
+  const last = addMonths(toCompetence(startDate), months - 1)
+
+  // O dia é limitado ao tamanho do mês final pelo mesmo motivo de
+  // `occurrenceDate`: um começo no dia 31 não pode virar um fim em 31 de abril.
+  return `${last}-${String(Math.min(day, lastDayOfMonth(last))).padStart(2, '0')}`
+}
+
+/** Quanto sai no total ao longo de um prazo fechado. */
+export function repeatTotal(amountCents: number, months: number | null): number | null {
+  if (months === null || months <= 0) return null
+  return amountCents * months
 }
