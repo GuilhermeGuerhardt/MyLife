@@ -52,18 +52,35 @@ export function useAgenda(from: string, to: string) {
     const activityName = (id: string) =>
       activities.find((a) => a.id === id)?.name ?? 'Treino'
 
+    // Faculdade e curso livre têm telas diferentes: o link do evento precisa
+    // saber de qual trilha o curso é para não jogar todo mundo em /faculdade.
+    const programHref = (id: string) => {
+      const program = programs.find((p) => p.id === id)
+      if (!program) return null
+      return program.track === 'course' ? `/cursos/${id}` : `/faculdade/${id}`
+    }
+
     const events = sortAgenda([
       ...classEvents(subjects, from, to),
       ...deadlineEvents(
-        deadlines.filter((d) => d.date >= from && d.date <= to),
+        // Uma das duas pontas dentro do intervalo basta: um trabalho que começa
+        // neste mês e vence no próximo tem de aparecer nos dois.
+        deadlines.filter((d) => {
+          const inicio = d.start_date ?? d.date
+          return (inicio >= from && inicio <= to) || (d.date >= from && d.date <= to)
+        }),
         (id) => (id ? (subjectById.get(id)?.name ?? null) : null),
-      ),
+        programHref,
+        // O marco da outra ponta pode cair fora da janela pedida; ele volta
+        // quando o mês dele for aberto.
+      ).filter((event) => event.date >= from && event.date <= to),
       ...assessmentEvents(
         assessments.filter((a) => a.date !== null && a.date >= from && a.date <= to),
         (id) => {
           const found = subjectById.get(id)
           return found ? { name: found.name, program_id: found.program_id } : null
         },
+        programHref,
       ),
       ...workoutEvents(
         sessions.filter((s) => s.date >= from && s.date <= to),

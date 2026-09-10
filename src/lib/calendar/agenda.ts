@@ -58,6 +58,21 @@ export const SOURCE_LABELS: Record<AgendaSource, string> = {
   plan: 'Plano',
 }
 
+/**
+ * A classe que dá a cor de cada área.
+ *
+ * Ela redefine `--accent` no elemento, então tudo que estiver dentro — ponto,
+ * etiqueta, texto — sai na cor do módulo sem ninguém escrever a cor à mão.
+ * Mora aqui, e não na tela do calendário, porque o painel de início pinta os
+ * mesmos compromissos: duas tabelas separadas sairiam do lugar na primeira vez
+ * que uma cor mudasse.
+ */
+export const AREA_ACCENT: Record<AgendaArea, string> = {
+  health: 'accent-health',
+  education: 'accent-education',
+  finance: 'accent-finance',
+}
+
 const AREA_OF: Record<AgendaSource, AgendaArea> = {
   class: 'education',
   exam: 'education',
@@ -125,6 +140,7 @@ export interface DeadlineLike {
   id: string
   title: string
   kind: 'prova' | 'trabalho' | 'entrega' | 'aula'
+  start_date?: string | null
   date: string
   done: boolean
   program_id: string | null
@@ -132,22 +148,64 @@ export interface DeadlineLike {
   notes: string | null
 }
 
+/**
+ * Provas, entregas e tudo que foi marcado à mão.
+ *
+ * Compromisso com data de início vira dois marcos no calendário — o dia em que
+ * começa e o dia em que vence. Pintar todos os dias entre os dois encheria a
+ * grade do mês: um trabalho de três semanas apagaria o resto da vida da pessoa
+ * embaixo dele. As duas pontas são o que se precisa enxergar.
+ *
+ * `programHref` recebe o id do curso e devolve a rota certa: faculdade e curso
+ * livre moram em telas diferentes.
+ */
 export function deadlineEvents(
   deadlines: DeadlineLike[],
   subjectName: (id: string | null) => string | null,
+  programHref?: (id: string) => string | null,
 ): AgendaEvent[] {
-  return deadlines.map((deadline) => ({
-    id: `deadline:${deadline.id}`,
-    date: deadline.date,
-    time: null,
-    endTime: null,
-    title: deadline.title,
-    detail: subjectName(deadline.subject_id) ?? deadline.notes,
-    source: deadline.kind === 'prova' ? 'exam' : deadline.kind === 'aula' ? 'class' : 'assignment',
-    area: 'education',
-    href: deadline.program_id ? `/faculdade/${deadline.program_id}` : null,
-    done: deadline.done,
-  }))
+  const events: AgendaEvent[] = []
+
+  for (const deadline of deadlines) {
+    const href = deadline.program_id
+      ? (programHref?.(deadline.program_id) ?? `/faculdade/${deadline.program_id}`)
+      : null
+    const source: AgendaSource =
+      deadline.kind === 'prova' ? 'exam' : deadline.kind === 'aula' ? 'class' : 'assignment'
+    const detail = subjectName(deadline.subject_id) ?? deadline.notes
+
+    const temInicio = Boolean(deadline.start_date && deadline.start_date !== deadline.date)
+
+    if (temInicio) {
+      events.push({
+        id: `deadline-start:${deadline.id}`,
+        date: deadline.start_date!,
+        time: null,
+        endTime: null,
+        title: deadline.title,
+        detail: detail ? `Início · ${detail}` : 'Início',
+        source,
+        area: 'education',
+        href,
+        done: deadline.done,
+      })
+    }
+
+    events.push({
+      id: `deadline:${deadline.id}`,
+      date: deadline.date,
+      time: null,
+      endTime: null,
+      title: deadline.title,
+      detail: temInicio ? (detail ? `Entrega · ${detail}` : 'Entrega') : detail,
+      source,
+      area: 'education',
+      href,
+      done: deadline.done,
+    })
+  }
+
+  return events
 }
 
 export interface AssessmentLike {
@@ -165,6 +223,7 @@ export interface AssessmentLike {
 export function assessmentEvents(
   assessments: AssessmentLike[],
   subject: (id: string) => { name: string; program_id: string } | null,
+  programHref?: (id: string) => string | null,
 ): AgendaEvent[] {
   return assessments
     .filter((item) => item.date !== null && item.grade === null)
@@ -179,7 +238,9 @@ export function assessmentEvents(
         detail: 'Avaliação sem nota lançada',
         source: 'exam' as const,
         area: 'education' as const,
-        href: info ? `/faculdade/${info.program_id}` : null,
+        href: info
+          ? (programHref?.(info.program_id) ?? `/faculdade/${info.program_id}`)
+          : null,
         done: false,
       }
     })

@@ -188,7 +188,13 @@ export interface Program extends BaseRow {
   cost: number | null
   /** Avaliação pessoal do curso, 1 a 5. */
   rating: number | null
+  /**
+   * O certificado como imagem: a foto enviada, ou a primeira página do PDF.
+   * É o que o cartão do curso mostra em miniatura.
+   */
   certificate_url: string | null
+  /** O PDF original, quando o certificado foi enviado nesse formato. */
+  certificate_pdf: string | null
   notes: string | null
 }
 
@@ -334,11 +340,19 @@ export interface RecurringTransaction extends BaseRow {
   active: boolean
 }
 
+/**
+ * Compromisso do calendário. Quando aponta para um curso ou disciplina, é o
+ * mesmo registro que aparece na agenda e na tela do curso — marcar concluído
+ * num lugar altera o outro porque não existem duas cópias.
+ */
 export interface Deadline extends BaseRow {
   program_id: string | null
   subject_id: string | null
   title: string
   kind: 'prova' | 'trabalho' | 'entrega' | 'aula'
+  /** Data de início. Nula em compromisso de um dia só, onde `date` basta. */
+  start_date: string | null
+  /** Data de entrega — o fim do período, quando há início. */
   date: string
   done: boolean
   notes: string | null

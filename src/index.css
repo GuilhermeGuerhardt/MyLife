@@ -1,10 +1,15 @@
 @import 'tailwindcss';
 
 /*
-  Tema controlado por data-theme no <html> (setado antes do paint no index.html).
-  Não usamos prefers-color-scheme direto para que o toggle mande sempre.
+  Tema controlado por dois atributos no <html>, escritos antes do primeiro paint
+  pelo index.html: `data-theme` guarda a escolha (dark, dim, dracula, nord...) e
+  `data-scheme` diz se ela é clara ou escura.
+
+  A separação existe para o resto do arquivo não precisar se repetir tema a
+  tema: acento de módulo, `color-scheme` e a variante `dark:` olham só para o
+  esquema. Não usamos prefers-color-scheme direto para que a escolha mande.
 */
-@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+@custom-variant dark (&:where([data-scheme='dark'], [data-scheme='dark'] *));
 
 /* ---------------------------------------------------------------------------
    Tokens semânticos. Toda cor da aplicação sai daqui — nenhum componente
@@ -59,13 +64,106 @@
   --shadow-card: 0 1px 2px 0 oklch(0 0 0 / 0.3);
 }
 
+/* Escuro suave: o mesmo desenho do escuro, dois passos acima no cinza. Serve
+   para quem acha o escuro pesado demais numa sala clara. */
+[data-theme='dim'] {
+  --bg: oklch(0.29 0.011 265);
+  --surface: oklch(0.335 0.013 265);
+  --surface-2: oklch(0.385 0.014 265);
+  --border: oklch(0.435 0.015 265);
+  --border-strong: oklch(0.52 0.018 265);
+  --fg: oklch(0.96 0.003 265);
+  --fg-muted: oklch(0.79 0.011 265);
+  --fg-subtle: oklch(0.66 0.013 265);
+
+  --accent: oklch(0.74 0.13 250);
+  --accent-fg: oklch(0.24 0.01 265);
+  --accent-soft: oklch(0.42 0.06 250);
+
+  --positive: oklch(0.76 0.15 152);
+  --negative: oklch(0.71 0.17 25);
+  --warning: oklch(0.81 0.14 75);
+  --series-workout: oklch(0.74 0.13 250);
+
+  --shadow-card: 0 1px 2px 0 oklch(0 0 0 / 0.22);
+}
+
+/* Drácula, nas cores oficiais da paleta. */
+[data-theme='dracula'] {
+  --bg: #282a36;
+  --surface: #2f3242;
+  --surface-2: #3a3d4f;
+  --border: #44475a;
+  --border-strong: #565a70;
+  --fg: #f8f8f2;
+  --fg-muted: #bcc0d6;
+  --fg-subtle: #7f86ab;
+
+  --accent: #bd93f9;
+  --accent-fg: #282a36;
+  --accent-soft: #453a63;
+
+  --positive: #50fa7b;
+  --negative: #ff5555;
+  --warning: #f1fa8c;
+  --series-workout: #8be9fd;
+
+  --shadow-card: 0 1px 2px 0 oklch(0 0 0 / 0.35);
+}
+
+/* Nord: azul-gelo nórdico, contraste baixo de propósito. */
+[data-theme='nord'] {
+  --bg: #2e3440;
+  --surface: #363d4b;
+  --surface-2: #3b4252;
+  --border: #454e61;
+  --border-strong: #566072;
+  --fg: #eceff4;
+  --fg-muted: #c6cede;
+  --fg-subtle: #8d9aae;
+
+  --accent: #88c0d0;
+  --accent-fg: #2e3440;
+  --accent-soft: #3a4c58;
+
+  --positive: #a3be8c;
+  --negative: #bf616a;
+  --warning: #ebcb8b;
+  --series-workout: #81a1c1;
+
+  --shadow-card: 0 1px 2px 0 oklch(0 0 0 / 0.3);
+}
+
+/* Sépia, à base do Solarized claro: papel em vez de branco. */
+[data-theme='solar'] {
+  --bg: #fdf6e3;
+  --surface: #fffcf2;
+  --surface-2: #f3edda;
+  --border: #e4ddc6;
+  --border-strong: #cbc3a8;
+  --fg: #073642;
+  --fg-muted: #56707a;
+  --fg-subtle: #8a9a9a;
+
+  --accent: #268bd2;
+  --accent-fg: #fdf6e3;
+  --accent-soft: #dee9f4;
+
+  --positive: #6c8000;
+  --negative: #dc322f;
+  --warning: #b58900;
+  --series-workout: #268bd2;
+
+  --shadow-card: 0 1px 2px 0 oklch(0.4 0.05 80 / 0.08);
+}
+
 /* Cor de destaque por módulo: aplique .accent-health, .accent-finance, etc.
    num contêiner e tudo dentro dele (botões, gráficos, barras) acompanha. */
 .accent-health {
   --accent: oklch(0.65 0.14 162);
   --accent-soft: oklch(0.94 0.04 162);
 }
-[data-theme='dark'] .accent-health {
+[data-scheme='dark'] .accent-health {
   --accent: oklch(0.74 0.15 162);
   --accent-soft: oklch(0.3 0.05 162);
 }
@@ -73,7 +171,7 @@
   --accent: oklch(0.55 0.18 275);
   --accent-soft: oklch(0.94 0.04 275);
 }
-[data-theme='dark'] .accent-education {
+[data-scheme='dark'] .accent-education {
   --accent: oklch(0.7 0.15 275);
   --accent-soft: oklch(0.31 0.07 275);
 }
@@ -81,7 +179,7 @@
   --accent: oklch(0.57 0.2 300);
   --accent-soft: oklch(0.94 0.04 300);
 }
-[data-theme='dark'] .accent-courses {
+[data-scheme='dark'] .accent-courses {
   --accent: oklch(0.72 0.16 300);
   --accent-soft: oklch(0.31 0.07 300);
 }
@@ -89,7 +187,7 @@
   --accent: oklch(0.68 0.15 70);
   --accent-soft: oklch(0.95 0.05 70);
 }
-[data-theme='dark'] .accent-finance {
+[data-scheme='dark'] .accent-finance {
   --accent: oklch(0.78 0.14 70);
   --accent-soft: oklch(0.32 0.06 70);
 }
@@ -97,7 +195,7 @@
   --accent: oklch(0.6 0.19 18);
   --accent-soft: oklch(0.95 0.04 18);
 }
-[data-theme='dark'] .accent-routine {
+[data-scheme='dark'] .accent-routine {
   --accent: oklch(0.72 0.17 18);
   --accent-soft: oklch(0.32 0.07 18);
 }
@@ -145,7 +243,7 @@
   html {
     color-scheme: light;
   }
-  [data-theme='dark'] {
+  [data-scheme='dark'] {
     color-scheme: dark;
   }
 

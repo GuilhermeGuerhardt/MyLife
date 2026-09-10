@@ -52,6 +52,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             arquivos::ler_texto,
             arquivos::gravar_texto,
+            arquivos::gravar_bytes,
             arquivos::pasta_existe,
         ])
         .setup(|app| {

@@ -28,6 +28,7 @@
     "dompurify": "^3.4.14",
     "lucide-react": "^1.33.0",
     "marked": "^18.0.10",
+    "pdfjs-dist": "^6.3.289",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-hook-form": "^7.85.0",

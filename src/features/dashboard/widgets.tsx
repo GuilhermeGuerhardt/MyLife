@@ -34,7 +34,7 @@ import { useHealthSummary } from '@/features/health/use-health-summary'
 import { useAgenda } from '@/features/routine/use-agenda'
 import { useHabitBoard } from '@/features/routine/use-habit-board'
 import { useInsights } from '@/features/routine/use-insights'
-import { SOURCE_LABELS } from '@/lib/calendar/agenda'
+import { AREA_ACCENT, SOURCE_LABELS } from '@/lib/calendar/agenda'
 import { addDays, today } from '@/lib/dates'
 import { currency, decimal, integer, longDate, relativeDay, signed } from '@/lib/format'
 import { cn } from '@/lib/utils'
@@ -316,33 +316,57 @@ function AgendaWidget() {
           </Link>
         }
       />
-      <CardContent className="space-y-2">
+      <CardContent className="space-y-1">
         {next.length === 0 ? (
           <p className="text-fg-muted text-sm">
             Nada marcado. Provas, entregas e vencimentos aparecem aqui automaticamente.
           </p>
         ) : (
-          next.map((event) => (
-            <div key={event.id} className="flex items-baseline gap-2.5">
-              <span className="text-fg-subtle w-16 shrink-0 text-[11px]">
-                {relativeDay(event.date)}
-              </span>
-              <span className="text-fg min-w-0 flex-1 truncate text-sm">{event.title}</span>
-              {/*
-                Tendo valor, ele vale mais que a origem: cinco linhas marcadas
-                "Conta" não informam nada, e o que se quer saber de relance é
-                quanto vai sair. Sem valor — prova, entrega, meta já atingida —
-                o rótulo continua sendo a única pista do que é aquilo.
-              */}
-              {event.amountCents ? (
-                <span className="text-fg-muted shrink-0 text-xs font-medium tabular-nums">
-                  {currency(event.amountCents / 100)}
+          next.map((event) => {
+            const hoje = event.date === from
+
+            return (
+              /*
+                A classe da área redefine `--accent` na linha inteira, então o
+                ponto e a etiqueta saem na mesma cor que aquele compromisso tem
+                no calendário. É o que permite reconhecer "isto é da faculdade"
+                sem ler o rótulo — e é a mesma legenda das duas telas.
+              */
+              <div
+                key={event.id}
+                className={cn(
+                  'flex items-center gap-2.5 rounded-lg px-2 py-1.5 -mx-2',
+                  AREA_ACCENT[event.area],
+                  // Um fundo tênue separa o que é para hoje do resto da lista.
+                  hoje && 'bg-accent-soft/50',
+                )}
+              >
+                <span className="bg-accent size-1.5 shrink-0 rounded-full" />
+                <span
+                  className={cn(
+                    'w-16 shrink-0 text-[11px]',
+                    hoje ? 'text-accent font-semibold' : 'text-fg-subtle',
+                  )}
+                >
+                  {relativeDay(event.date)}
                 </span>
-              ) : (
-                <Badge>{SOURCE_LABELS[event.source]}</Badge>
-              )}
-            </div>
-          ))
+                <span className="text-fg min-w-0 flex-1 truncate text-sm">{event.title}</span>
+                {/*
+                  Tendo valor, ele vale mais que a origem: cinco linhas marcadas
+                  "Conta" não informam nada, e o que se quer saber de relance é
+                  quanto vai sair. Sem valor — prova, entrega, meta já atingida —
+                  o rótulo continua sendo a única pista do que é aquilo.
+                */}
+                {event.amountCents ? (
+                  <span className="text-fg shrink-0 text-xs font-medium tabular-nums">
+                    {currency(event.amountCents / 100)}
+                  </span>
+                ) : (
+                  <Badge tone="accent">{SOURCE_LABELS[event.source]}</Badge>
+                )}
+              </div>
+            )
+          })
         )}
       </CardContent>
     </Card>

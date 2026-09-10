@@ -1,13 +1,15 @@
-import { AlertTriangle, Check, Minus, Plus, Trash2 } from 'lucide-react'
+import { AlertTriangle, CalendarPlus, Check, Minus, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/field'
 import { Badge, Progress } from '@/components/ui/misc'
-import { useAssessments, useSubjects } from '@/data/queries'
+import { useAssessments, useDeadlines, useSubjects } from '@/data/queries'
 import type { Assessment, Subject } from '@/data/types'
 import { attendance, gradeSummary, neededGrade } from '@/lib/education/academics'
-import { decimal } from '@/lib/format'
+import { DeadlineForm } from '@/features/routine/deadline-form'
+import { decimal, shortDate } from '@/lib/format'
+import { today } from '@/lib/utils'
 import { WEEKDAYS } from './subject-form'
 
 /**
@@ -24,12 +26,22 @@ export function TermSubject({
 }) {
   const { update: updateSubject } = useSubjects()
   const { data: allAssessments, create, update, remove } = useAssessments()
+  const {
+    data: allDeadlines,
+    create: createDeadline,
+    update: updateDeadline,
+  } = useDeadlines()
   const [adding, setAdding] = useState(false)
+  const [schedulingDeadline, setSchedulingDeadline] = useState(false)
   const [draft, setDraft] = useState({ name: '', weight: '', grade: '' })
 
   const assessments = allAssessments
     .filter((a) => a.subject_id === subject.id)
     .sort((a, b) => (a.created_at ?? '').localeCompare(b.created_at ?? ''))
+
+  const subjectDeadlines = allDeadlines
+    .filter((d) => d.subject_id === subject.id)
+    .sort((a, b) => a.date.localeCompare(b.date))
 
   const freq = attendance(subject.total_classes ?? 0, subject.absences)
   const summary = gradeSummary(assessments)
@@ -202,6 +214,51 @@ export function TermSubject({
           )}
         </div>
 
+        {/* Compromissos — o mesmo registro que vive na agenda e sobe para o
+            curso. Marcado aqui, muda lá; marcado lá, muda aqui. */}
+        <div className="space-y-2 border-t pt-3">
+          <div className="flex items-center justify-between">
+            <span className="text-fg-muted text-xs font-medium">Compromissos</span>
+            <Button variant="ghost" size="sm" onClick={() => setSchedulingDeadline(true)}>
+              <CalendarPlus />
+              Marcar
+            </Button>
+          </div>
+
+          {subjectDeadlines.length === 0 ? (
+            <p className="text-fg-subtle text-[11px]">
+              O que você marcar aqui entra no calendário e no resumo do curso.
+            </p>
+          ) : (
+            subjectDeadlines.map((deadline) => (
+              <label key={deadline.id} className="flex cursor-pointer items-center gap-2">
+                <input
+                  type="checkbox"
+                  checked={deadline.done}
+                  onChange={() =>
+                    updateDeadline.mutate({ id: deadline.id, patch: { done: !deadline.done } })
+                  }
+                  className="accent-accent size-3.5 shrink-0"
+                />
+                <span
+                  className={
+                    deadline.done
+                      ? 'text-fg-subtle flex-1 truncate text-xs line-through'
+                      : 'text-fg flex-1 truncate text-xs'
+                  }
+                >
+                  {deadline.title}
+                </span>
+                <span className="text-fg-subtle shrink-0 text-[11px]">
+                  {deadline.start_date && deadline.start_date !== deadline.date
+                    ? `${shortDate(deadline.start_date)} → ${shortDate(deadline.date)}`
+                    : shortDate(deadline.date)}
+                </span>
+              </label>
+            ))
+          )}
+        </div>
+
         {/* Simulador */}
         {simulation.status !== 'no_assessments' && (
           <div
@@ -227,6 +284,21 @@ export function TermSubject({
           </div>
         )}
       </CardContent>
+
+      {schedulingDeadline && (
+        <DeadlineForm
+          open
+          deadline={null}
+          defaultDate={today()}
+          lockedProgramId={subject.program_id}
+          lockedSubjectId={subject.id}
+          onClose={() => setSchedulingDeadline(false)}
+          onSave={async (draftDeadline) => {
+            await createDeadline.mutateAsync(draftDeadline)
+            setSchedulingDeadline(false)
+          }}
+        />
+      )}
     </Card>
   )
 }

@@ -4,6 +4,7 @@ import { Field, Input, Select } from '@/components/ui/field'
 import { Modal } from '@/components/ui/modal'
 import type { BaseRow, Degree, Institution, Program, ProgramStatus, Track } from '@/data/types'
 import { DEGREE_LABELS, PROGRAM_STATUS_LABELS } from '@/data/types'
+import { CertificateField } from './certificate'
 
 export type ProgramDraft = Omit<Program, keyof BaseRow>
 
@@ -46,6 +47,7 @@ export function ProgramForm({
     cost: initial?.cost ?? null,
     rating: initial?.rating ?? null,
     certificate_url: initial?.certificate_url ?? null,
+    certificate_pdf: initial?.certificate_pdf ?? null,
     notes: initial?.notes ?? null,
   }))
   const [newInstitution, setNewInstitution] = useState('')
@@ -238,6 +240,15 @@ export function ProgramForm({
             </Field>
           </>
         )}
+
+        <CertificateField
+          className="sm:col-span-2"
+          imagem={form.certificate_url}
+          pdf={form.certificate_pdf}
+          onChange={({ imagem, pdf }) =>
+            setForm((prev) => ({ ...prev, certificate_url: imagem, certificate_pdf: pdf }))
+          }
+        />
       </div>
     </Modal>
   )

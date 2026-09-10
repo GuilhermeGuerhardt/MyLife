@@ -9,6 +9,7 @@ import type { Deadline } from '@/data/types'
 import { DeadlineForm, type DeadlineDraft } from '@/features/routine/deadline-form'
 import { useAgenda } from '@/features/routine/use-agenda'
 import {
+  AREA_ACCENT,
   groupByDay,
   monthRange,
   SOURCE_LABELS,
@@ -23,13 +24,6 @@ import { currency, longDate, relativeDay } from '@/lib/format'
 import { cn } from '@/lib/utils'
 
 const WEEKDAYS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
-
-/** A cor sai do próprio módulo: a classe redefine `--accent` no elemento. */
-const AREA_ACCENT = {
-  health: 'accent-health',
-  education: 'accent-education',
-  finance: 'accent-finance',
-} as const
 
 const AREAS: { key: AgendaArea; label: string }[] = [
   { key: 'education', label: 'Faculdade e cursos' },
@@ -339,7 +333,7 @@ function Legend({
   active,
   onToggle,
 }: {
-  area: keyof typeof AREA_ACCENT
+  area: AgendaArea
   label: string
   active: boolean
   onToggle: () => void

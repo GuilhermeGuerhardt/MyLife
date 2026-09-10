@@ -2,6 +2,7 @@ import { Check } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useProfile } from '@/data/queries'
 import { BackupCard } from '@/features/profile/backup-card'
+import { ThemeCard } from '@/features/profile/theme-card'
 import { WorkspaceCard } from '@/features/profile/workspace-card'
 import { ACTIVITY_LABELS, type ActivityLevel, type Sex } from '@/lib/health/formulas'
 import { Button } from '@/components/ui/button'
@@ -113,6 +114,11 @@ export function ProfilePage() {
           </div>
         </CardContent>
       </Card>
+
+      <div className="space-y-4">
+        <SectionTitle>Aparência</SectionTitle>
+        <ThemeCard />
+      </div>
 
       <div className="space-y-4">
         <SectionTitle>Dados e sincronização</SectionTitle>
