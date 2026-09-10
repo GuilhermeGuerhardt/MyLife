@@ -41,6 +41,12 @@ export const PLANILHA_CSV: TipoArquivo = {
   mime: 'text/csv;charset=utf-8',
 }
 
+export const CERTIFICADO_PDF: TipoArquivo = {
+  nome: 'Certificado em PDF',
+  extensoes: ['pdf'],
+  mime: 'application/pdf',
+}
+
 /**
  * Salva o conteúdo com o nome sugerido.
  *
@@ -49,7 +55,7 @@ export const PLANILHA_CSV: TipoArquivo = {
  */
 export async function salvarArquivo(
   nomeSugerido: string,
-  conteudo: string,
+  conteudo: string | Uint8Array,
   tipo: TipoArquivo,
 ): Promise<boolean> {
   if (isTauri()) {
@@ -58,11 +64,15 @@ export async function salvarArquivo(
       filters: [{ name: tipo.nome, extensions: tipo.extensoes }],
     })
     if (!caminho) return false
-    await invoke('gravar_texto', { caminho, conteudo })
+
+    // Binário vai por um comando próprio: uma `String` no meio do caminho
+    // reinterpretaria os bytes do PDF e o arquivo salvo não abriria.
+    if (typeof conteudo === 'string') await invoke('gravar_texto', { caminho, conteudo })
+    else await invoke('gravar_bytes', { caminho, dados: [...conteudo] })
     return true
   }
 
-  const blob = new Blob([conteudo], { type: tipo.mime })
+  const blob = new Blob([conteudo as BlobPart], { type: tipo.mime })
   const url = URL.createObjectURL(blob)
   const anchor = document.createElement('a')
   anchor.href = url

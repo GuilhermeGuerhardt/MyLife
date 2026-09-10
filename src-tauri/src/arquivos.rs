@@ -68,6 +68,33 @@ pub fn gravar_texto(caminho: String, conteudo: String) -> Result<(), String> {
     })
 }
 
+/// Grava um arquivo binário, criando as pastas que faltarem no caminho.
+///
+/// Existe separada da `gravar_texto` porque o certificado em PDF não é texto:
+/// passá-lo por uma `String` obrigaria a inventar uma codificação no meio do
+/// caminho, e o arquivo salvo não abriria em leitor nenhum.
+///
+/// Mesma gravação em duas etapas da irmã de texto, pelo mesmo motivo: o destino
+/// não pode ficar truncado se a energia cair no meio.
+#[tauri::command]
+pub fn gravar_bytes(caminho: String, dados: Vec<u8>) -> Result<(), String> {
+    let caminho = conferir(&caminho)?;
+
+    if let Some(pasta) = caminho.parent() {
+        fs::create_dir_all(pasta)
+            .map_err(|erro| format!("Não consegui criar {}: {erro}", pasta.display()))?;
+    }
+
+    let temporario = caminho.with_extension("tmp");
+    fs::write(&temporario, dados)
+        .map_err(|erro| format!("Não consegui gravar {}: {erro}", temporario.display()))?;
+
+    fs::rename(&temporario, &caminho).map_err(|erro| {
+        let _ = fs::remove_file(&temporario);
+        format!("Não consegui concluir a gravação de {}: {erro}", caminho.display())
+    })
+}
+
 /// A pasta existe e é mesmo uma pasta?
 ///
 /// Serve para reconectar a pasta lembrada na abertura: um pen drive removido ou

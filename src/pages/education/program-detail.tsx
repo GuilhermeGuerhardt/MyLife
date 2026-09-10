@@ -7,7 +7,10 @@ import { Select } from '@/components/ui/field'
 import { Badge, EmptyState, Progress, SectionTitle, Segmented, Stat } from '@/components/ui/misc'
 import { useInstitutions, useNotes, usePrograms, useSubjects } from '@/data/queries'
 import { DEGREE_LABELS, type Subject } from '@/data/types'
+import { CertificateThumb } from '@/features/education/certificate'
 import { ProgramForm } from '@/features/education/program-form'
+import { ProgramSchedule } from '@/features/education/program-schedule'
+import { ehImagem } from '@/lib/education/certificate'
 import { SubjectForm } from '@/features/education/subject-form'
 import { TermSubject } from '@/features/education/term-subject'
 import { decimal, integer, percent } from '@/lib/format'
@@ -95,7 +98,15 @@ export function ProgramDetail() {
             {program.current_term ? ` · ${program.current_term}º semestre` : ''}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          {ehImagem(program.certificate_url) && (
+            <CertificateThumb
+              imagem={program.certificate_url}
+              pdf={program.certificate_pdf}
+              title={program.name}
+              className="size-11"
+            />
+          )}
           <Link to="/faculdade/caderno">
             <Button variant="secondary">
               <NotebookPen />
@@ -212,6 +223,11 @@ export function ProgramDetail() {
           </Card>
 
           <div className="space-y-4">
+            <ProgramSchedule
+              programId={program.id}
+              description="Provas, entregas e eventos deste curso e das suas disciplinas — os mesmos itens da agenda."
+            />
+
             <Card>
               <CardHeader
                 title="Pode cursar agora"

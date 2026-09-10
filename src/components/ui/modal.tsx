@@ -1,6 +1,7 @@
 import { X } from 'lucide-react'
 import { useEffect, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
+import { cn } from '@/lib/utils'
 import { Button } from './button'
 
 /**
@@ -14,6 +15,8 @@ export function Modal({
   description,
   children,
   footer,
+  /** `wide` é para conteúdo que se lê pela imagem, como o certificado. */
+  size = 'default',
 }: {
   open: boolean
   onClose: () => void
@@ -21,6 +24,7 @@ export function Modal({
   description?: string
   children: ReactNode
   footer?: ReactNode
+  size?: 'default' | 'wide'
 }) {
   useEffect(() => {
     if (!open) return
@@ -48,7 +52,10 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="bg-surface border-border-base animate-[var(--animate-in)] relative flex max-h-[92vh] w-full flex-col rounded-t-2xl border sm:max-w-lg sm:rounded-2xl"
+        className={cn(
+          'bg-surface border-border-base animate-[var(--animate-in)] relative flex max-h-[92vh] w-full flex-col rounded-t-2xl border sm:rounded-2xl',
+          size === 'wide' ? 'sm:max-w-3xl' : 'sm:max-w-lg',
+        )}
       >
         <div className="flex items-start justify-between gap-4 border-b px-5 py-4">
           <div>

@@ -8,8 +8,8 @@ sem mensalidade — seus dados ficam na sua máquina.
 **Entregue até aqui:** módulos de **Saúde** (atividades, medidas, plano de emagrecimento
 adaptativo e diário alimentar), **Faculdade**, **Cursos**, **Caderno**, **Financeiro** e
 **Rotina** (hábitos, agenda unificada e insights entre módulos), com dashboard configurável,
-registro rápido em linguagem natural e importação de extrato em planilha. O que ainda falta
-está em [docs/PLANO.md](docs/PLANO.md).
+registro rápido em linguagem natural, importação de extrato em planilha e seis temas de cor.
+O que ainda falta está em [docs/PLANO.md](docs/PLANO.md).
 
 ---
 
@@ -64,8 +64,10 @@ fora da pasta do programa.
 
 - **Tauri 2** — programa de desktop para Windows. A janela é WebView2 (já vem no
   Windows 11), então o instalador fica na casa dos poucos MB em vez dos ~150 de um Electron
-- **React 19 + Vite + TypeScript** — rotas em lazy loading, bundle inicial ~108 kB gzip
-- **Tailwind CSS v4** com design system próprio em tokens semânticos (tema claro/escuro)
+- **React 19 + Vite + TypeScript** — rotas em lazy loading, bundle inicial ~90 kB gzip
+- **Tailwind CSS v4** com design system próprio em tokens semânticos — seis temas (Escuro,
+  Escuro suave, Claro, Drácula, Nord e Sépia) trocando os mesmos tokens, escolhidos em
+  **Perfil → Aparência** ou no botão do cabeçalho
 - **TanStack Query** para estado de servidor, **Recharts** para gráficos (carregado sob demanda)
 - **SQLite** via `tauri-plugin-sql` — banco local, sem servidor e sem conta
 - **PWA** via vite-plugin-pwa, só no build web — o app segue instalável pelo navegador para quem
@@ -267,6 +269,23 @@ avisam quando a aprovação já está garantida e quando não dá mais para alca
 
 **Cadastro de aulas em lote.** Cole o índice do curso — uma aula por linha, numeração é removida
 sozinha — em vez de preencher formulário aula por aula.
+
+**Módulos que recolhem.** Num curso de quarenta módulos, a lista aberta inteira é ilegível.
+Clicar no cabeçalho recolhe as aulas e deixa só o resumo — quantas foram, quanto falta, a barra
+—, e a escolha fica guardada por curso para não ser refeita a cada visita.
+
+**Certificado junto do curso.** Envie a imagem ou o PDF do certificado e ele aparece em
+miniatura no cartão, clicável para abrir inteiro. Imagem é reduzida antes de ser guardada; o
+PDF vai inteiro (até 1,5 MB) e ganha uma miniatura da primeira página, então o documento que se
+reenvia para uma empresa continua sendo o original. Tudo vive dentro do registro do curso — logo
+entra no backup e na pasta de sincronização, sem um segundo lugar de armazenamento.
+
+**Calendário e curso são o mesmo registro.** Um compromisso vinculado a um curso ou disciplina
+não é copiado para as duas telas: é a mesma linha, vista de dois ângulos. Concluir na agenda
+move a barra do curso, concluir no curso risca o dia na agenda, e o que nasce dentro de uma
+disciplina sobe para o curso sem recadastro. Compromisso pode ter **data de início além da de
+entrega**, e aí aparece nas duas pontas do mês — o trabalho de três semanas fica visível no dia
+em que começa e no dia em que vence.
 
 **Caderno em Markdown**, compartilhado por Faculdade e Cursos: anotação ligada ao curso e à
 disciplina, etiquetas, busca em título/conteúdo/etiqueta, prévia renderizada e salvamento

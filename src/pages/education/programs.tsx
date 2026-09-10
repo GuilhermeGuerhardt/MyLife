@@ -1,5 +1,6 @@
 import {
   BookOpen,
+  CalendarCheck,
   ExternalLink,
   GraduationCap,
   NotebookPen,
@@ -15,7 +16,9 @@ import { Badge, EmptyState, Progress, SectionTitle, Stat } from '@/components/ui
 import { useInstitutions, useNotes, usePrograms } from '@/data/queries'
 import { DEGREE_LABELS, PROGRAM_STATUS_LABELS, type Track } from '@/data/types'
 import { ProgramForm, type ProgramDraft } from '@/features/education/program-form'
+import { CertificateThumb } from '@/features/education/certificate'
 import { useEducation } from '@/features/education/use-education'
+import { ehImagem } from '@/lib/education/certificate'
 import { decimal, integer, longDate, percent } from '@/lib/format'
 
 export function AcademicPrograms() {
@@ -144,9 +147,19 @@ function ProgramsPage({ track }: { track: Track }) {
                           : ''}
                       </p>
                     </div>
-                    <Badge tone={summary.program.status === 'active' ? 'accent' : 'neutral'}>
-                      {PROGRAM_STATUS_LABELS[summary.program.status]}
-                    </Badge>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {ehImagem(summary.program.certificate_url) && (
+                        <CertificateThumb
+                          imagem={summary.program.certificate_url}
+                          pdf={summary.program.certificate_pdf}
+                          title={summary.program.name}
+                          className="size-11"
+                        />
+                      )}
+                      <Badge tone={summary.program.status === 'active' ? 'accent' : 'neutral'}>
+                        {PROGRAM_STATUS_LABELS[summary.program.status]}
+                      </Badge>
+                    </div>
                   </div>
 
                   <div>
@@ -160,6 +173,27 @@ function ProgramsPage({ track }: { track: Track }) {
                     </div>
                     <Progress value={summary.percent} />
                   </div>
+
+                  {/* O que veio do calendário. Barra própria porque a de cima
+                      mede outra coisa — aula assistida e prova feita não se
+                      somam sem inventar uma equivalência que não existe. */}
+                  {summary.tasks.length > 0 && (
+                    <div>
+                      <div className="text-fg-muted mb-1.5 flex justify-between text-xs">
+                        <span className="flex items-center gap-1.5">
+                          <CalendarCheck className="size-3" />
+                          {summary.tasksDone} de {summary.tasks.length} compromissos
+                        </span>
+                        <span className="text-fg font-medium">
+                          {percent(summary.tasksPercent, 0)}
+                        </span>
+                      </div>
+                      <Progress
+                        value={summary.tasksPercent}
+                        tone={summary.tasksPercent === 100 ? 'positive' : 'accent'}
+                      />
+                    </div>
+                  )}
 
                   <div className="text-fg-subtle flex flex-wrap gap-x-4 gap-y-1 text-[11px]">
                     {academic && (

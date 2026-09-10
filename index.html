@@ -12,11 +12,29 @@
     <meta name="apple-mobile-web-app-title" content="Life" />
     <title>Life</title>
     <script>
-      // Aplica o tema antes do primeiro paint para não piscar branco.
+      // Aplica o tema antes do primeiro paint para não piscar branco. A tabela
+      // é uma cópia enxuta de src/lib/theme.ts: este trecho roda antes do
+      // pacote, então não dá para importar de lá.
       (() => {
-        const stored = localStorage.getItem('life:theme')
-        const dark = stored ? stored === 'dark' : true
-        document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+        const TEMAS = {
+          dark: ['dark', '#1a1a1d'],
+          dim: ['dark', '#33353d'],
+          light: ['light', '#fafafa'],
+          dracula: ['dark', '#282a36'],
+          nord: ['dark', '#2e3440'],
+          solar: ['light', '#fdf6e3'],
+        }
+        let escolhido = 'dark'
+        try {
+          const guardado = localStorage.getItem('life:theme')
+          if (guardado && TEMAS[guardado]) escolhido = guardado
+        } catch {
+          // Armazenamento bloqueado: vale o padrão.
+        }
+        const [esquema, cor] = TEMAS[escolhido]
+        document.documentElement.dataset.theme = escolhido
+        document.documentElement.dataset.scheme = esquema
+        document.querySelector('meta[name="theme-color"]')?.setAttribute('content', cor)
       })()
     </script>
   </head>
