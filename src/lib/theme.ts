@@ -11,7 +11,7 @@
  * exibida no seletor e a cor da barra do sistema.
  */
 
-export type ThemeId = 'light' | 'dark' | 'dim' | 'dracula' | 'nord' | 'solar'
+export type ThemeId = 'light' | 'dark' | 'dim' | 'dracula' | 'nord' | 'solar' | 'latte' | 'rose'
 
 export type ColorScheme = 'light' | 'dark'
 
@@ -74,6 +74,22 @@ export const THEMES: ThemeInfo[] = [
     scheme: 'light',
     color: '#fdf6e3',
     swatch: ['#fdf6e3', '#fffbf0', '#268bd2'],
+  },
+  {
+    id: 'latte',
+    label: 'Latte',
+    description: 'Cinza-lavanda frio do Catppuccin — o claro sem nada de amarelo.',
+    scheme: 'light',
+    color: '#e6e9ef',
+    swatch: ['#e6e9ef', '#eff1f5', '#1e66d5'],
+  },
+  {
+    id: 'rose',
+    label: 'Rosé',
+    description: 'Base rosada e destaque ameixa, do Rosé Pine claro.',
+    scheme: 'light',
+    color: '#faf4ed',
+    swatch: ['#faf4ed', '#fffaf3', '#8265a3'],
   },
 ]
 
