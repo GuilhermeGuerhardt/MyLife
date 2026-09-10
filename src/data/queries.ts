@@ -420,6 +420,7 @@ const DEFAULT_PROFILE: Omit<Profile, keyof BaseRow> = {
   sex: 'male',
   height_cm: 175,
   activity_level: 'moderate',
+  avatar_url: null,
 }
 
 /** O perfil é um registro único — o hook esconde essa particularidade. */

@@ -17,6 +17,10 @@
  * que várias telas do app somadas, e a maioria dos certificados é imagem.
  */
 
+import { carregarImagem, comprimirJpeg, escalaPara, tamanhoAproximado } from '@/lib/image'
+
+export { tamanhoAproximado }
+
 /** Lado maior da imagem guardada, em pixels. */
 const LADO_MAXIMO = 1400
 
@@ -31,8 +35,6 @@ export const CERTIFICADO_MAX_BYTES = 700_000
  * 5 MB, e certificado costuma ter entre 100 e 500 kB.
  */
 export const PDF_MAX_BYTES = 1_500_000
-
-const QUALIDADES = [0.82, 0.72, 0.62, 0.5, 0.4]
 
 export const CERTIFICADO_ACCEPT = 'image/png,image/jpeg,image/webp,application/pdf'
 
@@ -144,13 +146,7 @@ async function primeiraPagina(dados: Uint8Array): Promise<PaginaPdf> {
   }
 }
 
-/**
- * Desenha num canvas do tamanho pedido e devolve o JPEG mais nítido que couber.
- *
- * A qualidade cai em degraus até o `data:` URL entrar no orçamento; o fundo
- * branco é obrigatório porque JPEG não tem transparência, e um PNG recortado
- * ficaria preto.
- */
+/** Reduz ao lado máximo e comprime, recusando o que não couber no orçamento. */
 async function desenharEComprimir(
   larguraOriginal: number,
   alturaOriginal: number,
@@ -161,29 +157,20 @@ async function desenharEComprimir(
     canvas: HTMLCanvasElement,
   ) => void | Promise<void>,
 ): Promise<string> {
-  const escala = Math.min(1, LADO_MAXIMO / Math.max(larguraOriginal, alturaOriginal))
+  const escala = escalaPara(larguraOriginal, alturaOriginal, LADO_MAXIMO)
   const largura = Math.max(1, Math.round(larguraOriginal * escala))
   const altura = Math.max(1, Math.round(alturaOriginal * escala))
 
-  const canvas = document.createElement('canvas')
-  canvas.width = largura
-  canvas.height = altura
-
-  const contexto = canvas.getContext('2d')
-  if (!contexto) throw new CertificadoInvalido('Não foi possível processar o arquivo.')
-
-  contexto.fillStyle = '#ffffff'
-  contexto.fillRect(0, 0, largura, altura)
-  await desenhar(contexto, largura, altura, canvas)
-
-  for (const qualidade of QUALIDADES) {
-    const url = canvas.toDataURL('image/jpeg', qualidade)
-    if (tamanhoAproximado(url) <= CERTIFICADO_MAX_BYTES) return url
-  }
-
-  throw new CertificadoInvalido(
-    'O arquivo é grande demais mesmo depois de reduzido. Tente uma imagem com menos detalhe ou um recorte só do certificado.',
+  const url = await comprimirJpeg(largura, altura, CERTIFICADO_MAX_BYTES, (contexto, canvas) =>
+    desenhar(contexto, largura, altura, canvas),
   )
+
+  if (!url) {
+    throw new CertificadoInvalido(
+      'O arquivo é grande demais mesmo depois de reduzido. Tente uma imagem com menos detalhe ou um recorte só do certificado.',
+    )
+  }
+  return url
 }
 
 function paraDataUrl(dados: ArrayBuffer, mime: string): string {
@@ -213,11 +200,6 @@ export function bytesDoDataUrl(dataUrl: string): Uint8Array {
   return bytes
 }
 
-/** Bytes que o `data:` URL ocupa — base64 são 4 caracteres a cada 3 bytes. */
-export function tamanhoAproximado(dataUrl: string): number {
-  const base64 = dataUrl.slice(dataUrl.indexOf(',') + 1)
-  return Math.round((base64.length * 3) / 4)
-}
 
 /** Só imagem tem miniatura; um link para o portal continua sendo só link. */
 export function ehImagem(url: string | null | undefined): url is string {
@@ -240,18 +222,3 @@ export function nomeDoCertificado(curso: string): string {
   return `certificado-${limpo || 'curso'}.pdf`
 }
 
-function carregarImagem(arquivo: File): Promise<HTMLImageElement> {
-  return new Promise((resolve, reject) => {
-    const endereco = URL.createObjectURL(arquivo)
-    const imagem = new Image()
-    imagem.onload = () => {
-      URL.revokeObjectURL(endereco)
-      resolve(imagem)
-    }
-    imagem.onerror = () => {
-      URL.revokeObjectURL(endereco)
-      reject(new CertificadoInvalido('Não foi possível ler o arquivo escolhido.'))
-    }
-    imagem.src = endereco
-  })
-}

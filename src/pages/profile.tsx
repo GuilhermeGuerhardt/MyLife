@@ -1,6 +1,7 @@
 import { Check } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useProfile } from '@/data/queries'
+import { AvatarField } from '@/features/profile/avatar-field'
 import { BackupCard } from '@/features/profile/backup-card'
 import { ThemeCard } from '@/features/profile/theme-card'
 import { WorkspaceCard } from '@/features/profile/workspace-card'
@@ -18,6 +19,7 @@ export function ProfilePage() {
     sex: 'male' as Sex,
     height_cm: 175,
     activity_level: 'moderate' as ActivityLevel,
+    avatar_url: null as string | null,
   })
   const [saved, setSaved] = useState(false)
 
@@ -29,6 +31,7 @@ export function ProfilePage() {
       sex: profile.sex,
       height_cm: profile.height_cm,
       activity_level: profile.activity_level,
+      avatar_url: profile.avatar_url ?? null,
     })
   }, [profile])
 
@@ -50,7 +53,19 @@ export function ProfilePage() {
       <Card>
         <CardHeader title="Dados pessoais" />
         <CardContent className="grid gap-4 sm:grid-cols-2">
-          <Field label="Nome" className="sm:col-span-2">
+          <div className="sm:col-span-2">
+            <AvatarField
+              value={form.avatar_url}
+              name={form.name}
+              onChange={(avatar_url) => setForm({ ...form, avatar_url })}
+            />
+          </div>
+
+          <Field
+            label="Nome"
+            className="sm:col-span-2"
+            hint="Aparece no topo do menu, no lugar de “Life”."
+          >
             <Input
               value={form.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}

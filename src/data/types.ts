@@ -23,6 +23,8 @@ export interface Profile extends BaseRow {
   sex: Sex
   height_cm: number
   activity_level: ActivityLevel
+  /** Foto de perfil, já recortada em quadrado (ver `lib/avatar.ts`). */
+  avatar_url: string | null
 }
 
 export type ActivityCategory = 'sport' | 'strength' | 'cardio' | 'mobility' | 'other'
