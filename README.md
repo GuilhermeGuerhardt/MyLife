@@ -31,7 +31,7 @@ Node.js, Rust ou qualquer outra ferramenta. Nada disso é usado em tempo de exec
 
 ### Instalando
 
-1. Baixe `Life_0.2.2_x64-setup.exe`.
+1. Baixe `Life_0.2.3_x64-setup.exe`.
 2. Execute o arquivo.
 3. O Windows provavelmente vai mostrar uma tela azul do **SmartScreen** dizendo que não
    reconhece o programa. Isso acontece porque o executável não tem assinatura digital —
@@ -101,7 +101,7 @@ app roda no navegador com o `localStorage` como destino.
 npm run build
 ```
 
-Sai em `src-tauri/target/release/bundle/nsis/Life_0.2.2_x64-setup.exe`. O
+Sai em `src-tauri/target/release/bundle/nsis/Life_0.2.3_x64-setup.exe`. O
 instalador é NSIS por usuário — não pede administrador e não toca em `Program
 Files`.
 
