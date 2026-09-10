@@ -9,8 +9,11 @@ import {
 } from 'lucide-react'
 import { Suspense, useCallback, useState } from 'react'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
+import { Avatar } from '@/components/avatar'
 import { RouteBoundary } from '@/components/route-boundary'
 import { storageMode, type StorageMode } from '@/data/adapters'
+import { useProfile } from '@/data/queries'
+import { primeiroNome } from '@/lib/avatar'
 import { cn } from '@/lib/utils'
 import { ThemeToggle } from '../theme-toggle'
 import { Badge } from '../ui/misc'
@@ -94,6 +97,8 @@ export function AppShell({ onOpenPalette }: { onOpenPalette: () => void }) {
   const mode = storageMode()
   const section = NAV.find((item) => item.to !== '/' && pathname.startsWith(item.to))
   const [collapsed, toggleSidebar] = useCollapsedSidebar()
+  const { profile } = useProfile()
+  const nome = profile?.name.trim() ?? ''
 
   return (
     <div className="bg-bg flex min-h-dvh">
@@ -104,15 +109,29 @@ export function AppShell({ onOpenPalette }: { onOpenPalette: () => void }) {
           collapsed ? 'w-16' : 'w-60',
         )}
       >
+        {/*
+          Topo do menu: quem está usando o app. Sem perfil preenchido ele volta
+          a ser o quadrado da cor de destaque com "Life" ao lado, que era o que
+          existia antes — a identidade do app só cede lugar quando há uma pessoa
+          para pôr no lugar dela.
+        */}
         <div
           className={cn(
             'flex h-14 items-center gap-2',
             collapsed ? 'justify-center px-0' : 'px-5',
           )}
+          title={collapsed && nome ? nome : undefined}
         >
-          <span className="bg-accent size-6 shrink-0 rounded-md" />
+          <Avatar
+            url={profile?.avatar_url}
+            name={nome}
+            className="size-6"
+            textClassName="text-[10px]"
+          />
           {!collapsed && (
-            <span className="text-fg text-sm font-semibold tracking-tight">Life</span>
+            <span className="text-fg truncate text-sm font-semibold tracking-tight">
+              {nome ? primeiroNome(nome) : 'Life'}
+            </span>
           )}
         </div>
 
@@ -232,9 +251,16 @@ export function AppShell({ onOpenPalette }: { onOpenPalette: () => void }) {
       {/* Conteúdo */}
       <div className={cn('flex min-w-0 flex-1 flex-col', accent)}>
         <header className="border-border-base bg-bg/80 sticky top-0 z-30 flex h-14 items-center justify-between gap-3 border-b px-4 backdrop-blur lg:px-8">
-          <div className="flex items-center gap-2 lg:hidden">
-            <span className="bg-accent size-5 rounded" />
-            <span className="text-fg text-sm font-semibold">Life</span>
+          <div className="flex min-w-0 items-center gap-2 lg:hidden">
+            <Avatar
+              url={profile?.avatar_url}
+              name={nome}
+              className="size-5 rounded"
+              textClassName="text-[9px]"
+            />
+            <span className="text-fg truncate text-sm font-semibold">
+              {nome ? primeiroNome(nome) : 'Life'}
+            </span>
           </div>
           <span className="text-fg-muted hidden text-sm font-medium lg:block">
             {section?.label ?? 'Início'}
