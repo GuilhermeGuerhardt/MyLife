@@ -8,7 +8,7 @@ sem mensalidade — seus dados ficam na sua máquina.
 **Entregue até aqui:** módulos de **Saúde** (atividades, medidas, plano de emagrecimento
 adaptativo e diário alimentar), **Faculdade**, **Cursos**, **Caderno**, **Financeiro** e
 **Rotina** (hábitos, agenda unificada e insights entre módulos), com dashboard configurável,
-registro rápido em linguagem natural, importação de extrato em planilha e seis temas de cor.
+registro rápido em linguagem natural, importação de extrato em planilha e oito temas de cor.
 O que ainda falta está em [docs/PLANO.md](docs/PLANO.md).
 
 ---
@@ -65,9 +65,9 @@ fora da pasta do programa.
 - **Tauri 2** — programa de desktop para Windows. A janela é WebView2 (já vem no
   Windows 11), então o instalador fica na casa dos poucos MB em vez dos ~150 de um Electron
 - **React 19 + Vite + TypeScript** — rotas em lazy loading, bundle inicial ~90 kB gzip
-- **Tailwind CSS v4** com design system próprio em tokens semânticos — seis temas (Escuro,
-  Escuro suave, Claro, Drácula, Nord e Sépia) trocando os mesmos tokens, escolhidos em
-  **Perfil → Aparência** ou no botão do cabeçalho
+- **Tailwind CSS v4** com design system próprio em tokens semânticos — oito temas (Escuro,
+  Escuro suave, Claro, Drácula, Nord, Sépia, Latte e Rosé) trocando os mesmos tokens,
+  escolhidos em **Perfil → Aparência**
 - **TanStack Query** para estado de servidor, **Recharts** para gráficos (carregado sob demanda)
 - **SQLite** via `tauri-plugin-sql` — banco local, sem servidor e sem conta
 - **PWA** via vite-plugin-pwa, só no build web — o app segue instalável pelo navegador para quem

@@ -15,7 +15,6 @@ import { storageMode, type StorageMode } from '@/data/adapters'
 import { useProfile } from '@/data/queries'
 import { primeiroNome } from '@/lib/avatar'
 import { cn } from '@/lib/utils'
-import { ThemeToggle } from '../theme-toggle'
 import { Badge } from '../ui/misc'
 import { NAV, accentForPath } from './nav'
 
@@ -199,12 +198,12 @@ export function AppShell({ onOpenPalette }: { onOpenPalette: () => void }) {
             {!collapsed && 'Perfil'}
           </NavLink>
 
-          <div
-            className={cn(
-              'flex items-center gap-2',
-              collapsed ? 'flex-col' : 'justify-between px-1',
-            )}
-          >
+          {/*
+            O tema mora só em Perfil > Aparência. Com seis paletas, um botão de
+            atalho aqui seria um segundo lugar dizendo a mesma coisa — e dois
+            lugares para a mesma escolha é onde a divergência começa.
+          */}
+          <div className={cn('flex items-center', collapsed ? 'justify-center' : 'px-1')}>
             {collapsed ? (
               // Recolhida, sobra espaço para o ícone e não para o texto — o
               // rótulo continua acessível como dica.
@@ -223,7 +222,6 @@ export function AppShell({ onOpenPalette }: { onOpenPalette: () => void }) {
                 {MODE_LABEL[mode]}
               </Badge>
             )}
-            <ThemeToggle />
           </div>
 
           <button
@@ -278,9 +276,6 @@ export function AppShell({ onOpenPalette }: { onOpenPalette: () => void }) {
                 Ctrl K
               </kbd>
             </button>
-            <div className="lg:hidden">
-              <ThemeToggle />
-            </div>
           </div>
         </header>
 

@@ -157,6 +157,53 @@
   --shadow-card: 0 1px 2px 0 oklch(0.4 0.05 80 / 0.08);
 }
 
+/* Latte, do Catppuccin: cinza-lavanda frio, o oposto do Sépia entre os claros. */
+[data-theme='latte'] {
+  --bg: #e6e9ef;
+  --surface: #eff1f5;
+  --surface-2: #dce0e8;
+  --border: #ccd0da;
+  --border-strong: #b8bcc9;
+  --fg: #4c4f69;
+  --fg-muted: #5c5f77;
+  --fg-subtle: #8c8fa1;
+
+  --accent: #1e66d5;
+  --accent-fg: #eff1f5;
+  --accent-soft: #dbe3f7;
+
+  --positive: #40a02b;
+  --negative: #d20f39;
+  --warning: #c98416;
+  --series-workout: #7287fd;
+
+  --shadow-card: 0 1px 2px 0 oklch(0.35 0.03 265 / 0.09);
+}
+
+/* Rosé, do Rosé Pine claro: base rosada e destaque ameixa — o único claro que
+   não puxa para azul. */
+[data-theme='rose'] {
+  --bg: #faf4ed;
+  --surface: #fffaf3;
+  --surface-2: #f2e9e1;
+  --border: #e4d8ce;
+  --border-strong: #cbbcb1;
+  --fg: #575279;
+  --fg-muted: #6e6a8a;
+  --fg-subtle: #9893a5;
+
+  --accent: #8265a3;
+  --accent-fg: #fffaf3;
+  --accent-soft: #ebe2f2;
+
+  --positive: #4f7d5e;
+  --negative: #b4637a;
+  --warning: #c1801f;
+  --series-workout: #286983;
+
+  --shadow-card: 0 1px 2px 0 oklch(0.4 0.04 20 / 0.08);
+}
+
 /* Cor de destaque por módulo: aplique .accent-health, .accent-finance, etc.
    num contêiner e tudo dentro dele (botões, gráficos, barras) acompanha. */
 .accent-health {
