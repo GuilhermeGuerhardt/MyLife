@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
   allFolderKeys,
+  allTags,
   buildNoteTree,
   countTreeNotes,
+  filterNotes,
   GENERAL_LABEL,
   type NamedLike,
   type NoteLike,
+  type SearchableNote,
   type SubjectLike,
 } from './note-tree'
 
@@ -195,5 +198,81 @@ describe('chaves das pastas', () => {
   it('árvore vazia não tem chave nem contagem', () => {
     expect(allFolderKeys([])).toEqual([])
     expect(countTreeNotes([])).toBe(0)
+  })
+})
+
+function searchable(over: Partial<SearchableNote> & { id: string }): SearchableNote {
+  return {
+    title: 'Anotação',
+    content: '',
+    tags: [],
+    program_id: null,
+    subject_id: null,
+    pinned: false,
+    created_at: '2026-01-01T00:00:00.000Z',
+    ...over,
+  }
+}
+
+describe('filtro da lista', () => {
+  const notas = [
+    searchable({
+      id: 'n1',
+      title: 'Derivadas',
+      content: 'regra da cadeia',
+      tags: ['prova'],
+      program_id: 'p1',
+      created_at: '2026-01-01T00:00:00.000Z',
+    }),
+    searchable({
+      id: 'n2',
+      title: 'Árvores AVL',
+      content: 'rotação',
+      tags: ['revisão'],
+      program_id: 'p1',
+      created_at: '2026-02-01T00:00:00.000Z',
+    }),
+    searchable({
+      id: 'n3',
+      title: 'Normalização',
+      content: 'terceira forma normal',
+      program_id: 'p2',
+      created_at: '2026-03-01T00:00:00.000Z',
+    }),
+  ]
+
+  const sem = { search: '', programId: '', tag: null }
+
+  it('sem filtro, a mais recente primeiro', () => {
+    expect(filterNotes(notas, sem).map((n) => n.id)).toEqual(['n3', 'n2', 'n1'])
+  })
+
+  it('fixadas sobem, mesmo sendo antigas', () => {
+    const fixada = notas.map((n) => (n.id === 'n1' ? { ...n, pinned: true } : n))
+    expect(filterNotes(fixada, sem).map((n) => n.id)).toEqual(['n1', 'n3', 'n2'])
+  })
+
+  it('usa updated_at quando existe', () => {
+    const editada = notas.map((n) =>
+      n.id === 'n1' ? { ...n, updated_at: '2026-04-01T00:00:00.000Z' } : n,
+    )
+    expect(filterNotes(editada, sem)[0]!.id).toBe('n1')
+  })
+
+  it('a busca ignora acento e caixa, e varre conteúdo e etiqueta', () => {
+    expect(filterNotes(notas, { ...sem, search: 'ARVORES' }).map((n) => n.id)).toEqual(['n2'])
+    expect(filterNotes(notas, { ...sem, search: 'cadeia' }).map((n) => n.id)).toEqual(['n1'])
+    expect(filterNotes(notas, { ...sem, search: 'revisao' }).map((n) => n.id)).toEqual(['n2'])
+  })
+
+  it('curso e etiqueta filtram, e combinam com a busca', () => {
+    expect(filterNotes(notas, { ...sem, programId: 'p1' }).map((n) => n.id)).toEqual(['n2', 'n1'])
+    expect(filterNotes(notas, { ...sem, tag: 'prova' }).map((n) => n.id)).toEqual(['n1'])
+    expect(filterNotes(notas, { search: 'derivadas', programId: 'p2', tag: null })).toEqual([])
+  })
+
+  it('reúne as etiquetas usadas, sem repetir e em ordem', () => {
+    expect(allTags(notas)).toEqual(['prova', 'revisão'])
+    expect(allTags([])).toEqual([])
   })
 })

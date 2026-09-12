@@ -518,3 +518,27 @@ export function distinctLabels(rows: ImportRow[], pick: (row: ImportRow) => stri
   }
   return labels
 }
+
+/** As abas da prévia. */
+export type RowFilter = 'all' | 'ready' | 'duplicate' | 'error'
+
+export function rowMatches(row: ImportRow, filter: RowFilter): boolean {
+  if (filter === 'all') return true
+  if (filter === 'error') return row.error !== null
+  if (filter === 'duplicate') return row.duplicate
+  return !row.error && !row.duplicate
+}
+
+/**
+ * Lê o arquivo como texto.
+ *
+ * Tenta UTF-8 e cai para Windows-1252 quando aparece o caractere de
+ * substituição: o Excel em português ainda exporta assim, e sem essa segunda
+ * tentativa "Alimentação" chegaria cheia de losangos de interrogação.
+ */
+export async function readText(file: Blob): Promise<string> {
+  const buffer = await file.arrayBuffer()
+  const utf8 = new TextDecoder('utf-8').decode(buffer)
+  if (!utf8.includes('\uFFFD')) return utf8
+  return new TextDecoder('windows-1252').decode(buffer)
+}

@@ -12,6 +12,8 @@ import {
   parseInstallment,
   parseKind,
   parsePaid,
+  readText,
+  rowMatches,
   summarize,
   type ImportRow,
 } from './import'
@@ -256,5 +258,41 @@ describe('resumo', () => {
       from: '2026-08-06',
       to: '2026-09-30',
     })
+  })
+})
+
+describe('filtro da prévia', () => {
+  const linha = (over: Partial<ImportRow>): ImportRow =>
+    ({ line: 2, duplicate: false, error: null, ...over }) as ImportRow
+
+  const nova = linha({ line: 2 })
+  const repetida = linha({ line: 3, duplicate: true })
+  const comErro = linha({ line: 4, error: 'data inválida' })
+  const todas = [nova, repetida, comErro]
+
+  it('"todas" não filtra nada', () => {
+    expect(todas.filter((row) => rowMatches(row, 'all'))).toEqual(todas)
+  })
+
+  it('"novas" exclui repetidas e com erro', () => {
+    expect(todas.filter((row) => rowMatches(row, 'ready'))).toEqual([nova])
+  })
+
+  it('cada aba mostra só o seu', () => {
+    expect(todas.filter((row) => rowMatches(row, 'duplicate'))).toEqual([repetida])
+    expect(todas.filter((row) => rowMatches(row, 'error'))).toEqual([comErro])
+  })
+})
+
+describe('leitura do arquivo', () => {
+  it('lê UTF-8', async () => {
+    const blob = new Blob([new TextEncoder().encode('Alimentação,R$ 10,00')])
+    expect(await readText(blob)).toBe('Alimentação,R$ 10,00')
+  })
+
+  it('cai para Windows-1252 quando o UTF-8 não decodifica', async () => {
+    // "Alimentação" como o Excel em português exporta: ç = 0xE7, ã = 0xE3.
+    const bytes = Uint8Array.from([65, 108, 105, 109, 101, 110, 116, 97, 0xe7, 0xe3, 111])
+    expect(await readText(new Blob([bytes]))).toBe('Alimentação')
   })
 })
