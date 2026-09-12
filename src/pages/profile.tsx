@@ -5,6 +5,7 @@ import { AvatarField } from '@/features/profile/avatar-field'
 import { BackupCard } from '@/features/profile/backup-card'
 import { ThemeCard } from '@/features/profile/theme-card'
 import { WorkspaceCard } from '@/features/profile/workspace-card'
+import { UpdatesCard } from '@/features/updates/updates-card'
 import { ACTIVITY_LABELS, type ActivityLevel, type Sex } from '@/lib/health/formulas'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -139,6 +140,11 @@ export function ProfilePage() {
         <SectionTitle>Dados e sincronização</SectionTitle>
         <WorkspaceCard />
         <BackupCard />
+      </div>
+
+      <div className="space-y-4">
+        <SectionTitle>Programa</SectionTitle>
+        <UpdatesCard />
       </div>
     </div>
   )

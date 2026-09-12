@@ -8,6 +8,7 @@ import { setFolderStore } from './data/adapters'
 import { migrarDoLocalStorage } from './data/sqlite-store'
 import { restoreFolder } from './data/folder-store'
 import { ensureSeed } from './data/queries'
+import { UpdateWatcher } from './features/updates/update-watcher'
 import { lazyRoute } from './lib/lazy-route'
 
 // Rotas em lazy: os gráficos (Recharts) só chegam ao navegador na tela que os usa.
@@ -156,6 +157,7 @@ function Boot() {
           </Route>
         </Routes>
         <QuickAdd open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+        <UpdateWatcher />
       </BrowserRouter>
     </QueryClientProvider>
   )

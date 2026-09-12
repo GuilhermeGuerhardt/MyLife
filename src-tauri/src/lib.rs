@@ -8,7 +8,6 @@
 
 mod arquivos;
 
-use tauri::Manager;
 use tauri_plugin_sql::{Migration, MigrationKind};
 
 /// Esquema do banco local.
@@ -44,6 +43,7 @@ fn migrations() -> Vec<Migration> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(
             tauri_plugin_sql::Builder::default()
                 .add_migrations("sqlite:life.db", migrations())
@@ -55,12 +55,15 @@ pub fn run() {
             arquivos::gravar_bytes,
             arquivos::pasta_existe,
         ])
-        .setup(|app| {
+        .setup(|_app| {
             // Em desenvolvimento o inspetor abre junto: sem ele, depurar a
             // interface dentro da janela nativa vira adivinhação.
             #[cfg(debug_assertions)]
-            if let Some(window) = app.get_webview_window("main") {
-                window.open_devtools();
+            {
+                use tauri::Manager;
+                if let Some(window) = _app.get_webview_window("main") {
+                    window.open_devtools();
+                }
             }
             Ok(())
         })
