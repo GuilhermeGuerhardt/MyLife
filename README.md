@@ -3,7 +3,8 @@
 Dashboard da vida: saúde, alimentação, faculdade, cursos e finanças em um lugar só.
 
 Programa de desktop para Windows. Funciona **inteiramente offline**, sem conta, sem servidor e
-sem mensalidade — seus dados ficam na sua máquina.
+sem mensalidade — seus dados ficam na sua máquina. A única coisa que consulta a internet é a
+busca por versão nova, que você pode desligar.
 
 **Entregue até aqui:** módulos de **Saúde** (atividades, medidas, plano de emagrecimento
 adaptativo e diário alimentar), **Faculdade**, **Cursos**, **Caderno**, **Financeiro** e
@@ -26,8 +27,10 @@ Esta seção é para quem quer **usar** o Life. Para mexer no código, pule para
 | **WebView2** | Já vem no Windows 11. No Windows 10 mais antigo, baixe o [Evergreen Runtime](https://developer.microsoft.com/microsoft-edge/webview2/) (gratuito, ~2 MB) |
 | **~15 MB de disco** | 3 MB o instalador, ~6 MB instalado, o resto é o seu banco crescendo |
 
-**O que você não precisa:** internet, conta de usuário, senha, privilégio de administrador,
-Node.js, Rust ou qualquer outra ferramenta. Nada disso é usado em tempo de execução.
+**O que você não precisa:** conta de usuário, senha, privilégio de administrador, Node.js, Rust
+ou qualquer outra ferramenta. Nada disso é usado em tempo de execução. **Internet** também não:
+ela serve só para buscar versão nova, e o app funciona inteiro sem ela — é desligável em
+**Perfil → Atualizações**.
 
 ### Instalando
 
@@ -55,8 +58,24 @@ programa pode levar o banco junto, e o backup é o que sobrevive a isso.
 
 ### Atualizando
 
-Baixe o instalador da versão nova e execute por cima. Seus dados não são tocados: o banco vive
-fora da pasta do programa.
+**A partir da 0.2.4, o Life se atualiza sozinho.** Alguns segundos depois de abrir, ele consulta
+as releases deste repositório. Se houver versão nova, aparece um aviso discreto no canto inferior
+direito, com as novidades e os botões **Atualizar** e **Agora não** — nada é baixado sem você
+mandar. Ao atualizar, o download aparece na barra de progresso e o programa reabre sozinho.
+
+Sem internet, o aviso é só um "Sem conexão" que some em poucos segundos. E quando já está na
+última versão, **não aparece nada** — estar atualizado não é notícia.
+
+Se preferir que o programa nunca toque na internet, desligue em **Perfil → Atualizações**. Nesse
+caso, vale o jeito manual: baixe o instalador da versão nova e execute por cima.
+
+As atualizações são **assinadas**: o programa só aceita um pacote cuja assinatura bate com a
+chave pública embutida nele, o que impede que um download adulterado se passe por atualização.
+
+> **Vindo da 0.2.3 ou anterior?** O mecanismo só existe a partir da 0.2.4, então essa primeira
+> troca é manual. Da próxima em diante é automático.
+
+Seus dados não são tocados em nenhum dos dois caminhos: o banco vive fora da pasta do programa.
 
 ---
 
@@ -101,9 +120,33 @@ app roda no navegador com o `localStorage` como destino.
 npm run build
 ```
 
-Sai em `src-tauri/target/release/bundle/nsis/Life_0.2.3_x64-setup.exe`. O
+Sai em `src-tauri/target/release/bundle/nsis/Life_<versão>_x64-setup.exe`. O
 instalador é NSIS por usuário — não pede administrador e não toca em `Program
 Files`.
+
+#### Publicando uma versão que o updater enxergue
+
+1. Suba a versão nos **três** arquivos: `package.json`, `src-tauri/Cargo.toml` e
+   `src-tauri/tauri.conf.json`. O updater compara versões, então esquecer um deles quebra a
+   conta.
+2. Compile com a chave de assinatura no ambiente — sem ela o build sai sem o `.sig` e o
+   updater recusa o pacote:
+
+   ```bash
+   TAURI_SIGNING_PRIVATE_KEY="$(cat ~/.tauri/life-updater.key)" TAURI_SIGNING_PRIVATE_KEY_PASSWORD= npm run build
+   ```
+
+   A variável leva o **conteúdo** da chave, não o caminho dela. O build termina com
+   `Finished 1 updater signature` — não vindo essa linha, o pacote saiu sem assinatura e o
+   updater vai recusá-lo.
+
+3. Crie a release na tag da versão e anexe **dois** arquivos: o `-setup.exe` e um
+   `latest.json` apontando para ele, com a assinatura que está no `.sig` gerado ao lado do
+   instalador.
+
+A **chave privada** (`~/.tauri/life-updater.key`) nunca entra no repositório e não tem
+substituta: perdida, nenhuma cópia já instalada volta a atualizar sozinha. Guarde uma cópia
+fora da máquina.
 
 O indicador no rodapé da barra lateral mostra qual destino de gravação está ativo: **Banco
 local**, **Pasta** ou **Navegador**.
@@ -215,7 +258,8 @@ src/
 │  ├─ education/       # formulários de curso/disciplina, cartão do semestre, caderno, Markdown
 │  ├─ finance/         # formulários, ações, gráficos e as etapas do assistente de importação
 │  ├─ routine/         # hábitos, agenda e insights
-│  └─ profile/         # avatar, tema, pasta de trabalho e backup
+│  ├─ profile/         # avatar, tema, pasta de trabalho e backup
+│  └─ updates/         # busca por versão nova, aviso no canto e o interruptor
 ├─ lib/
 │  ├─ health/          # TMB, TDEE, IMC, média móvel, plano, macros do diário (puro + testado)
 │  ├─ education/       # progresso, pré-requisitos, faltas, média e simulador (puro + testado)
