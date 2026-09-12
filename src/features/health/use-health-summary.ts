@@ -10,6 +10,7 @@ import {
   tdeeFromSessions,
   trend,
 } from '@/lib/health/formulas'
+import { sumMacros } from '@/lib/health/nutrition'
 import { addDays, ageFromBirthdate, today } from '@/lib/utils'
 
 /**
@@ -64,15 +65,7 @@ export function useHealthSummary() {
     const activePlan = plans.filter((p) => p.status === 'active').at(-1) ?? null
 
     const todayLogs = mealLogs.filter((m) => m.date === today())
-    const intake = todayLogs.reduce(
-      (acc, log) => ({
-        kcal: acc.kcal + log.kcal,
-        protein: acc.protein + log.protein_g,
-        carb: acc.carb + log.carb_g,
-        fat: acc.fat + log.fat_g,
-      }),
-      { kcal: 0, protein: 0, carb: 0, fat: 0 },
-    )
+    const intake = sumMacros(todayLogs)
 
     return {
       profile,

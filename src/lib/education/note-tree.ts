@@ -7,6 +7,8 @@
  * costuma apodrecer em organização por pastas.
  */
 
+import { normalize } from '@/lib/quick-add/parser'
+
 export interface NoteLike {
   id: string
   title: string
@@ -153,4 +155,48 @@ export function allFolderKeys(folders: TreeFolder[]): string[] {
 /** Quantas anotações a árvore contém no total. */
 export function countTreeNotes(folders: TreeFolder[]): number {
   return folders.reduce((sum, folder) => sum + folder.count, 0)
+}
+
+/** O que a busca do caderno precisa ler de uma anotação. */
+export interface SearchableNote extends NoteLike {
+  content: string
+  tags: string[]
+  created_at: string
+  updated_at?: string | null
+}
+
+export interface NoteFilters {
+  /** Termo livre: varre título, conteúdo e etiquetas. */
+  search: string
+  /** Vazio = todos os cursos. */
+  programId: string
+  /** Nulo = todas as etiquetas. */
+  tag: string | null
+}
+
+/**
+ * Aplica os filtros da lista e ordena: fixadas no topo, depois da mais recente
+ * para a mais antiga — que é a ordem em que se procura o que se escreveu.
+ */
+export function filterNotes<T extends SearchableNote>(notes: T[], filters: NoteFilters): T[] {
+  const term = normalize(filters.search)
+  return notes
+    .filter((note) => !filters.programId || note.program_id === filters.programId)
+    .filter((note) => !filters.tag || note.tags.includes(filters.tag))
+    .filter(
+      (note) =>
+        !term ||
+        normalize(note.title).includes(term) ||
+        normalize(note.content).includes(term) ||
+        note.tags.some((tag) => normalize(tag).includes(term)),
+    )
+    .sort((a, b) => {
+      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1
+      return (b.updated_at ?? b.created_at).localeCompare(a.updated_at ?? a.created_at)
+    })
+}
+
+/** Todas as etiquetas usadas, em ordem alfabética. */
+export function allTags(notes: SearchableNote[]): string[] {
+  return [...new Set(notes.flatMap((note) => note.tags))].sort((a, b) => a.localeCompare(b))
 }

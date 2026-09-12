@@ -60,7 +60,7 @@ export function suggestAccounts(labels: string[], accounts: Account[]): Record<s
  * ninguém ter configurado nada. O que sobra vira categoria nova.
  */
 export function suggestCategories(
-  labels: Array<{ label: string; kind: 'income' | 'expense' }>,
+  labels: LabelKind[],
   categories: Category[],
 ): Record<string, string> {
   const result: Record<string, string> = {}
@@ -76,8 +76,14 @@ export function suggestCategories(
   return result
 }
 
+/** Um rótulo de categoria do arquivo e o tipo que ele representa. */
+export interface LabelKind {
+  label: string
+  kind: 'income' | 'expense'
+}
+
 /** O tipo predominante de cada rótulo de categoria, para sugerir na chave certa. */
-export function labelKinds(rows: ImportRow[]): Array<{ label: string; kind: 'income' | 'expense' }> {
+export function labelKinds(rows: ImportRow[]): LabelKind[] {
   const tally = new Map<string, { income: number; expense: number }>()
 
   for (const row of rows) {

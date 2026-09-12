@@ -181,6 +181,32 @@ export function Toggle({
   )
 }
 
+/** Aviso dentro de um cartão: o que está errado, ou o que vai acontecer. */
+export function Callout({
+  tone,
+  icon,
+  className,
+  children,
+}: {
+  tone: 'warning' | 'negative'
+  icon?: ReactNode
+  className?: string
+  children: ReactNode
+}) {
+  return (
+    <div
+      className={cn(
+        'flex items-start gap-2 rounded-lg border border-transparent p-3 text-xs',
+        tone === 'warning' ? 'bg-warning/10 text-warning' : 'bg-negative/10 text-negative',
+        className,
+      )}
+    >
+      {icon && <span className="mt-px shrink-0">{icon}</span>}
+      <p>{children}</p>
+    </div>
+  )
+}
+
 export function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
     <div className="mb-3 flex items-center justify-between gap-4">

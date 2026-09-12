@@ -210,10 +210,14 @@ src/
 ├─ components/         # design system (button, card, field, modal…) e layout
 ├─ data/               # tipos, adaptadores (SQLite/pasta/local), hooks de query, seeds
 ├─ features/
-│  ├─ health/          # composição da lógica de saúde (resumo, gráfico de peso)
-│  └─ education/       # formulários de curso/disciplina, cartão do semestre, Markdown
+│  ├─ dashboard/       # catálogo de widgets (um arquivo por área) e layout configurável
+│  ├─ health/          # resumo, gráfico de peso, modal de alimento, formulário e resumo do dia
+│  ├─ education/       # formulários de curso/disciplina, cartão do semestre, caderno, Markdown
+│  ├─ finance/         # formulários, ações, gráficos e as etapas do assistente de importação
+│  ├─ routine/         # hábitos, agenda e insights
+│  └─ profile/         # avatar, tema, pasta de trabalho e backup
 ├─ lib/
-│  ├─ health/          # TMB, TDEE, IMC, média móvel, plano e recalibração (puro + testado)
+│  ├─ health/          # TMB, TDEE, IMC, média móvel, plano, macros do diário (puro + testado)
 │  ├─ education/       # progresso, pré-requisitos, faltas, média e simulador (puro + testado)
 │  ├─ finance/         # centavos, ciclo de fatura, parcelas e relatórios (puro + testado)
 │  ├─ habits/          # sequências, meta semanal e heatmap (puro + testado)
@@ -231,6 +235,32 @@ supabase/migrations/   # SQL versionado, guardado caso a sincronização volte
 
 A regra que mantém o projeto sustentável: **nada de lógica de cálculo dentro de componente**.
 As fórmulas vivem em `src/lib` como funções puras com teste, e as telas só as consomem.
+
+## Refatoração das telas grandes
+
+Quatro arquivos tinham crescido a ponto de esconder a própria estrutura — o maior passava de 700
+linhas, misturando página, modal, formulário e componentes de apoio no mesmo lugar. Foram
+quebrados em módulos coesos, **sem nenhuma mudança de comportamento**:
+
+| Antes | Depois |
+|---|---|
+| `features/dashboard/widgets.tsx` — 703 linhas | `widgets/` — um arquivo por área (saúde, rotina, estudos, financeiro) mais o catálogo |
+| `pages/health/nutrition.tsx` — 760 linhas | página com 207, mais `add-food-modal`, `food-form` e `day-summary` |
+| `pages/education/notebook.tsx` — 701 linhas | página com 265, mais `note-browser`, `note-editor` e `use-notebook-prefs` |
+| `pages/finance/import.tsx` — 652 linhas | página com 147, mais `use-import-wizard` e um componente por etapa |
+
+O maior arquivo do projeto caiu de **760 para 339 linhas**.
+
+**Quatro duplicações reais sumiram no caminho.** O `computeStreak` do dashboard era idêntico ao
+`dailyStreak` de `lib/habits`; a soma de macros existia igual no resumo de saúde e na tela de
+alimentação; o `planPercent` era recalculado três vezes com os mesmos argumentos no mesmo render;
+e o aviso colorido do importador, que era local, virou o `Callout` do design system.
+
+**A regra de não calcular dentro de componente ganhou terreno.** Saíram das telas para `src/lib`,
+já com teste: `sumMacros`, `scaleMacros`, `kcalFromMacros` e `decimalInput` (novo
+`lib/health/nutrition.ts`), `filterNotes` e `allTags` (em `lib/education/note-tree.ts`), e
+`rowMatches` e `readText` (em `lib/finance/import.ts`). São **19 testes novos**, levando a suíte
+de 349 para **368**.
 
 ## Destaques da Fase 1
 
