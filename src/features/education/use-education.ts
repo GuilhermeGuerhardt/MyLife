@@ -7,14 +7,14 @@ import {
   usePrograms,
   useSubjects,
 } from '@/data/queries'
-import type { Program, Track } from '@/data/types'
+import type { Program, ProgramTrack } from '@/data/types'
 import { academicIndex, programProgress, type SubjectLike } from '@/lib/education/academics'
 
 /**
  * Junta programas, disciplinas e aulas num resumo por curso — evita recalcular
  * progresso em cada card e mantém a regra num lugar só.
  */
-export function useEducation(track: Track) {
+export function useEducation(track: ProgramTrack) {
   const { data: programs, ...programOps } = usePrograms()
   const { data: subjects } = useSubjects()
   const { data: lessons } = useCourseLessons()

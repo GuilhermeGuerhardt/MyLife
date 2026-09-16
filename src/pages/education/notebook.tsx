@@ -6,29 +6,41 @@ import { Card } from '@/components/ui/card'
 import { Field, Input, Select } from '@/components/ui/field'
 import { EmptyState, Segmented } from '@/components/ui/misc'
 import { useNotes, usePrograms, useSubjects } from '@/data/queries'
-import type { Track } from '@/data/types'
+import { TRACK_LABELS, TRACK_ORDER, type Note, type ProgramTrack, type Track } from '@/data/types'
 import { ListLabel, NoteList, NoteTree, TreeLabel } from '@/features/education/note-browser'
 import { NOTE_TEMPLATE, NoteEditor, type NoteMode } from '@/features/education/note-editor'
 import { useCollapsedFolders, useNoteView } from '@/features/education/use-notebook-prefs'
 import {
+  afetadasPorRenomear,
+  chaveTitulo,
+  indicePorTitulo,
+  retrolinks,
+} from '@/lib/education/links'
+import {
   allFolderKeys,
   allTags,
   buildNoteTree,
+  buildTrackTree,
   countTreeNotes,
   filterNotes,
 } from '@/lib/education/note-tree'
 import { cn } from '@/lib/utils'
 
+/** O caderno inteiro — faculdade, cursos e estudo livre no mesmo lugar. */
+export function Notebook() {
+  return <NotebookView track={null} />
+}
+
+/** As rotas antigas continuam valendo, agora como um caderno já filtrado. */
 export function AcademicNotebook() {
-  return <Notebook track="academic" />
+  return <NotebookView track="academic" />
 }
 
 export function CourseNotebook() {
-  return <Notebook track="course" />
+  return <NotebookView track="course" />
 }
 
-function Notebook({ track }: { track: Track }) {
-  const academic = track === 'academic'
+function NotebookView({ track }: { track: ProgramTrack | null }) {
   const { data: allNotes, create, update, remove } = useNotes()
   const { data: programs } = usePrograms()
   const { data: subjects } = useSubjects()
@@ -43,7 +55,7 @@ function Notebook({ track }: { track: Track }) {
   const [search, setSearch] = useState('')
   const [programFilter, setProgramFilter] = useState('')
   const [tagFilter, setTagFilter] = useState<string | null>(null)
-  const [collapsed, setCollapsed] = useCollapsedFolders(track)
+  const [collapsed, setCollapsed] = useCollapsedFolders(track ?? 'tudo')
 
   /** Todo caminho de abertura passa por aqui, para nenhum deles esquecer o modo. */
   function openNote(id: string) {
@@ -56,8 +68,11 @@ function Notebook({ track }: { track: Track }) {
     setMode('preview')
   }
 
-  const trackPrograms = programs.filter((p) => p.track === track)
-  const notes = useMemo(() => allNotes.filter((n) => n.track === track), [allNotes, track])
+  const trackPrograms = track ? programs.filter((p) => p.track === track) : programs
+  const notes = useMemo(
+    () => (track ? allNotes.filter((n) => n.track === track) : allNotes),
+    [allNotes, track],
+  )
   const tags = useMemo(() => allTags(notes), [notes])
 
   const filtered = useMemo(
@@ -67,10 +82,11 @@ function Notebook({ track }: { track: Track }) {
 
   // A árvore é montada sobre `filtered`: busca e etiquetas continuam valendo, e
   // uma pasta sem resultado simplesmente não é desenhada.
-  const tree = useMemo(
-    () => buildNoteTree(filtered, trackPrograms, subjects),
-    [filtered, trackPrograms, subjects],
-  )
+  const tree = useMemo(() => {
+    if (track) return buildNoteTree(filtered, trackPrograms, subjects)
+    const ordem = TRACK_ORDER.map((t) => ({ track: t, label: TRACK_LABELS[t] }))
+    return buildTrackTree(filtered, programs, subjects, ordem)
+  }, [track, filtered, trackPrograms, programs, subjects])
 
   // Buscando, tudo abre: esconder o resultado atrás de uma pasta fechada faria
   // a busca parecer quebrada.
@@ -89,13 +105,25 @@ function Notebook({ track }: { track: Track }) {
 
   const selected = notes.find((n) => n.id === selectedId) ?? null
 
-  async function createNote() {
+  // Os links atravessam o caderno todo, mesmo numa rota filtrada: uma anotação
+  // de faculdade citando uma de curso é justamente o que a rede serve para ver.
+  const porTitulo = useMemo(() => indicePorTitulo(allNotes), [allNotes])
+  const existeNota = (titulo: string) => porTitulo.has(chaveTitulo(titulo))
+  const backlinks = useMemo(
+    () => (selected ? retrolinks(selected, allNotes) : []),
+    [selected, allNotes],
+  )
+
+  const nomeDoCurso = (note: Note) =>
+    programs.find((p) => p.id === note.program_id)?.name ?? null
+
+  async function criarNota(titulo: string, comoTrack: Track, programId: string | null) {
     const note = await create.mutateAsync({
-      track,
-      program_id: programFilter || null,
+      track: comoTrack,
+      program_id: programId,
       subject_id: null,
-      title: 'Nova anotação',
-      content: NOTE_TEMPLATE,
+      title: titulo,
+      content: titulo ? '' : NOTE_TEMPLATE,
       tags: [],
       pinned: false,
     })
@@ -103,29 +131,68 @@ function Notebook({ track }: { track: Track }) {
     // A única exceção à regra da leitura: anotação recém-criada só tem o modelo
     // em branco, e quem clicou em "Nova anotação" quer escrever, não ler.
     setMode('edit')
+    return note
   }
 
-  const base = academic ? '/faculdade' : '/cursos'
+  /** Clique num `[[link]]`: abre a anotação, ou cria a que ainda não existe. */
+  function abrirPorTitulo(titulo: string) {
+    const alvo = porTitulo.get(chaveTitulo(titulo))
+    if (alvo) {
+      openNote(alvo.id)
+      return
+    }
+    // Nasce no mesmo lugar de quem a citou: quem escreveu o link ali é quem
+    // mais sabe onde o conceito mora.
+    void criarNota(titulo, selected?.track ?? track ?? 'free', selected?.program_id ?? null)
+  }
+
+  /**
+   * Grava a anotação e, mudando o título, conserta quem apontava para ela.
+   *
+   * Sem isto o link vira órfão em silêncio — a pior forma de perder informação,
+   * porque ninguém percebe.
+   */
+  function salvar(id: string, patch: Partial<Note>) {
+    const antes = allNotes.find((n) => n.id === id)
+    update.mutate({ id, patch })
+
+    const tituloNovo = patch.title
+    if (!antes || tituloNovo === undefined || !antes.title) return
+
+    for (const { nota, conteudo } of afetadasPorRenomear(allNotes, antes.title, tituloNovo)) {
+      if (nota.id === id) continue
+      update.mutate({ id: nota.id, patch: { content: conteudo } })
+    }
+  }
+
+  const base = track === 'academic' ? '/faculdade' : track === 'course' ? '/cursos' : null
+  const titulosDisponiveis = useMemo(
+    () => allNotes.filter((n) => n.id !== selectedId).map((n) => ({ id: n.id, title: n.title })),
+    [allNotes, selectedId],
+  )
 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <Link
-            to={base}
-            className="text-fg-subtle hover:text-fg mb-2 inline-flex items-center gap-1.5 text-xs transition-colors"
-          >
-            <ArrowLeft className="size-3.5" />
-            {academic ? 'Faculdade' : 'Cursos'}
-          </Link>
+          {base && (
+            <Link
+              to={base}
+              className="text-fg-subtle hover:text-fg mb-2 inline-flex items-center gap-1.5 text-xs transition-colors"
+            >
+              <ArrowLeft className="size-3.5" />
+              {track === 'academic' ? 'Faculdade' : 'Cursos'}
+            </Link>
+          )}
           <h1 className="text-fg text-xl font-semibold">Caderno</h1>
           <p className="text-fg-muted mt-1 max-w-2xl text-sm">
-            Anotações e resumos em Markdown, ligados{' '}
-            {academic ? 'ao curso e à disciplina' : 'ao curso'}. A busca varre título, conteúdo e
-            etiquetas.
+            {track
+              ? 'Anotações e resumos em Markdown deste módulo.'
+              : 'Anotações e resumos em Markdown — da faculdade, dos cursos e do que você estuda por conta.'}{' '}
+            Escreva <code className="text-fg-subtle">[[</code> para ligar uma anotação a outra.
           </p>
         </div>
-        <Button onClick={() => void createNote()}>
+        <Button onClick={() => void criarNota('', track ?? 'free', programFilter || null)}>
           <Plus />
           Nova anotação
         </Button>
@@ -227,7 +294,8 @@ function Notebook({ track }: { track: Track }) {
               subtitleOf={(note) => {
                 const program = programs.find((p) => p.id === note.program_id)
                 const subject = subjects.find((s) => s.id === note.subject_id)
-                return [subject?.name, program?.name].filter(Boolean).join(' · ') || 'Geral'
+                const lugar = [subject?.name, program?.name].filter(Boolean).join(' · ')
+                return lugar || TRACK_LABELS[note.track]
               }}
             />
           )}
@@ -238,17 +306,22 @@ function Notebook({ track }: { track: Track }) {
           <NoteEditor
             key={selected.id}
             note={selected}
-            track={track}
             mode={mode}
             onModeChange={setMode}
-            programs={trackPrograms}
+            programs={programs}
             subjects={subjects.filter((s) => s.program_id === selected.program_id)}
             onBack={closeNote}
-            onSave={(patch) => update.mutate({ id: selected.id, patch })}
+            onSave={(patch) => salvar(selected.id, patch)}
             onRemove={() => {
               remove.mutate(selected.id)
               closeNote()
             }}
+            backlinks={backlinks}
+            onAbrirNota={openNote}
+            onAbrirPorTitulo={abrirPorTitulo}
+            existeNota={existeNota}
+            titulosDisponiveis={titulosDisponiveis}
+            nomeDoCurso={nomeDoCurso}
           />
         ) : (
           <Card className="hidden lg:block">

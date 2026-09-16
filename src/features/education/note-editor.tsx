@@ -4,9 +4,12 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Field, Input, Select, Textarea } from '@/components/ui/field'
 import { Badge, Segmented } from '@/components/ui/misc'
-import type { Note, Track } from '@/data/types'
+import type { Note, Program, Track } from '@/data/types'
 import { confirmar } from '@/lib/avisos'
+import type { Retrolink } from '@/lib/education/links'
+import { LinkSuggestions, useLinkAutocomplete } from './link-autocomplete'
 import { Markdown } from './markdown'
+import { NoteBacklinks } from './note-backlinks'
 
 export type NoteMode = 'edit' | 'preview'
 
@@ -27,9 +30,11 @@ export const NOTE_TEMPLATE = `## Resumo
 /** Pausa na digitação antes de gravar sozinho. */
 const AUTOSAVE_MS = 800
 
+/** O valor do select "Onde" quando a anotação não pertence a curso nenhum. */
+const LIVRE = '__livre__'
+
 export function NoteEditor({
   note,
-  track,
   mode,
   onModeChange,
   programs,
@@ -37,17 +42,30 @@ export function NoteEditor({
   onBack,
   onSave,
   onRemove,
+  backlinks,
+  onAbrirNota,
+  onAbrirPorTitulo,
+  existeNota,
+  titulosDisponiveis,
+  nomeDoCurso,
 }: {
   note: Note
-  track: Track
   /** Vem de fora: o editor remonta a cada troca de anotação, o modo não. */
   mode: NoteMode
   onModeChange: (mode: NoteMode) => void
-  programs: Array<{ id: string; name: string }>
+  /** Todos os cursos, dos dois trilhos — o select agrupa por conta. */
+  programs: Program[]
+  /** Disciplinas do curso escolhido. */
   subjects: Array<{ id: string; name: string }>
   onBack: () => void
   onSave: (patch: Partial<Note>) => void
   onRemove: () => void
+  backlinks: Array<Retrolink<Note>>
+  onAbrirNota: (id: string) => void
+  onAbrirPorTitulo: (titulo: string) => void
+  existeNota: (titulo: string) => boolean
+  titulosDisponiveis: Array<{ id: string; title: string }>
+  nomeDoCurso: (note: Note) => string | null
 }) {
   const [form, setForm] = useState({
     title: note.title,
@@ -55,6 +73,7 @@ export function NoteEditor({
     program_id: note.program_id ?? '',
     subject_id: note.subject_id ?? '',
     tags: note.tags.join(', '),
+    track: note.track,
   })
   const [saved, setSaved] = useState(true)
 
@@ -62,6 +81,7 @@ export function NoteEditor({
     (): Partial<Note> => ({
       title: form.title,
       content: form.content,
+      track: form.track,
       program_id: form.program_id || null,
       subject_id: form.subject_id || null,
       tags: form.tags
@@ -96,6 +116,26 @@ export function NoteEditor({
     setSaved(false)
   }
 
+  const auto = useLinkAutocomplete({
+    value: form.content,
+    onChange: (texto) => set({ content: texto }),
+    notas: titulosDisponiveis,
+  })
+
+  /** O select "Onde": um curso, ou estudo livre. O trilho vem junto. */
+  const mudarOnde = (valor: string) => {
+    if (valor === LIVRE) {
+      set({ track: 'free', program_id: '', subject_id: '' })
+      return
+    }
+    const program = programs.find((p) => p.id === valor)
+    if (!program) return
+    set({ track: program.track, program_id: program.id, subject_id: '' })
+  }
+
+  const academicos = programs.filter((p) => p.track === 'academic')
+  const cursos = programs.filter((p) => p.track === 'course')
+  const ondeAtual = form.program_id || (form.track === 'free' ? LIVRE : '')
   const words = form.content.trim().split(/\s+/).filter(Boolean).length
 
   return (
@@ -148,27 +188,38 @@ export function NoteEditor({
       </div>
 
       <div className="border-border-base grid gap-3 border-b px-4 py-3 sm:grid-cols-3">
-        <Field label={track === 'academic' ? 'Curso' : 'Curso livre'}>
-          <Select
-            value={form.program_id}
-            onChange={(e) => set({ program_id: e.target.value, subject_id: '' })}
-          >
-            <option value="">Geral</option>
-            {programs.map((program) => (
-              <option key={program.id} value={program.id}>
-                {program.name}
-              </option>
-            ))}
+        <Field label="Onde" hint="Sem curso, vai para Estudos">
+          <Select value={ondeAtual} onChange={(e) => mudarOnde(e.target.value)}>
+            <option value={LIVRE}>Estudo livre</option>
+            {/* A anotação antiga sem curso guarda o trilho dela: some da lista
+                se for editada, mas até lá continua onde estava. */}
+            {ondeAtual === '' && <option value="">Sem curso</option>}
+            {academicos.length > 0 && (
+              <optgroup label="Faculdade">
+                {academicos.map((program) => (
+                  <option key={program.id} value={program.id}>
+                    {program.name}
+                  </option>
+                ))}
+              </optgroup>
+            )}
+            {cursos.length > 0 && (
+              <optgroup label="Cursos">
+                {cursos.map((program) => (
+                  <option key={program.id} value={program.id}>
+                    {program.name}
+                  </option>
+                ))}
+              </optgroup>
+            )}
           </Select>
         </Field>
 
-        {track === 'academic' && (
+        {/* Disciplina só existe na faculdade: no curso livre ela ocupava
+            espaço desabilitada, sem nunca ter o que oferecer. */}
+        {form.track === 'academic' && form.program_id ? (
           <Field label="Disciplina">
-            <Select
-              value={form.subject_id}
-              disabled={!form.program_id}
-              onChange={(e) => set({ subject_id: e.target.value })}
-            >
+            <Select value={form.subject_id} onChange={(e) => set({ subject_id: e.target.value })}>
               <option value="">Nenhuma</option>
               {subjects.map((subject) => (
                 <option key={subject.id} value={subject.id}>
@@ -177,6 +228,8 @@ export function NoteEditor({
               ))}
             </Select>
           </Field>
+        ) : (
+          <div className="hidden sm:block" />
         )}
 
         <Field label="Etiquetas" hint="Separadas por vírgula">
@@ -188,24 +241,50 @@ export function NoteEditor({
         </Field>
       </div>
 
-      <CardContent className="min-h-0 flex-1 p-0">
+      <CardContent className="relative min-h-0 flex-1 p-0">
         {mode === 'edit' ? (
-          <Textarea
-            value={form.content}
-            onChange={(e) => set({ content: e.target.value })}
-            placeholder="Escreva em Markdown..."
-            className="h-full min-h-[50vh] resize-none rounded-none border-0 bg-transparent px-5 py-4 font-mono text-[13px] leading-relaxed"
-          />
+          <>
+            <Textarea
+              value={form.content}
+              onChange={(e) => {
+                set({ content: e.target.value })
+                auto.sincronizar(e)
+              }}
+              onKeyDown={(e) => {
+                if (auto.teclou(e)) e.preventDefault()
+              }}
+              onKeyUp={auto.sincronizar}
+              onClick={auto.sincronizar}
+              onBlur={auto.fechar}
+              placeholder="Escreva em Markdown. Use [[ para ligar a outra anotação."
+              className="h-full min-h-[50vh] resize-none rounded-none border-0 bg-transparent px-5 py-4 font-mono text-[13px] leading-relaxed"
+            />
+            {auto.aberto && (
+              <LinkSuggestions
+                opcoes={auto.opcoes}
+                criar={auto.criar}
+                termo={auto.termo}
+                indice={auto.indice}
+                onEscolher={auto.escolher}
+              />
+            )}
+          </>
         ) : (
           <div className="px-5 py-4">
             {form.content.trim() ? (
-              <Markdown content={form.content} />
+              <Markdown
+                content={form.content}
+                existeNota={existeNota}
+                onAbrirNota={onAbrirPorTitulo}
+              />
             ) : (
               <p className="text-fg-subtle text-sm">Nada escrito ainda.</p>
             )}
           </div>
         )}
       </CardContent>
+
+      <NoteBacklinks itens={backlinks} onAbrir={onAbrirNota} nomeDoCurso={nomeDoCurso} />
 
       <div className="border-border-base text-fg-subtle flex items-center justify-between border-t px-4 py-2 text-[11px]">
         <span>{words} palavras</span>
@@ -214,3 +293,5 @@ export function NoteEditor({
     </Card>
   )
 }
+
+export type { Track }
