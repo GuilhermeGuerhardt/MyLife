@@ -38,6 +38,9 @@ const ProgramDetail = lazyRoute(() =>
 const CourseDetail = lazyRoute(() =>
   import('./pages/education/course-detail').then((m) => ({ default: m.CourseDetail })),
 )
+const Notebook = lazyRoute(() =>
+  import('./pages/education/notebook').then((m) => ({ default: m.Notebook })),
+)
 const AcademicNotebook = lazyRoute(() =>
   import('./pages/education/notebook').then((m) => ({ default: m.AcademicNotebook })),
 )
@@ -137,6 +140,9 @@ function Boot() {
             <Route path="saude/plano" element={<DietPlanPage />} />
             <Route path="saude/alimentacao" element={<NutritionPage />} />
             <Route path="faculdade" element={<AcademicPrograms />} />
+            <Route path="caderno" element={<Notebook />} />
+            {/* As rotas antigas continuam valendo: abrem o mesmo caderno já
+                filtrado, para quem tinha o endereço na memória ou salvo. */}
             <Route path="faculdade/caderno" element={<AcademicNotebook />} />
             <Route path="faculdade/:programId" element={<ProgramDetail />} />
             <Route path="cursos" element={<CoursePrograms />} />

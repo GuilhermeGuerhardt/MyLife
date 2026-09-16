@@ -14,7 +14,7 @@ import { confirmar } from '@/lib/avisos'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge, EmptyState, Progress, SectionTitle, Stat } from '@/components/ui/misc'
 import { useInstitutions, useNotes, usePrograms } from '@/data/queries'
-import { DEGREE_LABELS, PROGRAM_STATUS_LABELS, type Track } from '@/data/types'
+import { DEGREE_LABELS, PROGRAM_STATUS_LABELS, type ProgramTrack } from '@/data/types'
 import { ProgramForm, type ProgramDraft } from '@/features/education/program-form'
 import { CertificateThumb } from '@/features/education/certificate'
 import { useEducation } from '@/features/education/use-education'
@@ -29,7 +29,7 @@ export function CoursePrograms() {
   return <ProgramsPage track="course" />
 }
 
-function ProgramsPage({ track }: { track: Track }) {
+function ProgramsPage({ track }: { track: ProgramTrack }) {
   const academic = track === 'academic'
   const { summaries, institutions } = useEducation(track)
   const { create, remove } = usePrograms()

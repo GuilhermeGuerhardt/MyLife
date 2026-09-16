@@ -200,3 +200,51 @@ export function filterNotes<T extends SearchableNote>(notes: T[], filters: NoteF
 export function allTags(notes: SearchableNote[]): string[] {
   return [...new Set(notes.flatMap((note) => note.tags))].sort((a, b) => a.localeCompare(b))
 }
+
+/** A anotação com o trilho, para a árvore poder agrupar por ele. */
+export interface TrackedNote extends SearchableNote {
+  track: 'academic' | 'course' | 'free'
+}
+
+export const TRACK_FOLDER_PREFIX = 'track:'
+
+export function trackKey(track: string): string {
+  return `${TRACK_FOLDER_PREFIX}${track}`
+}
+
+/**
+ * A árvore do caderno reunido: um nível a mais no topo, com Faculdade, Cursos
+ * e Estudos, e a árvore de cada trilho pendurada abaixo.
+ *
+ * Existe porque os dois cadernos viraram um. O curso desceu um degrau, e o
+ * estudo livre — que não tem curso nenhum — ganhou onde morar em vez de cair
+ * numa pasta "Geral" dividida com as sobras da faculdade.
+ */
+export function buildTrackTree(
+  notes: TrackedNote[],
+  programs: NamedLike[],
+  subjects: SubjectLike[],
+  ordem: Array<{ track: string; label: string }>,
+): TreeFolder[] {
+  const folders: TreeFolder[] = []
+
+  for (const { track, label } of ordem) {
+    const doTrack = notes.filter((note) => note.track === track)
+    if (doTrack.length === 0) continue
+
+    // Estudo livre não tem curso: uma pasta "Geral" dentro de "Estudos" seria
+    // um degrau sem informação nenhuma. As anotações ficam direto no trilho.
+    const children = track === 'free' ? [] : buildNoteTree(doTrack, programs, subjects)
+    const soltas = track === 'free' ? doTrack : []
+
+    folders.push({
+      key: trackKey(track),
+      label,
+      notes: soltas,
+      children,
+      count: doTrack.length,
+    })
+  }
+
+  return folders
+}

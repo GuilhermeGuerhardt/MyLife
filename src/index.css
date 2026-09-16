@@ -376,6 +376,25 @@
     text-decoration: underline;
     text-underline-offset: 2px;
   }
+  /* Ligação para outra anotação: sublinhado mais leve que o de link externo,
+     porque navegar dentro do caderno é o caso comum e não merece destaque. */
+  .prose-notes .nota-link {
+    cursor: pointer;
+    text-decoration-color: color-mix(in oklch, var(--accent) 45%, transparent);
+  }
+  .prose-notes .nota-link:hover {
+    text-decoration-color: var(--accent);
+  }
+  /* A anotação ainda não escrita. Tracejado e apagado: é uma promessa, não um
+     destino — clicar nela é que a cria. */
+  .prose-notes .nota-link-vazio {
+    color: var(--fg-subtle);
+    text-decoration-style: dashed;
+    text-decoration-color: var(--border-strong);
+  }
+  .prose-notes .nota-link-vazio:hover {
+    color: var(--fg-muted);
+  }
   .prose-notes ul,
   .prose-notes ol {
     padding-left: 1.25rem;

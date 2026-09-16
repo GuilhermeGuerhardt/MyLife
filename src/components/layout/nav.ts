@@ -3,6 +3,7 @@ import {
   GraduationCap,
   HeartPulse,
   LayoutDashboard,
+  NotebookPen,
   Repeat,
   Wallet,
   type LucideIcon,
@@ -36,20 +37,23 @@ export const NAV: NavItem[] = [
     label: 'Faculdade',
     icon: GraduationCap,
     accent: 'accent-education',
-    children: [
-      { to: '/faculdade', label: 'Meus cursos' },
-      { to: '/faculdade/caderno', label: 'Caderno' },
-    ],
+    children: [{ to: '/faculdade', label: 'Meus cursos' }],
   },
   {
     to: '/cursos',
     label: 'Cursos',
     icon: BookOpen,
     accent: 'accent-courses',
-    children: [
-      { to: '/cursos', label: 'Minha lista' },
-      { to: '/cursos/caderno', label: 'Caderno' },
-    ],
+    children: [{ to: '/cursos', label: 'Minha lista' }],
+  },
+  {
+    // O caderno é um só: a anotação de faculdade, a do curso e a do que você
+    // estuda por conta vivem na mesma rede e se ligam umas nas outras. Dois
+    // cadernos separados eram dois cantos do mesmo assunto.
+    to: '/caderno',
+    label: 'Caderno',
+    icon: NotebookPen,
+    accent: 'accent-education',
   },
   {
     to: '/financeiro',

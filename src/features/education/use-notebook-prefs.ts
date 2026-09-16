@@ -7,7 +7,6 @@
  */
 
 import { useCallback, useState } from 'react'
-import type { Track } from '@/data/types'
 
 export type NoteView = 'list' | 'tree'
 
@@ -17,7 +16,7 @@ const VIEW_KEY = 'life:caderno-vista'
 /** Pastas fechadas, por trilha — faculdade e cursos têm árvores diferentes. */
 const COLLAPSED_KEY = 'life:caderno-pastas-fechadas'
 
-function readCollapsed(track: Track): Set<string> {
+function readCollapsed(track: string): Set<string> {
   try {
     const raw = localStorage.getItem(`${COLLAPSED_KEY}:${track}`)
     const parsed: unknown = raw ? JSON.parse(raw) : []
@@ -45,7 +44,7 @@ function write(key: string, value: string) {
  * primeira anotação — nasce aberta, em vez de nascer escondida por não constar
  * de uma lista de abertas gravada antes de ela existir.
  */
-export function useCollapsedFolders(track: Track): [Set<string>, (next: Set<string>) => void] {
+export function useCollapsedFolders(track: string): [Set<string>, (next: Set<string>) => void] {
   const [collapsed, setCollapsed] = useState<Set<string>>(() => readCollapsed(track))
 
   const change = useCallback(

@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Field, Input, Select } from '@/components/ui/field'
 import { Modal } from '@/components/ui/modal'
-import type { BaseRow, Degree, Institution, Program, ProgramStatus, Track } from '@/data/types'
+import type { BaseRow, Degree, Institution, Program, ProgramStatus, ProgramTrack } from '@/data/types'
 import { DEGREE_LABELS, PROGRAM_STATUS_LABELS } from '@/data/types'
 import { CertificateField } from './certificate'
 
@@ -21,7 +21,7 @@ export function ProgramForm({
   onSave,
   onCreateInstitution,
 }: {
-  track: Track
+  track: ProgramTrack
   institutions: Institution[]
   initial?: Program
   onClose: () => void

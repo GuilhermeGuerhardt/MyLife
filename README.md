@@ -255,14 +255,14 @@ src/
 ├─ features/
 │  ├─ dashboard/       # catálogo de widgets (um arquivo por área) e layout configurável
 │  ├─ health/          # resumo, gráfico de peso, modal de alimento, formulário e resumo do dia
-│  ├─ education/       # formulários de curso/disciplina, cartão do semestre, caderno, Markdown
+│  ├─ education/       # curso/disciplina, semestre, caderno, Markdown com [[links]]
 │  ├─ finance/         # formulários, ações, gráficos e as etapas do assistente de importação
 │  ├─ routine/         # hábitos, agenda e insights
 │  ├─ profile/         # avatar, tema, pasta de trabalho e backup
 │  └─ updates/         # busca por versão nova, aviso no canto e o interruptor
 ├─ lib/
 │  ├─ health/          # TMB, TDEE, IMC, média móvel, plano, macros do diário (puro + testado)
-│  ├─ education/       # progresso, pré-requisitos, faltas, média e simulador (puro + testado)
+│  ├─ education/       # progresso, faltas, média, árvore e links do caderno (puro + testado)
 │  ├─ finance/         # centavos, ciclo de fatura, parcelas e relatórios (puro + testado)
 │  ├─ habits/          # sequências, meta semanal e heatmap (puro + testado)
 │  ├─ calendar/        # agenda unificada e export iCalendar (puro + testado)
@@ -279,6 +279,48 @@ supabase/migrations/   # SQL versionado, guardado caso a sincronização volte
 
 A regra que mantém o projeto sustentável: **nada de lógica de cálculo dentro de componente**.
 As fórmulas vivem em `src/lib` como funções puras com teste, e as telas só as consomem.
+
+## Caderno: um só, e em rede
+
+Antes havia **dois** cadernos — um em Faculdade, outro em Cursos — e uma anotação de Cálculo e
+outra de Rust viviam em lugares diferentes, alcançados por menus diferentes. Agora o Caderno é um
+módulo próprio no menu, reunindo tudo. As rotas antigas (`/faculdade/caderno`, `/cursos/caderno`)
+continuam funcionando, só que abrindo o mesmo caderno já filtrado.
+
+O curso deixou de ser **rota** e virou **pasta**. A árvore ganhou um nível no topo:
+
+```
+Faculdade/  Engenharia de Software/  Cálculo II/  …
+Cursos/     Rust do zero/  …
+Estudos/    ← o que você estuda por conta, sem curso nenhum
+```
+
+**Estudos** é o trilho novo. O `Track` ganhou um terceiro valor, `free`, que só existe em
+anotação: nenhum curso nasce com ele. No editor, o campo "Onde" resolve os dois de uma vez —
+escolher um curso põe a anotação naquele trilho, escolher "Estudo livre" a manda para Estudos.
+
+### Ligações entre anotações
+
+A pasta diz a que curso uma anotação **pertence** — um pai só. O link diz o que ela **puxa**:
+quantos quiser, atravessando faculdade, curso e estudo livre. É a relação que nenhuma árvore
+expressa, e o que faz um caderno virar rede em vez de gaveta.
+
+Escrevendo `[[Título da anotação]]` no Markdown:
+
+- **Vira link.** Implementado como extensão do `marked`, não como troca de texto antes de
+  converter — assim um `[[exemplo]]` dentro de bloco de código continua sendo o exemplo.
+- **Aponta para o que ainda não existe.** O link sai tracejado, e clicar nele cria a anotação já
+  com aquele título. É o hábito que faz o caderno crescer sozinho.
+- **Aparece do outro lado.** No rodapé de cada anotação, um painel "Mencionada em" lista quem
+  aponta para ela, com o trecho em volta da citação. Sem isso o link seria rua de mão única.
+- **Autocompleta.** Digitando `[[`, uma lista com os títulos existentes. Sem ela a funcionalidade
+  morreria na segunda semana: ligar por título exige lembrar o título exato.
+- **Sobrevive a renomear.** Trocar o título de uma anotação reescreve os `[[ ]]` de quem a citava.
+  Link órfão é a pior forma de perder informação — ninguém percebe.
+
+A ligação é por **título** e não por id, de propósito: o Markdown do backup continua legível fora
+do app. E o grafo de pontinhos ficou de fora — é a parte mais fotogênica do Obsidian e a menos
+útil; com algumas dezenas de anotações, a lista de retrolinks informa mais.
 
 ## Refatoração das telas grandes
 

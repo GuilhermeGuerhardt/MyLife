@@ -141,11 +141,28 @@ export interface MealLog extends BaseRow {
 // O campo `track` separa os dois mundos sem duplicar modelo.
 // ---------------------------------------------------------------------------
 
-export type Track = 'academic' | 'course'
+/**
+ * `free` só existe para anotação: é o estudo que você faz por conta, sem curso
+ * nenhum por trás. Nenhum `Program` ou `Institution` nasce com esse trilho —
+ * quem o carrega é sempre uma `Note` sem `program_id`.
+ */
+export type Track = 'academic' | 'course' | 'free'
+
+/** Trilho de um programa — o subconjunto de `Track` que vira curso de verdade. */
+export type ProgramTrack = Exclude<Track, 'free'>
+
+export const TRACK_LABELS: Record<Track, string> = {
+  academic: 'Faculdade',
+  course: 'Cursos',
+  free: 'Estudos',
+}
+
+/** A ordem em que os trilhos aparecem na árvore do caderno. */
+export const TRACK_ORDER: Track[] = ['academic', 'course', 'free']
 
 export interface Institution extends BaseRow {
   name: string
-  track: Track
+  track: ProgramTrack
   /** Site ou portal do aluno. */
   link: string | null
 }
@@ -172,7 +189,7 @@ export const PROGRAM_STATUS_LABELS: Record<ProgramStatus, string> = {
 
 export interface Program extends BaseRow {
   institution_id: string | null
-  track: Track
+  track: ProgramTrack
   name: string
   degree: Degree
   status: ProgramStatus
@@ -242,6 +259,7 @@ export interface CourseLesson extends BaseRow {
 }
 
 export interface Note extends BaseRow {
+  /** Único lugar onde `free` aparece: anotação que não pertence a curso algum. */
   track: Track
   program_id: string | null
   subject_id: string | null
