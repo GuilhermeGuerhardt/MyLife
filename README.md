@@ -14,6 +14,57 @@ O que ainda falta está em [docs/PLANO.md](docs/PLANO.md).
 
 ---
 
+## Como é
+
+> Os dados das imagens são **fictícios**, criados só para a demonstração.
+
+### Início
+
+O dashboard monta o dia com os widgets que você escolher: peso, calorias que ainda cabem,
+treinos da semana, hábitos para marcar ali mesmo e o que vence nas próximas duas semanas.
+
+![Dashboard do Life, com widgets de peso, calorias, treinos, hábitos do dia e próximos compromissos](docs/prints/dashboard.png)
+
+### Financeiro
+
+Fatura de cartão contada por **competência** — a compra entra na fatura que a inclui, não no mês
+em que foi feita. Parcelamento distribuído sem perder centavos, orçamento por categoria e fluxo
+de caixa de seis meses.
+
+![Tela do financeiro, com saldo, fluxo de caixa, distribuição por categoria e últimos lançamentos](docs/prints/financeiro.png)
+
+### Saúde
+
+Peso pela **média móvel de 7 dias**, não pela pesagem do dia — é a diferença entre acompanhar uma
+tendência e se assustar com a balança. O gasto diário se ajusta pelos treinos realmente
+registrados na semana.
+
+![Tela de saúde, com peso em média móvel, IMC, gasto diário e o gráfico de evolução do peso](docs/prints/saude.png)
+
+### Caderno
+
+Anotações da faculdade, dos cursos e do que você estuda por conta, no mesmo lugar. Escrevendo
+`[[Título]]` uma anotação liga na outra, e o rodapé mostra quem menciona a que está aberta.
+
+![Caderno com a árvore Faculdade, Cursos e Estudos, uma anotação aberta com links e o painel de menções](docs/prints/caderno.png)
+
+### Rotina
+
+Hábitos diários e semanais, com sequência, meta da semana e heatmap de seis meses clicável para
+corrigir o passado. O dia de hoje nunca quebra uma sequência.
+
+![Tela de hábitos, com progresso da semana e heatmap de seis meses](docs/prints/rotina.png)
+
+### Faculdade
+
+Progresso por carga horária, CR ponderado por créditos e previsão de conclusão pelo seu ritmo.
+O **"pode cursar agora"** sai dos pré-requisitos já cumpridos — em vez de você conferir a grade
+na mão todo semestre.
+
+![Tela do curso na faculdade, com progresso, CR, o que falta cursar, compromissos e as disciplinas liberadas](docs/prints/faculdade.png)
+
+---
+
 ## Usando o app
 
 Esta seção é para quem quer **usar** o Life. Para mexer no código, pule para
@@ -34,7 +85,9 @@ ela serve só para buscar versão nova, e o app funciona inteiro sem ela — é 
 
 ### Instalando
 
-1. Baixe `Life_0.2.3_x64-setup.exe`.
+1. Baixe o instalador na
+   **[última versão](https://github.com/GuilhermeGuerhardt/MyLife/releases/latest)** — é o
+   arquivo `Life_<versão>_x64-setup.exe` no fim da página.
 2. Execute o arquivo.
 3. O Windows provavelmente vai mostrar uma tela azul do **SmartScreen** dizendo que não
    reconhece o programa. Isso acontece porque o executável não tem assinatura digital —
