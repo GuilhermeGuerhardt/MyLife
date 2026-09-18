@@ -25,6 +25,7 @@ import type {
   HabitLog,
   Institution,
   MealLog,
+  MealPreset,
   Note,
   Profile,
   Program,
@@ -44,6 +45,7 @@ export const TABLES = {
   dietPlans: 'diet_plans',
   foods: 'foods',
   mealLogs: 'meal_logs',
+  mealPresets: 'meal_presets',
   institutions: 'institutions',
   programs: 'programs',
   subjects: 'subjects',
@@ -71,6 +73,7 @@ const collections = {
   dietPlans: collection<DietPlanRow>(TABLES.dietPlans),
   foods: collection<Food>(TABLES.foods),
   mealLogs: collection<MealLog>(TABLES.mealLogs),
+  mealPresets: collection<MealPreset>(TABLES.mealPresets),
   institutions: collection<Institution>(TABLES.institutions),
   programs: collection<Program>(TABLES.programs),
   subjects: collection<Subject>(TABLES.subjects),
@@ -344,6 +347,10 @@ export function useDietPlans() {
 
 export function useFoods() {
   return useCollection<Food>('foods')
+}
+
+export function useMealPresets() {
+  return useCollection<MealPreset>('mealPresets')
 }
 
 export function useMealLogs() {

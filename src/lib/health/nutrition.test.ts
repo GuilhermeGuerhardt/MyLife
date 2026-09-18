@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { decimalInput, kcalFromMacros, scaleMacros, sumMacros } from './nutrition'
+import {
+  decimalInput,
+  itensDoDiario,
+  kcalFromMacros,
+  registrosDaRefeicao,
+  resumoDaRefeicao,
+  scaleMacros,
+  sumMacros,
+} from './nutrition'
 
 describe('soma do diário', () => {
   it('soma calorias e macros dos registros', () => {
@@ -56,5 +64,65 @@ describe('número digitado', () => {
     expect(decimalInput('')).toBe(0)
     expect(decimalInput('0')).toBe(0)
     expect(decimalInput('-3')).toBe(0)
+  })
+})
+
+describe('refeição salva', () => {
+  const alimentos = [
+    { id: 'f1', name: 'Arroz branco cozido', kcal: 128, protein_g: 2.5, carb_g: 28.1, fat_g: 0.2 },
+    { id: 'f2', name: 'Frango grelhado', kcal: 159, protein_g: 32, carb_g: 0, fat_g: 2.5 },
+  ]
+
+  it('recalcula os macros na hora, a partir do cadastro atual', () => {
+    const registros = registrosDaRefeicao(
+      [{ food_id: 'f1', quantity_g: 150 }, { food_id: 'f2', quantity_g: 150 }],
+      alimentos,
+    )
+    expect(registros).toEqual([
+      { food_id: 'f1', food_name: 'Arroz branco cozido', quantity_g: 150, kcal: 192, protein_g: 3.8, carb_g: 42.2, fat_g: 0.3 },
+      { food_id: 'f2', food_name: 'Frango grelhado', quantity_g: 150, kcal: 239, protein_g: 48, carb_g: 0, fat_g: 3.8 },
+    ])
+  })
+
+  it('corrigir o alimento conserta a refeição, sem tocar nela', () => {
+    const corrigido = [{ ...alimentos[0]!, kcal: 130 }, alimentos[1]!]
+    const antes = registrosDaRefeicao([{ food_id: 'f1', quantity_g: 100 }], alimentos)
+    const depois = registrosDaRefeicao([{ food_id: 'f1', quantity_g: 100 }], corrigido)
+    expect(antes[0]!.kcal).toBe(128)
+    expect(depois[0]!.kcal).toBe(130)
+  })
+
+  it('alimento removido do cadastro é ignorado, o resto entra', () => {
+    const registros = registrosDaRefeicao(
+      [{ food_id: 'sumiu', quantity_g: 100 }, { food_id: 'f2', quantity_g: 100 }],
+      alimentos,
+    )
+    expect(registros.map((r) => r.food_id)).toEqual(['f2'])
+  })
+
+  it('quantidade zerada não vira registro', () => {
+    expect(registrosDaRefeicao([{ food_id: 'f1', quantity_g: 0 }], alimentos)).toEqual([])
+  })
+
+  it('resume itens e calorias para a faixa do modal', () => {
+    const resumo = resumoDaRefeicao(
+      [{ food_id: 'f1', quantity_g: 150 }, { food_id: 'f2', quantity_g: 150 }],
+      alimentos,
+    )
+    expect(resumo.itens).toBe(2)
+    expect(resumo.totais.kcal).toBe(431)
+  })
+
+  it('o diário vira itens, somando o alimento repetido', () => {
+    expect(
+      itensDoDiario([
+        { food_id: 'f1', quantity_g: 100 },
+        { food_id: 'f2', quantity_g: 150 },
+        { food_id: 'f1', quantity_g: 50 },
+      ]),
+    ).toEqual([
+      { food_id: 'f1', quantity_g: 150 },
+      { food_id: 'f2', quantity_g: 150 },
+    ])
   })
 })

@@ -7,9 +7,10 @@ sem mensalidade — seus dados ficam na sua máquina. A única coisa que consult
 busca por versão nova, que você pode desligar.
 
 **Entregue até aqui:** módulos de **Saúde** (atividades, medidas, plano de emagrecimento
-adaptativo e diário alimentar), **Faculdade**, **Cursos**, **Caderno**, **Financeiro** e
-**Rotina** (hábitos, agenda unificada e insights entre módulos), com dashboard configurável,
-registro rápido em linguagem natural, importação de extrato em planilha e oito temas de cor.
+adaptativo e diário alimentar com refeições salvas), **Faculdade**, **Cursos**, **Caderno**,
+**Financeiro** e **Rotina** (hábitos, agenda unificada e insights entre módulos), com dashboard
+configurável, registro rápido em linguagem natural, importação de extrato em planilha e oito
+temas de cor.
 O que ainda falta está em [docs/PLANO.md](docs/PLANO.md).
 
 ---
@@ -40,6 +41,11 @@ tendência e se assustar com a balança. O gasto diário se ajusta pelos treinos
 registrados na semana.
 
 ![Tela de saúde, com peso em média móvel, IMC, gasto diário e o gráfico de evolução do peso](docs/prints/saude.png)
+
+No diário alimentar, o prato que se repete vira **refeição salva**: você monta o almoço uma vez
+do jeito normal e clica em "salvar refeição". Da próxima, ela aparece no topo da busca e um
+clique registra tudo. Os macros são recalculados na hora, pelo cadastro atual — corrigir a
+caloria de um alimento conserta todas as refeições que o usam.
 
 ### Caderno
 
@@ -314,7 +320,7 @@ src/
 │  ├─ profile/         # avatar, tema, pasta de trabalho e backup
 │  └─ updates/         # busca por versão nova, aviso no canto e o interruptor
 ├─ lib/
-│  ├─ health/          # TMB, TDEE, IMC, média móvel, plano, macros do diário (puro + testado)
+│  ├─ health/          # TMB, TDEE, IMC, média móvel, plano, macros e refeições (puro + testado)
 │  ├─ education/       # progresso, faltas, média, árvore e links do caderno (puro + testado)
 │  ├─ finance/         # centavos, ciclo de fatura, parcelas e relatórios (puro + testado)
 │  ├─ habits/          # sequências, meta semanal e heatmap (puro + testado)
