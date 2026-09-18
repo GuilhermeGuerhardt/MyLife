@@ -4,12 +4,13 @@ import { Button } from '@/components/ui/button'
 import { Field, Input } from '@/components/ui/field'
 import { Badge, EmptyState } from '@/components/ui/misc'
 import { Modal } from '@/components/ui/modal'
-import { MEAL_SLOTS, type Food, type MealSlot } from '@/data/types'
+import { MEAL_SLOTS, type Food, type MealPreset, type MealSlot } from '@/data/types'
 import { confirmar } from '@/lib/avisos'
 import { decimal, integer } from '@/lib/format'
 import { decimalInput } from '@/lib/health/nutrition'
 import { normalize } from '@/lib/quick-add/parser'
 import { FoodForm, type FoodDraft } from './food-form'
+import { MealPresetStrip } from './meal-presets'
 
 /**
  * As três telas do modal.
@@ -42,6 +43,9 @@ export function AddFoodModal({
   onCreateFood,
   onUpdateFood,
   onRemoveFood,
+  presets,
+  onUsePreset,
+  onRemovePreset,
 }: {
   slot: MealSlot
   foods: Food[]
@@ -52,6 +56,9 @@ export function AddFoodModal({
   onCreateFood: (draft: FoodDraft) => Promise<Food>
   onUpdateFood: (id: string, draft: FoodDraft) => Promise<Food>
   onRemoveFood: (id: string) => Promise<void>
+  presets: MealPreset[]
+  onUsePreset: (preset: MealPreset) => Promise<void>
+  onRemovePreset: (preset: MealPreset) => Promise<void>
 }) {
   const [query, setQuery] = useState(initialQuery)
   const [view, setView] = useState<View>({ kind: 'search' })
@@ -141,6 +148,15 @@ export function AddFoodModal({
         />
       ) : (
         <SearchView
+          presets={presets}
+          foods={foods}
+          slot={slot}
+          onUsePreset={async (preset) => {
+            await onUsePreset(preset)
+            // Registrou a refeição inteira: não há o que escolher depois.
+            onClose()
+          }}
+          onRemovePreset={onRemovePreset}
           query={query}
           onQueryChange={setQuery}
           results={results}
@@ -175,6 +191,11 @@ function searchFoods(foods: Food[], query: string): Food[] {
 }
 
 function SearchView({
+  presets,
+  foods,
+  slot,
+  onUsePreset,
+  onRemovePreset,
   query,
   onQueryChange,
   results,
@@ -183,6 +204,11 @@ function SearchView({
   onCreate,
   onToggleFavorite,
 }: {
+  presets: MealPreset[]
+  foods: Food[]
+  slot: MealSlot
+  onUsePreset: (preset: MealPreset) => void
+  onRemovePreset: (preset: MealPreset) => Promise<void>
   query: string
   onQueryChange: (query: string) => void
   results: Food[]
@@ -193,6 +219,14 @@ function SearchView({
 }) {
   return (
     <div className="space-y-3">
+      <MealPresetStrip
+        presets={presets}
+        foods={foods}
+        slot={slot}
+        onUse={onUsePreset}
+        onRemove={(preset) => void onRemovePreset(preset)}
+      />
+
       <Field>
         <Input
           autoFocus

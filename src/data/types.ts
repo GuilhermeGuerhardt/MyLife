@@ -136,6 +136,29 @@ export interface MealLog extends BaseRow {
   fat_g: number
 }
 
+/** Um alimento dentro de uma refeição salva. */
+export interface MealPresetItem {
+  food_id: string
+  quantity_g: number
+}
+
+/**
+ * Uma refeição que se repete — o almoço de sempre, a marmita da segunda.
+ *
+ * Guarda só o alimento e a quantidade, não os macros: assim, corrigindo o
+ * valor de um alimento no cadastro, a refeição salva passa a render a conta
+ * nova. Os macros são calculados na hora de registrar, como em qualquer adição.
+ *
+ * Os itens ficam embutidos na linha, como as `tags` da anotação: eles não
+ * existem fora da refeição e nunca são consultados por conta própria.
+ */
+export interface MealPreset extends BaseRow {
+  name: string
+  /** Só ordena a lista — o café da manhã vem primeiro no café. Não filtra. */
+  slot: MealSlot | null
+  items: MealPresetItem[]
+}
+
 // ---------------------------------------------------------------------------
 // Educação — faculdade e cursos compartilham as mesmas tabelas.
 // O campo `track` separa os dois mundos sem duplicar modelo.
