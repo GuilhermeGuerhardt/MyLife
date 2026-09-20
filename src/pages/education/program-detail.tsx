@@ -1,6 +1,6 @@
 import { ArrowLeft, Lock, NotebookPen, Pencil, Plus, Trash2 } from 'lucide-react'
 import { useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Select } from '@/components/ui/field'
@@ -10,6 +10,7 @@ import { DEGREE_LABELS, type Subject } from '@/data/types'
 import { CertificateThumb } from '@/features/education/certificate'
 import { ProgramForm } from '@/features/education/program-form'
 import { ProgramSchedule } from '@/features/education/program-schedule'
+import { useRemoveProgram } from '@/features/education/use-remove-program'
 import { ehImagem } from '@/lib/education/certificate'
 import { SubjectForm } from '@/features/education/subject-form'
 import { TermSubject } from '@/features/education/term-subject'
@@ -33,6 +34,8 @@ export function ProgramDetail() {
   const { data: allSubjects, create, update, remove } = useSubjects()
   const { data: institutions, create: createInstitution } = useInstitutions()
   const { data: notes } = useNotes()
+  const navigate = useNavigate()
+  const removerPrograma = useRemoveProgram()
 
   const [tab, setTab] = useState<Tab>('overview')
   const [editing, setEditing] = useState(false)
@@ -116,6 +119,20 @@ export function ProgramDetail() {
           </Link>
           <Button variant="ghost" size="icon" onClick={() => setEditing(true)} aria-label="Editar curso">
             <Pencil />
+          </Button>
+          {/* Também aqui, e não só na lista: quem decide largar um curso
+              costuma estar olhando para ele, não para a lista de todos. */}
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              void removerPrograma(program).then((removeu) => {
+                if (removeu) navigate('/faculdade')
+              })
+            }}
+            aria-label="Remover curso"
+          >
+            <Trash2 />
           </Button>
         </div>
       </div>

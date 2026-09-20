@@ -10,7 +10,6 @@ import {
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
-import { confirmar } from '@/lib/avisos'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge, EmptyState, Progress, SectionTitle, Stat } from '@/components/ui/misc'
 import { useInstitutions, useNotes, usePrograms } from '@/data/queries'
@@ -18,6 +17,7 @@ import { DEGREE_LABELS, PROGRAM_STATUS_LABELS, type ProgramTrack } from '@/data/
 import { ProgramForm, type ProgramDraft } from '@/features/education/program-form'
 import { CertificateThumb } from '@/features/education/certificate'
 import { useEducation } from '@/features/education/use-education'
+import { useRemoveProgram } from '@/features/education/use-remove-program'
 import { ehImagem } from '@/lib/education/certificate'
 import { decimal, integer, longDate, percent } from '@/lib/format'
 
@@ -32,7 +32,8 @@ export function CoursePrograms() {
 function ProgramsPage({ track }: { track: ProgramTrack }) {
   const academic = track === 'academic'
   const { summaries, institutions } = useEducation(track)
-  const { create, remove } = usePrograms()
+  const { create } = usePrograms()
+  const removerPrograma = useRemoveProgram()
   const { create: createInstitution } = useInstitutions()
   const { data: notes } = useNotes()
   const [creating, setCreating] = useState(false)
@@ -236,14 +237,7 @@ function ProgramsPage({ track }: { track: ProgramTrack }) {
                     <Button
                       variant="ghost"
                       size="sm"
-                      onClick={() => {
-                        void confirmar(
-                          `Remover "${summary.program.name}" e tudo dentro dele?`,
-                          { confirmar: 'Remover', tom: 'error' },
-                        ).then((ok) => {
-                          if (ok) remove.mutate(summary.program.id)
-                        })
-                      }}
+                      onClick={() => void removerPrograma(summary.program)}
                     >
                       Remover
                     </Button>

@@ -10,7 +10,7 @@ import {
   Trash2,
 } from 'lucide-react'
 import { useCallback, useMemo, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Field, Input, Textarea } from '@/components/ui/field'
@@ -21,6 +21,7 @@ import { PROGRAM_STATUS_LABELS } from '@/data/types'
 import { CertificateThumb } from '@/features/education/certificate'
 import { ProgramForm } from '@/features/education/program-form'
 import { ProgramSchedule } from '@/features/education/program-schedule'
+import { useRemoveProgram } from '@/features/education/use-remove-program'
 import { ehImagem } from '@/lib/education/certificate'
 import { currency, decimal, duration, longDate, percent, relativeDay } from '@/lib/format'
 import { cn, today } from '@/lib/utils'
@@ -79,6 +80,8 @@ export function CourseDetail() {
   const { data: allLessons, create, update, remove } = useCourseLessons()
   const { data: institutions, create: createInstitution } = useInstitutions()
   const { data: notes } = useNotes()
+  const navigate = useNavigate()
+  const removerPrograma = useRemoveProgram()
 
   const [editing, setEditing] = useState(false)
   const [adding, setAdding] = useState(false)
@@ -162,6 +165,18 @@ export function CourseDetail() {
           )}
           <Button variant="ghost" size="icon" onClick={() => setEditing(true)} aria-label="Editar">
             <Pencil />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              void removerPrograma(program).then((removeu) => {
+                if (removeu) navigate('/cursos')
+              })
+            }}
+            aria-label="Remover curso"
+          >
+            <Trash2 />
           </Button>
         </div>
       </div>

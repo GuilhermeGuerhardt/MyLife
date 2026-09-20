@@ -67,6 +67,10 @@ Progresso por carga horária, CR ponderado por créditos e previsão de conclus�
 O **"pode cursar agora"** sai dos pré-requisitos já cumpridos — em vez de você conferir a grade
 na mão todo semestre.
 
+Removendo um curso, a pergunta diz **exatamente o que sai junto** — quantas disciplinas, aulas,
+avaliações e compromissos. E o que não sai: **suas anotações ficam**, passando para Estudos. O
+texto que você escreveu é a coisa menos reproduzível do app.
+
 ![Tela do curso na faculdade, com progresso, CR, o que falta cursar, compromissos e as disciplinas liberadas](docs/prints/faculdade.png)
 
 ---
@@ -321,7 +325,7 @@ src/
 │  └─ updates/         # busca por versão nova, aviso no canto e o interruptor
 ├─ lib/
 │  ├─ health/          # TMB, TDEE, IMC, média móvel, plano, macros e refeições (puro + testado)
-│  ├─ education/       # progresso, faltas, média, árvore e links do caderno (puro + testado)
+│  ├─ education/       # progresso, faltas, média, caderno e remoção em cascata (puro + testado)
 │  ├─ finance/         # centavos, ciclo de fatura, parcelas e relatórios (puro + testado)
 │  ├─ habits/          # sequências, meta semanal e heatmap (puro + testado)
 │  ├─ calendar/        # agenda unificada e export iCalendar (puro + testado)
