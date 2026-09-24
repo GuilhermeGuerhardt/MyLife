@@ -156,11 +156,18 @@ function percorrer(no: Node, blocos: Bloco[], marcas: Marcas, recuo: number): vo
   }
 }
 
-/** Acrescenta ao último bloco, abrindo um novo se ainda não houver. */
+/**
+ * Acrescenta o trecho ao bloco aberto, abrindo um novo se não houver.
+ *
+ * Linha divisória e bloco de código não recebem texto solto: um já está
+ * fechado por natureza e o outro guarda o conteúdo inteiro de uma vez.
+ */
 function anexar(blocos: Bloco[], novo: Bloco, trecho: Trecho): void {
   const ultimo = blocos[blocos.length - 1]
-  const alvo = ultimo && ultimo.tipo !== 'linha' && ultimo.tipo !== 'codigo' ? ultimo : (blocos.push(novo), blocos[blocos.length - 1]!)
-  alvo.trechos.push(trecho)
+  const aberto = ultimo && ultimo.tipo !== 'linha' && ultimo.tipo !== 'codigo'
+
+  if (!aberto) blocos.push(novo)
+  blocos[blocos.length - 1]!.trechos.push(trecho)
 }
 
 /** As marcas que este elemento acrescenta às que já vinham de fora. */
@@ -252,7 +259,8 @@ export function markdownParaTexto(markdown: string): string {
 export function nomeDeArquivo(titulo: string): string {
   const limpo = titulo
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    // Marcas de acentuação, que o `normalize` acabou de separar da letra.
+    .replace(/\p{M}/gu, '')
     .replace(/[^\w\s-]/g, '')
     .trim()
     .replace(/\s+/g, '-')

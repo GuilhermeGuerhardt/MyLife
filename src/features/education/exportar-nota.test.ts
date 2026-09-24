@@ -49,7 +49,11 @@ describe('exportação', () => {
 
   it('o .docx sai como um arquivo do Word de verdade', async () => {
     const html =
-      '<h1>Título</h1><p><span style="color: #0091ff">colorido</span></p>' +
+      '<h1>Título</h1><p><span style="color: #0091ff">colorido</span> ' +
+      // O marca-texto sai por `shading`, que é o caminho que guarda a cor
+      // escolhida; montar o documento já prova que o Word aceita o que foi
+      // pedido, porque a biblioteca recusa atributo inválido na montagem.
+      '<mark data-color="#fde68a">marcado</mark></p>' +
       '<ul data-type="taskList"><li data-checked="true"><label><input type="checkbox" checked></label><div><p>feita</p></div></li></ul>'
     await exportarNota('Revisão', html, 'html', 'docx')
 

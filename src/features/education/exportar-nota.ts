@@ -20,6 +20,7 @@ import {
   type Bloco,
   type Marcas,
 } from '@/lib/education/documento'
+import { htmlLimpoDaNota } from '@/lib/education/html-limpo'
 import { salvarArquivo, type TipoArquivo } from '@/lib/salvar-arquivo'
 
 export type FormatoDeSaida = 'md' | 'txt' | 'docx' | 'pdf'
@@ -104,6 +105,7 @@ async function montarDocx(titulo: string, blocos: Bloco[]): Promise<Uint8Array> 
     HeadingLevel,
     Packer,
     Paragraph,
+    ShadingType,
     TextRun,
     UnderlineType,
   } = await import('docx')
@@ -130,7 +132,12 @@ async function montarDocx(titulo: string, blocos: Bloco[]): Promise<Uint8Array> 
       strike: marcas.riscado,
       font: marcas.codigo ? 'Consolas' : undefined,
       color: corDoWord(marcas.cor),
-      highlight: marcas.fundo ? 'yellow' : undefined,
+      // Fundo por `shading`, e não pelo `highlight` do Word: o `highlight` só
+      // aceita um punhado de cores com nome, e o marca-texto do editor sairia
+      // amarelo qualquer que fosse a cor escolhida.
+      shading: marcas.fundo
+        ? { type: ShadingType.CLEAR, fill: corDoWord(marcas.fundo) ?? 'FDE68A' }
+        : undefined,
       underline: marcas.sublinhado
         ? { type: UnderlineType.SINGLE, color: corDoWord(marcas.corDoSublinhado) }
         : undefined,
@@ -247,7 +254,7 @@ function imprimir(titulo: string, html: string): void {
   h1, h2, h3 { break-after: avoid; }
   p, li { orphans: 2; widows: 2; }
 </style></head>
-<body><h1>${escaparHtml(titulo)}</h1>${html}</body></html>`)
+<body><h1>${escaparHtml(titulo)}</h1>${htmlLimpoDaNota(html)}</body></html>`)
   doc.close()
 
   // O `document.write` nem sempre dispara `load` — o tempo curto é a garantia

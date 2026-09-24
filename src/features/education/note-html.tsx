@@ -1,22 +1,14 @@
 /**
  * A leitura de uma anotação em texto formatado.
  *
- * O conteúdo saiu do editor da própria pessoa, mas passa pelo DOMPurify assim
- * mesmo: colar um trecho de site traz junto o que vier, e "conteúdo próprio"
- * deixa de ser confiável no instante em que se cola algo de fora.
- *
- * O `style` é liberado — sem ele a cor da letra e a do sublinhado, que são o
- * motivo desta tela existir, sumiriam na leitura.
+ * A limpeza do HTML está em `lib/education/html-limpo`, compartilhada com a
+ * exportação em PDF — as duas escrevem a anotação num documento do app, e uma
+ * segunda lista de permissões envelheceria diferente desta.
  */
 
-import DOMPurify from 'dompurify'
 import { useMemo, type MouseEvent } from 'react'
+import { htmlLimpoDaNota } from '@/lib/education/html-limpo'
 import { cn } from '@/lib/utils'
-
-const LIMPEZA = {
-  USE_PROFILES: { html: true },
-  ADD_ATTR: ['style', 'data-nota', 'data-cor', 'data-type', 'data-checked'],
-}
 
 export function NoteHtml({
   content,
@@ -30,7 +22,7 @@ export function NoteHtml({
   /** Marca a enésima tarefa do documento, na ordem em que aparecem. */
   onAlternarTarefa?: (ordinal: number, estavaMarcada: boolean) => void
 }) {
-  const html = useMemo(() => DOMPurify.sanitize(content ?? '', LIMPEZA), [content])
+  const html = useMemo(() => htmlLimpoDaNota(content), [content])
 
   const clicou = (evento: MouseEvent<HTMLDivElement>) => {
     const alvo = evento.target as HTMLElement
