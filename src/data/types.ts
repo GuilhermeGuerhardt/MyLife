@@ -287,8 +287,14 @@ export interface Note extends BaseRow {
   program_id: string | null
   subject_id: string | null
   title: string
-  /** Conteúdo em Markdown. */
+  /** O texto da anotação, na língua que `format` indicar. */
   content: string
+  /**
+   * Ausente = Markdown, que é o que toda anotação escrita até a 0.2.7 tem.
+   * `html` é o editor formatado, que guarda o que o Markdown não sabe dizer:
+   * cor de letra, cor de sublinhado, marca-texto.
+   */
+  format?: 'markdown' | 'html' | null
   tags: string[]
   pinned: boolean
 }

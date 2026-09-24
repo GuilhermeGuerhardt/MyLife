@@ -9,6 +9,15 @@ const OPCOES = { breaks: true, gfm: true } as const
 /** Marca o `<a>` que veio de um `[[link]]`, para o clique ser interceptado. */
 const ATRIBUTO = 'data-nota'
 
+/**
+ * Carimba a posição da caixa de tarefa no documento.
+ *
+ * Carimbar na renderização, em vez de contar os `input` do DOM depois, é o que
+ * torna a conta confiável: um `<input type="checkbox">` cru digitado no meio da
+ * anotação não recebe o carimbo e é ignorado, em vez de deslocar todo o resto.
+ */
+const TAREFA = 'data-tarefa'
+
 interface TokenLink extends Tokens.Generic {
   type: 'wikilink'
   titulo: string
@@ -52,6 +61,20 @@ function extensaoWikilink(existe: (titulo: string) => boolean) {
 }
 
 /**
+ * O renderer de caixa de tarefa, numerado e clicável.
+ *
+ * O padrão do `marked` sai com `disabled`, que é justamente o que impedia
+ * marcar um item sem trocar para o modo de edição.
+ */
+function rendererDeTarefa(proximo: () => number) {
+  return {
+    checkbox({ checked }: Tokens.Checkbox) {
+      return `<input type="checkbox" ${TAREFA}="${proximo()}"${checked ? ' checked' : ''}> `
+    },
+  }
+}
+
+/**
  * Renderiza o Markdown do caderno.
  *
  * O conteúdo é do próprio usuário, mas passa pelo DOMPurify assim mesmo: basta
@@ -65,29 +88,52 @@ export function Markdown({
   existeNota,
   /** Clique num `[[link]]`. Sem isso, os links viram texto comum. */
   onAbrirNota,
+  /**
+   * Clique numa caixa de tarefa, com a posição dela no documento e o estado
+   * que ela tinha. Sem isso, as caixas continuam só de leitura.
+   */
+  onAlternarTarefa,
 }: {
   content: string
   className?: string
   existeNota?: (titulo: string) => boolean
   onAbrirNota?: (titulo: string) => void
+  onAlternarTarefa?: (ordinal: number, estavaMarcada: boolean) => void
 }) {
   const ligado = Boolean(onAbrirNota)
+  const tarefasVivas = Boolean(onAlternarTarefa)
 
   const html = useMemo(() => {
     const marked = new Marked(OPCOES)
     if (ligado) marked.use({ extensions: [extensaoWikilink(existeNota ?? (() => false))] })
+    if (tarefasVivas) {
+      // O contador zera a cada renderização, junto com a instância do `marked`.
+      let n = 0
+      marked.use({ renderer: rendererDeTarefa(() => n++) })
+    }
     const parsed = marked.parse(content ?? '', { async: false })
     return DOMPurify.sanitize(parsed, { USE_PROFILES: { html: true } })
-  }, [content, ligado, existeNota])
+  }, [content, ligado, tarefasVivas, existeNota])
 
   /**
-   * Um ouvinte no container em vez de um por link: o HTML é injetado, então
-   * não há onde pendurar `onClick` em cada `<a>`.
+   * Um ouvinte no container em vez de um por elemento: o HTML é injetado, então
+   * não há onde pendurar `onClick` em cada `<a>` ou `<input>`.
    */
   const clicou = (evento: MouseEvent<HTMLDivElement>) => {
+    const alvo = evento.target as HTMLElement
+
+    const caixa = alvo.closest<HTMLInputElement>(`input[${TAREFA}]`)
+    if (caixa && onAlternarTarefa) {
+      const ordinal = Number(caixa.getAttribute(TAREFA))
+      // O estado é lido *antes* do clique do navegador — que já inverteu a
+      // caixa neste ponto, dando o retorno visual imediato.
+      if (Number.isInteger(ordinal)) onAlternarTarefa(ordinal, !caixa.checked)
+      return
+    }
+
     if (!onAbrirNota) return
-    const alvo = (evento.target as HTMLElement).closest(`a[${ATRIBUTO}]`)
-    const titulo = alvo?.getAttribute(ATRIBUTO)
+    const link = alvo.closest(`a[${ATRIBUTO}]`)
+    const titulo = link?.getAttribute(ATRIBUTO)
     if (!titulo) return
     evento.preventDefault()
     onAbrirNota(titulo)

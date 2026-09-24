@@ -465,4 +465,87 @@
     margin-right: 0.4rem;
     accent-color: var(--accent);
   }
+  /* A caixa clicável ganha alvo maior e o cursor de sempre: sem isso ela
+     continua parecendo enfeite, que era o problema. A área de clique passa do
+     desenho da caixa, para não exigir mira no toque. */
+  .prose-notes input[type='checkbox'][data-tarefa] {
+    cursor: pointer;
+    width: 0.95rem;
+    height: 0.95rem;
+    vertical-align: -1px;
+    outline-offset: 3px;
+  }
+  /* Tarefa feita fica apagada, como em qualquer lista de afazeres — é o que
+     deixa ler de relance o que ainda falta. */
+  .prose-notes li:has(> input[type='checkbox'][data-tarefa]:checked) {
+    color: var(--fg-subtle);
+    text-decoration: line-through;
+    text-decoration-color: var(--border-strong);
+  }
+  /* Só o item em si: a sublista aninhada abaixo dele não é riscada junto. */
+  .prose-notes li:has(> input[type='checkbox'][data-tarefa]:checked) ul,
+  .prose-notes li:has(> input[type='checkbox'][data-tarefa]:checked) ol {
+    color: var(--fg-muted);
+    text-decoration: none;
+  }
+}
+
+@layer components {
+  /* ---------------------------------------------------------------------
+     Editor de texto formatado (TipTap)
+
+     O TipTap entrega estrutura, não aparência: sem estas regras a área de
+     escrita sai sem espaçamento, a tarefa fica com a caixa desalinhada do
+     texto e o cursor some no bloco de código.
+     --------------------------------------------------------------------- */
+  .tiptap-area {
+    min-height: 40vh;
+    outline: none;
+  }
+  .tiptap-area p.is-editor-empty:first-child::before {
+    content: attr(data-placeholder);
+    color: var(--fg-subtle);
+    float: left;
+    height: 0;
+    pointer-events: none;
+  }
+
+  /* A lista de tarefas do TipTap não é uma lista comum: cada item é um
+     rótulo com a caixa e um bloco com o texto, lado a lado. */
+  .prose-notes ul[data-type='taskList'] {
+    list-style: none;
+    padding-left: 0.25rem;
+  }
+  .prose-notes ul[data-type='taskList'] li {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .prose-notes ul[data-type='taskList'] li > label {
+    display: flex;
+    align-items: center;
+    height: 1.7em;
+    cursor: pointer;
+  }
+  .prose-notes ul[data-type='taskList'] li > div {
+    flex: 1;
+    min-width: 0;
+  }
+  .prose-notes ul[data-type='taskList'] li > div > p {
+    margin: 0;
+  }
+  /* Feita fica apagada e riscada, como em qualquer lista de afazeres. */
+  .prose-notes ul[data-type='taskList'] li[data-checked='true'] > div {
+    color: var(--fg-subtle);
+    text-decoration: line-through;
+    text-decoration-color: var(--border-strong);
+  }
+
+  /* O marca-texto precisa de contraste próprio: as cores da paleta são
+     claras, então o texto por cima vai para o escuro em qualquer tema. */
+  .prose-notes mark {
+    color: oklch(0.2 0.01 250);
+    padding: 0 0.15em;
+    border-radius: 3px;
+  }
 }

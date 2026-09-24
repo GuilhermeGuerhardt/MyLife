@@ -52,6 +52,14 @@ caloria de um alimento conserta todas as refeições que o usam.
 Anotações da faculdade, dos cursos e do que você estuda por conta, no mesmo lugar. Escrevendo
 `[[Título]]` uma anotação liga na outra, e o rodapé mostra quem menciona a que está aberta.
 
+Cada anotação escreve do jeito que você preferir. Em **Markdown**, as caixas de tarefa são
+clicáveis na leitura — marcar um item não exige mais abrir o editor e digitar um `x`. Ou em
+**texto formatado**, com barra de ferramentas: negrito, itálico, sublinhado, riscado, cor da
+letra, cor do sublinhado, marca-texto, títulos, listas, tarefas e citação.
+
+> As anotações antigas **não são convertidas**. Cada uma guarda o formato em que foi escrita, e
+> a troca é um botão na própria anotação, uma por vez.
+
 ![Caderno com a árvore Faculdade, Cursos e Estudos, uma anotação aberta com links e o painel de menções](docs/prints/caderno.png)
 
 ### Rotina
@@ -150,6 +158,7 @@ Seus dados não são tocados em nenhum dos dois caminhos: o banco vive fora da p
 - **Tailwind CSS v4** com design system próprio em tokens semânticos — oito temas (Escuro,
   Escuro suave, Claro, Drácula, Nord, Sépia, Latte e Rosé) trocando os mesmos tokens,
   escolhidos em **Perfil → Aparência**
+- **TipTap** no editor de texto formatado do Caderno, carregado só na rota do Caderno
 - **TanStack Query** para estado de servidor, **Recharts** para gráficos (carregado sob demanda)
 - **SQLite** via `tauri-plugin-sql` — banco local, sem servidor e sem conta
 - **PWA** via vite-plugin-pwa, só no build web — o app segue instalável pelo navegador para quem

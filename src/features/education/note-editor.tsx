@@ -1,4 +1,4 @@
-import { ArrowLeft, Eye, Pen, Pin, Trash2 } from 'lucide-react'
+import { ArrowLeft, Eye, Pen, Pin, Trash2, Type } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -7,9 +7,13 @@ import { Badge, Segmented } from '@/components/ui/misc'
 import type { Note, Program, Track } from '@/data/types'
 import { confirmar } from '@/lib/avisos'
 import type { Retrolink } from '@/lib/education/links'
+import { contarPalavras, formatoDaNota, markdownParaHtml, textoPuro } from '@/lib/education/formato'
+import { alternarTarefa } from '@/lib/education/tarefas'
 import { LinkSuggestions, useLinkAutocomplete } from './link-autocomplete'
 import { Markdown } from './markdown'
 import { NoteBacklinks } from './note-backlinks'
+import { NoteHtml } from './note-html'
+import { RichEditor } from './rich-editor'
 
 export type NoteMode = 'edit' | 'preview'
 
@@ -74,6 +78,7 @@ export function NoteEditor({
     subject_id: note.subject_id ?? '',
     tags: note.tags.join(', '),
     track: note.track,
+    format: formatoDaNota(note),
   })
   const [saved, setSaved] = useState(true)
 
@@ -81,6 +86,7 @@ export function NoteEditor({
     (): Partial<Note> => ({
       title: form.title,
       content: form.content,
+      format: form.format,
       track: form.track,
       program_id: form.program_id || null,
       subject_id: form.subject_id || null,
@@ -122,6 +128,54 @@ export function NoteEditor({
     notas: titulosDisponiveis,
   })
 
+  /**
+   * Marcar uma tarefa na leitura entra pelo mesmo `set` da digitação: a
+   * anotação fica "Salvando..." e é gravada pelo temporizador de sempre. Um
+   * segundo caminho de gravação seria um segundo lugar para esquecer de salvar.
+   *
+   * O modo não muda — quem clicou numa caixa quer riscar o item, não editar.
+   */
+  const alternarTarefaNoTexto = (ordinal: number, estavaMarcada: boolean) => {
+    const novo = alternarTarefa(form.content, ordinal, estavaMarcada)
+    // `null` = a contagem não bateu com o texto. Melhor não fazer nada do que
+    // marcar a tarefa errada.
+    if (novo !== null) set({ content: novo })
+  }
+
+  /**
+   * Marca a enésima caixa do HTML.
+   *
+   * O `data-checked` do TipTap acompanha o `checked` do input — os dois
+   * precisam concordar, ou o editor reabre a tarefa como estava antes.
+   */
+  const alternarTarefaNoHtml = (ordinal: number, estavaMarcada: boolean) => {
+    const doc = new DOMParser().parseFromString(form.content, 'text/html')
+    const caixa = doc.querySelectorAll('input[type="checkbox"]')[ordinal]
+    if (!caixa) return
+
+    const agora = !estavaMarcada
+    if (agora) caixa.setAttribute('checked', '')
+    else caixa.removeAttribute('checked')
+    caixa.closest('li')?.setAttribute('data-checked', String(agora))
+
+    set({ content: doc.body.innerHTML })
+  }
+
+  /**
+   * Passa a anotação de Markdown para o editor formatado.
+   *
+   * Só acontece a pedido, uma anotação por vez: converter o caderno inteiro de
+   * uma vez seria reescrever o texto de alguém em massa, sem volta.
+   */
+  const converterParaFormatado = async () => {
+    const aviso =
+      'Esta anotação passa a ser editada com formatação, como num editor de texto.\n\n' +
+      'O conteúdo é convertido uma vez e o Markdown deixa de valer nela — as outras anotações não são tocadas.'
+    if (!(await confirmar(aviso, { confirmar: 'Converter' }))) return
+    set({ content: markdownParaHtml(form.content), format: 'html' })
+    onModeChange('edit')
+  }
+
   /** O select "Onde": um curso, ou estudo livre. O trilho vem junto. */
   const mudarOnde = (valor: string) => {
     if (valor === LIVRE) {
@@ -133,10 +187,11 @@ export function NoteEditor({
     set({ track: program.track, program_id: program.id, subject_id: '' })
   }
 
+  const formato = form.format
   const academicos = programs.filter((p) => p.track === 'academic')
   const cursos = programs.filter((p) => p.track === 'course')
   const ondeAtual = form.program_id || (form.track === 'free' ? LIVRE : '')
-  const words = form.content.trim().split(/\s+/).filter(Boolean).length
+  const words = contarPalavras(form.content, formato)
 
   return (
     <Card className="flex min-h-[70vh] flex-col">
@@ -164,6 +219,19 @@ export function NoteEditor({
             { value: 'preview', label: <Eye className="size-3.5" />, ariaLabel: 'Visualizar' },
           ]}
         />
+        {/* Só nas anotações que ainda são Markdown: nas formatadas não há
+            para onde converter, e o botão viraria enfeite. */}
+        {formato === 'markdown' && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => void converterParaFormatado()}
+            aria-label="Converter para texto formatado"
+            title="Converter para texto formatado"
+          >
+            <Type />
+          </Button>
+        )}
         <Button
           variant="ghost"
           size="icon"
@@ -241,8 +309,24 @@ export function NoteEditor({
         </Field>
       </div>
 
-      <CardContent className="relative min-h-0 flex-1 p-0">
-        {mode === 'edit' ? (
+      <CardContent className="relative flex min-h-0 flex-1 flex-col p-0">
+        {formato === 'html' ? (
+          mode === 'edit' ? (
+            <RichEditor content={form.content} onChange={(html) => set({ content: html })} />
+          ) : (
+            <div className="px-5 py-4">
+              {textoPuro(form.content, 'html').trim() ? (
+                <NoteHtml
+                  content={form.content}
+                  onAbrirNota={onAbrirPorTitulo}
+                  onAlternarTarefa={alternarTarefaNoHtml}
+                />
+              ) : (
+                <p className="text-fg-subtle text-sm">Nada escrito ainda.</p>
+              )}
+            </div>
+          )
+        ) : mode === 'edit' ? (
           <>
             <Textarea
               value={form.content}
@@ -276,6 +360,7 @@ export function NoteEditor({
                 content={form.content}
                 existeNota={existeNota}
                 onAbrirNota={onAbrirPorTitulo}
+                onAlternarTarefa={alternarTarefaNoTexto}
               />
             ) : (
               <p className="text-fg-subtle text-sm">Nada escrito ainda.</p>
