@@ -17,6 +17,17 @@ import { normalizeText, type ImportRow } from '@/lib/finance/import'
 import { CHART_PALETTE } from '@/lib/finance/palette'
 import { uid } from '@/lib/utils'
 
+import type { ImportProgress, ImportResult } from '@/lib/finance/import-result'
+
+// O andamento e o recibo moram num módulo sem dependência nenhuma: assim o
+// cartão do canto — montado em todas as telas — fala deles sem arrastar a
+// gravação para o pacote inicial. Repassados aqui para quem já os importava.
+export {
+  descreverResultado,
+  type ImportProgress,
+  type ImportResult,
+} from '@/lib/finance/import-result'
+
 /** Valor especial das listas de mapeamento. */
 export const CREATE = '__create__'
 export const IGNORE = '__ignore__'
@@ -112,18 +123,6 @@ export interface ImportPlan {
   categories: Record<string, string>
   /** Conta usada quando a linha não traz rótulo nenhum. */
   fallbackAccountId: string
-}
-
-/** Andamento da gravação, para a barra saber onde está. */
-export interface ImportProgress {
-  done: number
-  total: number
-}
-
-export interface ImportResult {
-  transactions: number
-  accountsCreated: number
-  categoriesCreated: number
 }
 
 /**

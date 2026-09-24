@@ -1,4 +1,5 @@
 import { ArrowLeft, Check, Loader2 } from 'lucide-react'
+import { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
@@ -16,6 +17,14 @@ import type { ImportProgress } from '@/features/finance/use-import'
 export function ImportPage() {
   const navigate = useNavigate()
   const wizard = useImportWizard()
+
+  // Mostrado aqui, o recibo não precisa aparecer também no canto da tela
+  // seguinte: o cartão é para quem não estava olhando.
+  const temRecibo = wizard.result !== null
+  const { marcarVisto } = wizard
+  useEffect(() => {
+    if (temRecibo) marcarVisto()
+  }, [temRecibo, marcarVisto])
 
   if (wizard.result) {
     return (
@@ -50,7 +59,12 @@ export function ImportPage() {
         )}
       </div>
 
-      {!wizard.fileName ? (
+      {wizard.running && !wizard.fileName ? (
+        // Voltou a Planilhas no meio da gravação: ela aparece inteira aqui, e o
+        // seletor fica fora do caminho — trazer outro arquivo agora gravaria os
+        // dois ao mesmo tempo, em cima das mesmas contas.
+        <WritingCard progress={wizard.progress ?? { done: 0, total: 0 }} />
+      ) : !wizard.fileName ? (
         <>
           <ExportCard />
           <ImportFilePicker onPick={(file) => void wizard.loadFile(file)} error={wizard.readError} />
@@ -106,7 +120,7 @@ export function ImportPage() {
                   Cancelar
                 </Button>
                 <Button
-                  onClick={() => void wizard.importNow()}
+                  onClick={wizard.importNow}
                   disabled={wizard.summary.ready === 0 || wizard.running}
                 >
                   {wizard.running ? <Loader2 className="animate-spin" /> : <Check />}
@@ -132,14 +146,17 @@ function WritingCard({ progress }: { progress: ImportProgress }) {
     <Card>
       <CardContent className="space-y-2">
         <div className="text-fg-muted flex items-center justify-between text-xs">
-          <span>Gravando lançamentos…</span>
-          <span className="tabular-nums">
-            {progress.done} de {progress.total}
-          </span>
+          <span>{progress.total > 0 ? 'Gravando lançamentos…' : 'Preparando…'}</span>
+          {progress.total > 0 && (
+            <span className="tabular-nums">
+              {progress.done} de {progress.total}
+            </span>
+          )}
         </div>
         <Progress value={progress.done} max={progress.total} />
         <p className="text-fg-subtle text-[11px]">
-          Não feche a janela: o que já foi gravado permanece, mas o resto não entra.
+          Pode sair desta tela: a gravação continua e o andamento passa para o canto da janela.
+          Fechar o Life é que interrompe — o que já entrou permanece, o resto não.
         </p>
       </CardContent>
     </Card>

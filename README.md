@@ -516,6 +516,11 @@ duplica nada, e duas viagens de metrô de R$ 5,40 no mesmo dia continuam sendo d
 a contagem é por ocorrência, não por conjunto. Tudo acontece no navegador; nada é gravado antes da
 prévia.
 
+**A gravação roda em segundo plano.** Confirmada a prévia, dá para sair da tela de Planilhas e
+continuar usando o app: o andamento passa para um cartão no canto inferior direito — o mesmo lugar
+do aviso de atualização — e no fim ele diz quanto entrou, com atalho para os lançamentos. Fechar o
+cartão esconde o cartão; a gravação segue.
+
 **Orçamento envelope** por categoria e mês, com alerta em 80% e 100% e cópia dos limites do mês
 anterior. **Metas** calculam o aporte mensal necessário para o prazo.
 

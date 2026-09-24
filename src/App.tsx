@@ -8,6 +8,8 @@ import { setFolderStore } from './data/adapters'
 import { migrarDoLocalStorage } from './data/sqlite-store'
 import { restoreFolder } from './data/folder-store'
 import { ensureSeed } from './data/queries'
+import { ImportRunProvider } from './features/finance/import-run'
+import { ImportWatcher } from './features/finance/import-watcher'
 import { UpdateWatcher } from './features/updates/update-watcher'
 import { lazyRoute } from './lib/lazy-route'
 
@@ -132,38 +134,44 @@ function Boot() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
-        <Routes>
-          <Route element={<AppShell onOpenPalette={() => setPaletteOpen(true)} />}>
-            <Route index element={<Dashboard onOpenPalette={() => setPaletteOpen(true)} />} />
-            <Route path="saude" element={<HealthOverview />} />
-            <Route path="saude/atividades" element={<ActivitiesPage />} />
-            <Route path="saude/plano" element={<DietPlanPage />} />
-            <Route path="saude/alimentacao" element={<NutritionPage />} />
-            <Route path="faculdade" element={<AcademicPrograms />} />
-            <Route path="caderno" element={<Notebook />} />
-            {/* As rotas antigas continuam valendo: abrem o mesmo caderno já
-                filtrado, para quem tinha o endereço na memória ou salvo. */}
-            <Route path="faculdade/caderno" element={<AcademicNotebook />} />
-            <Route path="faculdade/:programId" element={<ProgramDetail />} />
-            <Route path="cursos" element={<CoursePrograms />} />
-            <Route path="cursos/caderno" element={<CourseNotebook />} />
-            <Route path="cursos/:programId" element={<CourseDetail />} />
-            <Route path="financeiro" element={<FinanceOverview />} />
-            <Route path="financeiro/transacoes" element={<TransactionsPage />} />
-            <Route path="financeiro/contas" element={<AccountsPage />} />
-            <Route path="financeiro/orcamento" element={<BudgetPage />} />
-            <Route path="financeiro/recorrentes" element={<RecurringPage />} />
-            <Route path="financeiro/categorias" element={<CategoriesPage />} />
-            <Route path="financeiro/importar" element={<ImportPage />} />
-            <Route path="rotina" element={<HabitsPage />} />
-            <Route path="rotina/agenda" element={<AgendaPage />} />
-            <Route path="rotina/insights" element={<InsightsPage />} />
-            <Route path="perfil" element={<ProfilePage />} />
-            <Route path="*" element={<Dashboard onOpenPalette={() => setPaletteOpen(true)} />} />
-          </Route>
-        </Routes>
-        <QuickAdd open={paletteOpen} onClose={() => setPaletteOpen(false)} />
-        <UpdateWatcher />
+        {/* A importação de planilhas vive acima das rotas: começada na tela
+            de Planilhas, ela continua gravando depois que a pessoa sai dali,
+            e o andamento aparece no canto como o aviso de atualização. */}
+        <ImportRunProvider>
+          <Routes>
+            <Route element={<AppShell onOpenPalette={() => setPaletteOpen(true)} />}>
+              <Route index element={<Dashboard onOpenPalette={() => setPaletteOpen(true)} />} />
+              <Route path="saude" element={<HealthOverview />} />
+              <Route path="saude/atividades" element={<ActivitiesPage />} />
+              <Route path="saude/plano" element={<DietPlanPage />} />
+              <Route path="saude/alimentacao" element={<NutritionPage />} />
+              <Route path="faculdade" element={<AcademicPrograms />} />
+              <Route path="caderno" element={<Notebook />} />
+              {/* As rotas antigas continuam valendo: abrem o mesmo caderno já
+                  filtrado, para quem tinha o endereço na memória ou salvo. */}
+              <Route path="faculdade/caderno" element={<AcademicNotebook />} />
+              <Route path="faculdade/:programId" element={<ProgramDetail />} />
+              <Route path="cursos" element={<CoursePrograms />} />
+              <Route path="cursos/caderno" element={<CourseNotebook />} />
+              <Route path="cursos/:programId" element={<CourseDetail />} />
+              <Route path="financeiro" element={<FinanceOverview />} />
+              <Route path="financeiro/transacoes" element={<TransactionsPage />} />
+              <Route path="financeiro/contas" element={<AccountsPage />} />
+              <Route path="financeiro/orcamento" element={<BudgetPage />} />
+              <Route path="financeiro/recorrentes" element={<RecurringPage />} />
+              <Route path="financeiro/categorias" element={<CategoriesPage />} />
+              <Route path="financeiro/importar" element={<ImportPage />} />
+              <Route path="rotina" element={<HabitsPage />} />
+              <Route path="rotina/agenda" element={<AgendaPage />} />
+              <Route path="rotina/insights" element={<InsightsPage />} />
+              <Route path="perfil" element={<ProfilePage />} />
+              <Route path="*" element={<Dashboard onOpenPalette={() => setPaletteOpen(true)} />} />
+            </Route>
+          </Routes>
+          <QuickAdd open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+          <ImportWatcher />
+          <UpdateWatcher />
+        </ImportRunProvider>
       </BrowserRouter>
     </QueryClientProvider>
   )

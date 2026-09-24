@@ -7,7 +7,7 @@
  * seleção. A tela só desenha o que este hook já resolveu.
  */
 
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useAccounts, useCategories, useTransactions } from '@/data/queries'
 import {
   buildRows,
@@ -21,20 +21,16 @@ import {
   type ColumnMap,
   type RowFilter,
 } from '@/lib/finance/import'
-import {
-  labelKinds,
-  suggestAccounts,
-  suggestCategories,
-  useRunImport,
-  type ImportProgress,
-  type ImportResult,
-} from './use-import'
+import { useImportRun } from './import-run'
+import { labelKinds, suggestAccounts, suggestCategories } from './use-import'
 
 export function useImportWizard() {
   const { data: accounts } = useAccounts()
   const { data: categories } = useCategories()
   const { data: transactions } = useTransactions()
-  const runImport = useRunImport()
+  // A gravação não mora mais aqui: é do provedor na raiz, que sobrevive a esta
+  // tela fechar. Daqui sai só o pedido.
+  const execucao = useImportRun()
 
   const [fileName, setFileName] = useState<string | null>(null)
   const [cells, setCells] = useState<string[][]>([])
@@ -47,9 +43,31 @@ export function useImportWizard() {
 
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [filter, setFilter] = useState<RowFilter>('all')
-  const [running, setRunning] = useState(false)
-  const [progress, setProgress] = useState<ImportProgress | null>(null)
-  const [result, setResult] = useState<ImportResult | null>(null)
+
+  const estado = execucao.estado
+  const running = estado.kind === 'rodando'
+  const progress = estado.kind === 'rodando' ? estado.progresso : null
+
+  /**
+   * Um resultado já visto antes desta tela abrir é história.
+   *
+   * Sem isto, voltar a Planilhas depois mostraria de novo o recibo da
+   * importação passada em vez da porta para trazer o próximo arquivo. O que
+   * terminou enquanto a pessoa estava fora ainda não foi visto, e esse aparece.
+   */
+  const reciboVelho = useRef(estado.kind === 'concluido' && estado.visto).current
+  const result = estado.kind === 'concluido' && !reciboVelho ? estado.resultado : null
+
+  /**
+   * Apaga o recibo da importação anterior.
+   *
+   * Com uma gravação em curso não faz nada: ali `dispensar` significa "esconde
+   * o cartão do canto", e trocar de arquivo no meio não é motivo para deixar a
+   * pessoa sem o andamento quando sair desta tela.
+   */
+  const limparRecibo = () => {
+    if (estado.kind !== 'rodando') execucao.dispensar()
+  }
 
   const rows = useMemo(() => {
     if (cells.length < 2 || missingFields(map).length > 0) return []
@@ -77,7 +95,7 @@ export function useImportWizard() {
 
   async function loadFile(file: File) {
     setReadError(null)
-    setResult(null)
+    limparRecibo()
     try {
       const parsed = parseCsv(await readText(file))
       if (parsed.length < 2) {
@@ -96,8 +114,8 @@ export function useImportWizard() {
     setFileName(null)
     setCells([])
     setMap({})
-    setResult(null)
     setReadError(null)
+    limparRecibo()
   }
 
   function toggle(line: number) {
@@ -109,24 +127,22 @@ export function useImportWizard() {
     })
   }
 
-  async function importNow() {
-    setRunning(true)
-    setProgress({ done: 0, total: 0 })
-    try {
-      const outcome = await runImport(
-        {
-          rows: rows.filter((row) => selected.has(row.line) && !row.error),
-          accounts: accountChoice,
-          categories: categoryChoice,
-          fallbackAccountId: fallbackAccount,
-        },
-        setProgress,
-      )
-      setResult(outcome)
-    } finally {
-      setRunning(false)
-      setProgress(null)
-    }
+  /**
+   * Entrega o pedido e sai da frente.
+   *
+   * Não espera o fim de propósito: quem grava é o provedor da raiz, e é ele que
+   * continua quando esta tela fechar.
+   */
+  function importNow() {
+    execucao.importar(
+      {
+        rows: rows.filter((row) => selected.has(row.line) && !row.error),
+        accounts: accountChoice,
+        categories: categoryChoice,
+        fallbackAccountId: fallbackAccount,
+      },
+      fileName ?? 'planilha',
+    )
   }
 
   return {
@@ -165,5 +181,7 @@ export function useImportWizard() {
     progress,
     result,
     importNow,
+    /** Avisa o provedor de que o recibo já foi mostrado nesta tela. */
+    marcarVisto: execucao.marcarVisto,
   }
 }
