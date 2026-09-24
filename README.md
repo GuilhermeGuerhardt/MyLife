@@ -52,13 +52,19 @@ caloria de um alimento conserta todas as refeições que o usam.
 Anotações da faculdade, dos cursos e do que você estuda por conta, no mesmo lugar. Escrevendo
 `[[Título]]` uma anotação liga na outra, e o rodapé mostra quem menciona a que está aberta.
 
-Cada anotação escreve do jeito que você preferir. Em **Markdown**, as caixas de tarefa são
-clicáveis na leitura — marcar um item não exige mais abrir o editor e digitar um `x`. Ou em
-**texto formatado**, com barra de ferramentas: negrito, itálico, sublinhado, riscado, cor da
-letra, cor do sublinhado, marca-texto, títulos, listas, tarefas e citação.
+Anotação nova nasce em **texto formatado**, com barra de ferramentas: negrito, itálico,
+sublinhado, riscado, cor da letra, cor do sublinhado, marca-texto, títulos, listas, tarefas e
+citação. Quem prefere **Markdown** troca pelo botão da própria anotação — e ali as caixas de
+tarefa são clicáveis na leitura, sem precisar abrir o editor para digitar um `x`.
 
 > As anotações antigas **não são convertidas**. Cada uma guarda o formato em que foi escrita, e
 > a troca é um botão na própria anotação, uma por vez.
+
+O caderno tem porta de entrada e de saída. **Importar** aceita `.md`, `.txt`, `.docx` e `.pdf`:
+o Markdown entra como Markdown, e o resto entra como texto formatado, editável. **Exportar**
+oferece o que aquele formato sabe entregar — a anotação formatada sai em `.docx`, em PDF (pela
+caixa de impressão do sistema, então o texto continua selecionável) ou em `.txt`; a anotação em
+Markdown sai em `.md` ou `.txt`.
 
 ![Caderno com a árvore Faculdade, Cursos e Estudos, uma anotação aberta com links e o painel de menções](docs/prints/caderno.png)
 
@@ -159,6 +165,8 @@ Seus dados não são tocados em nenhum dos dois caminhos: o banco vive fora da p
   Escuro suave, Claro, Drácula, Nord, Sépia, Latte e Rosé) trocando os mesmos tokens,
   escolhidos em **Perfil → Aparência**
 - **TipTap** no editor de texto formatado do Caderno, carregado só na rota do Caderno
+- **docx** e **mammoth** para escrever e ler o `.docx`, e **pdf.js** para o PDF — as três
+  entram por `import()` e só descem quando alguém exporta ou importa naquele formato
 - **TanStack Query** para estado de servidor, **Recharts** para gráficos (carregado sob demanda)
 - **SQLite** via `tauri-plugin-sql` — banco local, sem servidor e sem conta
 - **PWA** via vite-plugin-pwa, só no build web — o app segue instalável pelo navegador para quem

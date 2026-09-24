@@ -1,14 +1,27 @@
-import { ArrowLeft, Eye, Pen, Pin, Trash2, Type } from 'lucide-react'
+import { ArrowLeft, Download, Eye, Pen, Pin, Trash2, Type } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Button } from '@/components/ui/button'
+import { Button, buttonStyles } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Field, Input, Select, Textarea } from '@/components/ui/field'
 import { Badge, Segmented } from '@/components/ui/misc'
 import type { Note, Program, Track } from '@/data/types'
 import { confirmar } from '@/lib/avisos'
 import type { Retrolink } from '@/lib/education/links'
-import { contarPalavras, formatoDaNota, markdownParaHtml, textoPuro } from '@/lib/education/formato'
+import {
+  contarPalavras,
+  formatoDaNota,
+  markdownParaHtml,
+  textoPuro,
+  type FormatoDaNota,
+} from '@/lib/education/formato'
 import { alternarTarefa } from '@/lib/education/tarefas'
+import { cn } from '@/lib/utils'
+import {
+  exportarNota,
+  ROTULOS,
+  saidasPossiveis,
+  type FormatoDeSaida,
+} from './exportar-nota'
 import { LinkSuggestions, useLinkAutocomplete } from './link-autocomplete'
 import { Markdown } from './markdown'
 import { NoteBacklinks } from './note-backlinks'
@@ -17,19 +30,14 @@ import { RichEditor } from './rich-editor'
 
 export type NoteMode = 'edit' | 'preview'
 
-/** O esqueleto de uma anotação nova — a folha em branco trava mais que ajuda. */
-export const NOTE_TEMPLATE = `## Resumo
-
-## Pontos principais
-
--
-
-## Dúvidas
-
--
-
-## Para revisar
-`
+/**
+ * O esqueleto de uma anotação nova — a folha em branco trava mais que ajuda.
+ *
+ * Em HTML, porque anotação nova nasce no editor formatado. Quem prefere
+ * Markdown continua trocando anotação por anotação, e as antigas não são
+ * tocadas.
+ */
+export const NOTE_TEMPLATE = `<h2>Resumo</h2><p></p><h2>Pontos principais</h2><ul><li><p></p></li></ul><h2>Dúvidas</h2><ul><li><p></p></li></ul><h2>Para revisar</h2><p></p>`
 
 /** Pausa na digitação antes de gravar sozinho. */
 const AUTOSAVE_MS = 800
@@ -219,6 +227,12 @@ export function NoteEditor({
             { value: 'preview', label: <Eye className="size-3.5" />, ariaLabel: 'Visualizar' },
           ]}
         />
+        <MenuExportar
+          formato={formato}
+          onEscolher={(saida) => {
+            void exportarNota(form.title || 'Anotação', form.content, formato, saida)
+          }}
+        />
         {/* Só nas anotações que ainda são Markdown: nas formatadas não há
             para onde converter, e o botão viraria enfeite. */}
         {formato === 'markdown' && (
@@ -376,6 +390,50 @@ export function NoteEditor({
         <Badge tone={saved ? 'neutral' : 'accent'}>{saved ? 'Salvo' : 'Salvando...'}</Badge>
       </div>
     </Card>
+  )
+}
+
+/**
+ * O menu de exportação, com o que aquele formato sabe entregar.
+ *
+ * `<details>` pelo mesmo motivo das paletas do editor: fecha sozinho ao clicar
+ * fora, anda pelo teclado e não pede estado no React.
+ */
+function MenuExportar({
+  formato,
+  onEscolher,
+}: {
+  formato: FormatoDaNota
+  onEscolher: (saida: FormatoDeSaida) => void
+}) {
+  return (
+    <details className="relative">
+      <summary
+        title="Exportar"
+        aria-label="Exportar"
+        className={cn(
+          buttonStyles({ variant: 'ghost', size: 'icon' }),
+          'cursor-pointer list-none [&::-webkit-details-marker]:hidden',
+        )}
+      >
+        <Download />
+      </summary>
+      <div className="border-border-base bg-surface absolute top-10 right-0 z-20 w-48 rounded-lg border p-1 shadow-lg">
+        {saidasPossiveis(formato).map((saida) => (
+          <button
+            key={saida}
+            type="button"
+            onClick={(e) => {
+              e.currentTarget.closest('details')?.removeAttribute('open')
+              onEscolher(saida)
+            }}
+            className="text-fg hover:bg-surface-2 block w-full rounded px-2 py-1.5 text-left text-xs"
+          >
+            {ROTULOS[saida]}
+          </button>
+        ))}
+      </div>
+    </details>
   )
 }
 

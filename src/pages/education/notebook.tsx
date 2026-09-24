@@ -1,5 +1,5 @@
-import { ArrowLeft, NotebookPen, Plus, Search } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { ArrowLeft, NotebookPen, Plus, Search, Upload } from 'lucide-react'
+import { useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -7,9 +7,15 @@ import { Field, Input, Select } from '@/components/ui/field'
 import { EmptyState, Segmented } from '@/components/ui/misc'
 import { useNotes, usePrograms, useSubjects } from '@/data/queries'
 import { TRACK_LABELS, TRACK_ORDER, type Note, type ProgramTrack, type Track } from '@/data/types'
+import {
+  IMPORTACAO_ACCEPT,
+  ImportacaoInvalida,
+  lerArquivoDeNota,
+} from '@/features/education/importar-nota'
 import { ListLabel, NoteList, NoteTree, TreeLabel } from '@/features/education/note-browser'
 import { NOTE_TEMPLATE, NoteEditor, type NoteMode } from '@/features/education/note-editor'
 import { useCollapsedFolders, useNoteView } from '@/features/education/use-notebook-prefs'
+import type { FormatoDaNota } from '@/lib/education/formato'
 import {
   afetadasPorRenomear,
   chaveTitulo,
@@ -56,6 +62,8 @@ function NotebookView({ track }: { track: ProgramTrack | null }) {
   const [programFilter, setProgramFilter] = useState('')
   const [tagFilter, setTagFilter] = useState<string | null>(null)
   const [collapsed, setCollapsed] = useCollapsedFolders(track ?? 'tudo')
+  const arquivo = useRef<HTMLInputElement>(null)
+  const [erroDeImportacao, setErroDeImportacao] = useState<string | null>(null)
 
   /** Todo caminho de abertura passa por aqui, para nenhum deles esquecer o modo. */
   function openNote(id: string) {
@@ -117,21 +125,58 @@ function NotebookView({ track }: { track: ProgramTrack | null }) {
   const nomeDoCurso = (note: Note) =>
     programs.find((p) => p.id === note.program_id)?.name ?? null
 
-  async function criarNota(titulo: string, comoTrack: Track, programId: string | null) {
+  async function criarNota(
+    titulo: string,
+    comoTrack: Track,
+    programId: string | null,
+    /** Vem preenchido na importação: o arquivo já traz texto e língua. */
+    pronta?: { content: string; format: FormatoDaNota },
+  ) {
     const note = await create.mutateAsync({
       track: comoTrack,
       program_id: programId,
       subject_id: null,
       title: titulo,
-      content: titulo ? '' : NOTE_TEMPLATE,
+      // Anotação nova nasce no editor formatado; o modelo em branco só entra
+      // quando ninguém deu um título, que é o caminho do "Nova anotação".
+      content: pronta ? pronta.content : titulo ? '' : NOTE_TEMPLATE,
+      format: pronta ? pronta.format : 'html',
       tags: [],
       pinned: false,
     })
     setSelectedId(note.id)
     // A única exceção à regra da leitura: anotação recém-criada só tem o modelo
-    // em branco, e quem clicou em "Nova anotação" quer escrever, não ler.
-    setMode('edit')
+    // em branco, e quem clicou em "Nova anotação" quer escrever, não ler. O
+    // arquivo importado já vem escrito, e abre para ler como qualquer outra.
+    setMode(pronta ? 'preview' : 'edit')
     return note
+  }
+
+  /**
+   * Traz um arquivo para dentro do caderno.
+   *
+   * A anotação nasce onde a lista está filtrada — mesmo curso, mesmo trilho —,
+   * que é onde quem importou estava olhando.
+   */
+  async function importarArquivo(escolhido: File | undefined) {
+    if (!escolhido) return
+    setErroDeImportacao(null)
+    try {
+      const nota = await lerArquivoDeNota(escolhido)
+      await criarNota(nota.title, track ?? 'free', programFilter || null, {
+        content: nota.content,
+        format: nota.format,
+      })
+    } catch (falha) {
+      setErroDeImportacao(
+        falha instanceof ImportacaoInvalida
+          ? falha.message
+          : 'Não foi possível importar este arquivo.',
+      )
+    } finally {
+      // Sem isto, escolher o mesmo arquivo de novo não dispara `change`.
+      if (arquivo.current) arquivo.current.value = ''
+    }
   }
 
   /** Clique num `[[link]]`: abre a anotação, ou cria a que ainda não existe. */
@@ -187,15 +232,34 @@ function NotebookView({ track }: { track: ProgramTrack | null }) {
           <h1 className="text-fg text-xl font-semibold">Caderno</h1>
           <p className="text-fg-muted mt-1 max-w-2xl text-sm">
             {track
-              ? 'Anotações e resumos em Markdown deste módulo.'
-              : 'Anotações e resumos em Markdown — da faculdade, dos cursos e do que você estuda por conta.'}{' '}
-            Escreva <code className="text-fg-subtle">[[</code> para ligar uma anotação a outra.
+              ? 'Anotações e resumos deste módulo.'
+              : 'Anotações e resumos — da faculdade, dos cursos e do que você estuda por conta.'}{' '}
+            Nas anotações em Markdown, escreva <code className="text-fg-subtle">[[</code> para
+            ligar uma à outra.
           </p>
         </div>
-        <Button onClick={() => void criarNota('', track ?? 'free', programFilter || null)}>
-          <Plus />
-          Nova anotação
-        </Button>
+        <div className="flex flex-col items-end gap-1.5">
+          <div className="flex items-center gap-2">
+            <input
+              ref={arquivo}
+              type="file"
+              accept={IMPORTACAO_ACCEPT}
+              className="hidden"
+              onChange={(e) => void importarArquivo(e.target.files?.[0])}
+            />
+            <Button variant="secondary" onClick={() => arquivo.current?.click()}>
+              <Upload />
+              Importar
+            </Button>
+            <Button onClick={() => void criarNota('', track ?? 'free', programFilter || null)}>
+              <Plus />
+              Nova anotação
+            </Button>
+          </div>
+          {erroDeImportacao && (
+            <p className="text-negative max-w-xs text-right text-xs">{erroDeImportacao}</p>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
@@ -273,7 +337,7 @@ function NotebookView({ track }: { track: ProgramTrack | null }) {
                 title={notes.length === 0 ? 'Caderno vazio' : 'Nada encontrado'}
                 description={
                   notes.length === 0
-                    ? 'Crie a primeira anotação. O modelo já vem com resumo, pontos principais, dúvidas e o que revisar.'
+                    ? 'Crie a primeira anotação — o modelo já vem com resumo, pontos principais, dúvidas e o que revisar. Ou importe um arquivo que você já tem.'
                     : 'Ajuste a busca ou os filtros.'
                 }
               />
@@ -328,7 +392,7 @@ function NotebookView({ track }: { track: ProgramTrack | null }) {
             <EmptyState
               icon={<NotebookPen className="size-6" />}
               title="Selecione uma anotação"
-              description="Ou crie uma nova. O conteúdo aceita Markdown: títulos, listas, tabelas, código e checkboxes."
+              description="Ou crie uma nova, com formatação como num editor de texto. Também dá para importar .md, .txt, .docx e .pdf."
             />
           </Card>
         )}
