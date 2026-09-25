@@ -63,9 +63,10 @@ export function ImportPreview({
         {summary.duplicates > 0 && (
           <Callout tone="warning" icon={<AlertTriangle className="size-3.5" />}>
             {summary.duplicates}{' '}
-            {summary.duplicates === 1 ? 'linha já existe' : 'linhas já existem'} no app (mesma data,
-            valor e descrição). Vieram desmarcadas para a reimportação do mesmo extrato não
-            duplicar nada.
+            {summary.duplicates === 1 ? 'linha já existe' : 'linhas já existem'} no app — mesmo
+            lançamento, a mesma parcela de um parcelamento, ou a assinatura que a recorrência já
+            tinha previsto para este mês. {summary.duplicates === 1 ? 'Veio' : 'Vieram'}{' '}
+            desmarcada{summary.duplicates === 1 ? '' : 's'}, para nada entrar em dobro.
           </Callout>
         )}
 
@@ -149,16 +150,24 @@ function RowTable({
                   <span className="text-fg-subtle ml-1.5 text-[11px]">· {row.detail}</span>
                 )}
               </td>
-              <td className="text-fg-muted p-2 text-xs">{row.categoryLabel || '—'}</td>
+              <td className="text-fg-muted p-2 text-xs">
+                {row.kind === 'transfer'
+                  ? `para ${row.transferToLabel || '?'}`
+                  : row.categoryLabel || '—'}
+              </td>
               <td
                 className={cn(
                   'p-2 text-right whitespace-nowrap tabular-nums',
                   row.kind === 'income' ? 'text-positive' : 'text-fg',
                 )}
               >
+                {/* A transferência sai com seta em vez de sinal: ela não soma
+                    nem subtrai do mês, só troca o dinheiro de conta. */}
                 {row.error
                   ? '—'
-                  : `${row.kind === 'income' ? '+' : '−'} ${formatCents(row.amountCents)}`}
+                  : row.kind === 'transfer'
+                    ? `⇄ ${formatCents(row.amountCents)}`
+                    : `${row.kind === 'income' ? '+' : '−'} ${formatCents(row.amountCents)}`}
               </td>
               <td className="p-2">
                 <RowStatus row={row} />

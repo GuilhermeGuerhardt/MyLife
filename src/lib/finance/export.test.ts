@@ -27,6 +27,7 @@ function tx(over: Partial<ExportTransaction> = {}): ExportTransaction {
     description: 'Mercado',
     notes: null,
     account_id: 'a1',
+    transfer_account_id: null,
     category_id: 'c1',
     paid: true,
     installment_n: null,
@@ -75,6 +76,7 @@ describe('buildExportRows', () => {
       'Descrição',
       'Complemento',
       'Conta',
+      'Destino',
       'Categoria',
       'Situação',
     ])
@@ -90,17 +92,28 @@ describe('buildExportRows', () => {
 
   it('escreve situação e tipo em português', () => {
     const [, pago] = buildExportRows([tx()], NAMES)
-    expect(pago).toMatchObject({ 2: 'Despesa', 7: 'Pago' })
+    expect(pago).toMatchObject({ 2: 'Despesa', 8: 'Pago' })
 
     const [, aberto] = buildExportRows([tx({ paid: false, kind: 'income' })], NAMES)
     expect(aberto![2]).toBe('Receita')
-    expect(aberto![7]).toBe('Em aberto')
+    expect(aberto![8]).toBe('Em aberto')
   })
 
-  it('deixa a célula vazia quando não há categoria ou complemento', () => {
+  it('a transferência leva a conta que recebe', () => {
+    const [, linha] = buildExportRows(
+      [tx({ kind: 'transfer', account_id: 'a1', transfer_account_id: 'a2', category_id: null })],
+      NAMES,
+    )
+    expect(linha![2]).toBe('Transferência')
+    expect(linha![5]).toBe('Crédito Azul')
+    expect(linha![6]).toBe('Carteira')
+  })
+
+  it('deixa a célula vazia quando não há categoria, complemento ou destino', () => {
     const [, linha] = buildExportRows([tx({ category_id: null, notes: null })], NAMES)
     expect(linha![4]).toBe('')
     expect(linha![6]).toBe('')
+    expect(linha![7]).toBe('')
   })
 })
 
@@ -131,9 +144,40 @@ describe('ida e volta pelo importador', () => {
     expect(missingFields(map)).toEqual([])
   })
 
-  it('mapeia as oito colunas, não só as obrigatórias', () => {
+  /**
+   * A transferência é a que mais tinha a perder na volta: sem a coluna de
+   * destino ela voltava como despesa, e os R$ 100 que só trocaram de conta
+   * viravam gasto do mês.
+   */
+  it('a transferência volta transferência, com as duas contas', () => {
+    const arquivo = toCsvFile(
+      buildExportRows(
+        [tx({ kind: 'transfer', account_id: 'a1', transfer_account_id: 'a2', category_id: null })],
+        NAMES,
+      ),
+    )
+    const grade = parseCsv(arquivo)
+    const volta = buildRows(grade.slice(1), detectColumns(grade[0]!))[0]!
+
+    expect(volta.error).toBeNull()
+    expect(volta.kind).toBe('transfer')
+    expect(volta.accountLabel).toBe('Crédito Azul')
+    expect(volta.transferToLabel).toBe('Carteira')
+  })
+
+  it('mapeia as nove colunas, não só as obrigatórias', () => {
     expect(Object.keys(map).sort()).toEqual(
-      ['account', 'amount', 'category', 'date', 'description', 'detail', 'kind', 'status'].sort(),
+      [
+        'account',
+        'amount',
+        'category',
+        'date',
+        'description',
+        'detail',
+        'kind',
+        'status',
+        'transferTo',
+      ].sort(),
     )
   })
 

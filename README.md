@@ -511,9 +511,23 @@ meses de lançamento. O cabeçalho é reconhecido sozinho — e quando não é, 
 por coluna, então formato desconhecido é trabalho de dois cliques, não pedido de funcionalidade.
 Parcela escrita no nome (`Geladeira (5/48)`) vira parcelamento de verdade, com as linhas do mesmo
 financiamento no mesmo grupo. A conta e a categoria que o arquivo cita e o app não tem podem ser
-criadas na hora. **Deduplicação por data, valor, tipo e descrição**: reimportar o mesmo extrato não
-duplica nada, e duas viagens de metrô de R$ 5,40 no mesmo dia continuam sendo dois lançamentos —
-a contagem é por ocorrência, não por conjunto. Tudo acontece no navegador; nada é gravado antes da
+criadas na hora.
+
+**Transferência entra como transferência**, e não como despesa. Dinheiro que sai de uma conta sua e
+entra em outra não é gasto nem ganho: some das duas somas do mês e liga as duas contas. As pontas
+saem de uma coluna de destino, quando o arquivo tem uma, ou da própria frase — `Transferência de
+Banco Azul para Poupança` é o que a maioria dos exportadores escreve, com o método em
+branco. Sem conseguir identificar para onde o dinheiro foi, a linha é recusada na prévia em vez de
+virar meia transferência.
+
+**Deduplicação em três níveis**, porque o app cria lançamento antes de o extrato existir e com a
+data que ele podia saber na época. Reconhece o lançamento igual (data, valor, tipo e descrição), a
+**mesma parcela** de um parcelamento — `Geladeira (5/48)` acha a parcela 5 de 48 que ficou
+guardada na data da compra — e a **previsão de um recorrente**, a assinatura que a regra lançou no
+dia do vencimento e o extrato traz no dia em que saiu de verdade. Sem isso, toda parcela e toda
+assinatura entrava em dobro a cada importação. Um lançamento digitado à mão não ganha essa
+tolerância: duas viagens de metrô de R$ 5,40 no mesmo dia continuam sendo dois lançamentos, e a
+contagem é por ocorrência, não por conjunto. Tudo acontece no navegador; nada é gravado antes da
 prévia.
 
 **A gravação roda em segundo plano.** Confirmada a prévia, dá para sair da tela de Planilhas e

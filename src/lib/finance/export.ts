@@ -31,6 +31,7 @@ export const EXPORT_HEADER = [
   'Descrição',
   'Complemento',
   'Conta',
+  'Destino',
   'Categoria',
   'Situação',
 ] as const
@@ -42,6 +43,8 @@ export interface ExportTransaction {
   description: string
   notes: string | null
   account_id: string
+  /** Conta que recebe, só em transferência. */
+  transfer_account_id: string | null
   category_id: string | null
   paid: boolean
   installment_n: number | null
@@ -51,9 +54,6 @@ export interface ExportTransaction {
 const KIND_LABEL: Record<ExportTransaction['kind'], string> = {
   income: 'Receita',
   expense: 'Despesa',
-  // Reimportada, uma transferência vira despesa: `parseKind` só conhece dois
-  // tipos. A tela avisa; escondê-la do arquivo seria pior, porque aí o extrato
-  // exportado não fecharia com o saldo das contas.
   transfer: 'Transferência',
 }
 
@@ -123,6 +123,9 @@ export function buildExportRows(
       withInstallment(tx.description, tx.installment_n, tx.installment_total),
       tx.notes ?? '',
       names.account(tx.account_id),
+      // A conta que recebe. Sem esta coluna a transferência voltava pela metade
+      // — o arquivo dizia que R$ 100 saíram e não dizia para onde foram.
+      tx.transfer_account_id ? names.account(tx.transfer_account_id) : '',
       names.category(tx.category_id),
       tx.paid ? 'Pago' : 'Em aberto',
     ]),

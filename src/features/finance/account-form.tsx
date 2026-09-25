@@ -79,7 +79,7 @@ export function AccountForm({
           <Input
             autoFocus
             value={form.name}
-            placeholder={isCard ? 'Crédito Azul' : 'Conta corrente'}
+            placeholder={isCard ? 'Cartão de crédito' : 'Conta corrente'}
             onChange={(e) => set('name', e.target.value)}
           />
         </Field>

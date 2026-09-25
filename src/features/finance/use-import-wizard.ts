@@ -74,7 +74,13 @@ export function useImportWizard() {
     return markDuplicates(buildRows(cells.slice(1), map), transactions)
   }, [cells, map, transactions])
 
-  const accountLabels = useMemo(() => distinctLabels(rows, (row) => row.accountLabel), [rows])
+  // As duas pontas da transferência entram na lista: a conta que recebe também
+  // precisa ser apontada, e às vezes ela só existe no arquivo.
+  const accountLabels = useMemo(() => {
+    const origens = distinctLabels(rows, (row) => row.accountLabel)
+    const destinos = distinctLabels(rows, (row) => row.transferToLabel)
+    return [...new Set([...origens, ...destinos])]
+  }, [rows])
   const categoryLabels = useMemo(() => labelKinds(rows), [rows])
 
   // Toda vez que as linhas mudam — arquivo novo ou coluna remapeada — as
@@ -167,8 +173,9 @@ export function useImportWizard() {
 
     categoryLabels,
     categoryChoice,
-    chooseCategory: (label: string, value: string) =>
-      setCategoryChoice((current) => ({ ...current, [label]: value })),
+    // A chave carrega o rótulo e o tipo: ver `chaveDaCategoria`.
+    chooseCategory: (chave: string, value: string) =>
+      setCategoryChoice((current) => ({ ...current, [chave]: value })),
 
     rows,
     summary: summarize(rows, (row) => selected.has(row.line)),

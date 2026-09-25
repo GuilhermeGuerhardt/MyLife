@@ -16,6 +16,7 @@ import {
   missingFields,
   normalizeText,
   parseCsv,
+  summarize,
 } from './import'
 
 /** O exportador separa `R$` do número com U+00A0, não com espaço comum. */
@@ -145,5 +146,78 @@ describe('extrato do app anterior', () => {
     const grade = parseCsv(dobrado, detectDelimiter(dobrado))
     const rows = markDuplicates(buildRows(grade.slice(1), detectColumns(grade[0]!)), [])
     expect(rows.filter((r) => r.duplicate)).toHaveLength(0)
+  })
+})
+
+/**
+ * A transferência do mesmo exportador.
+ *
+ * Ela chega com as contas escritas na frase e com o método em branco — um
+ * traço —, porque dinheiro que anda entre contas da própria pessoa não tem
+ * "método de pagamento". Era a linha que virava despesa e inflava o mês.
+ */
+describe('transferência no extrato', () => {
+  const comTransferencia = (linha: string) =>
+    [
+      'Tipo,Valor,Data,Nome,Descrição,Método,Categoria,Status',
+      linha,
+      `Despesa,"R$${NB}23,90",2026-09-24,Padaria ,-,Conta - Banco Azul,Alimentação,Já foi pago`,
+    ].join('\n')
+
+  const lerLinha = (linha: string) => {
+    const texto = comTransferencia(linha)
+    const grade = parseCsv(texto, detectDelimiter(texto))
+    const map = detectColumns(grade[0]!)
+    return { map, rows: buildRows(grade.slice(1), map) }
+  }
+
+  const TRANSFERENCIA =
+    `Transferência,"R$${NB}100,00",2026-09-24,Transferência de Banco Azul para Poupança,-,-,-,Já transferido`
+
+  it('não é receita nem despesa', () => {
+    const { rows } = lerLinha(TRANSFERENCIA)
+    expect(rows[0]!.kind).toBe('transfer')
+  })
+
+  it('tira as duas contas da frase, já que o método vem em branco', () => {
+    const { rows } = lerLinha(TRANSFERENCIA)
+    expect(rows[0]!.accountLabel).toBe('Banco Azul')
+    expect(rows[0]!.transferToLabel).toBe('Poupança')
+  })
+
+  it('entra sem erro e sem categoria', () => {
+    const { rows } = lerLinha(TRANSFERENCIA)
+    expect(rows[0]!.error).toBeNull()
+    expect(rows[0]!.categoryLabel).toBe('')
+  })
+
+  it('fica fora das somas de receita e despesa', () => {
+    const { rows } = lerLinha(TRANSFERENCIA)
+    const resumo = summarize(rows, () => true)
+    expect(resumo.ready).toBe(2)
+    // Só o Padaria de R$ 23,90; os R$ 100 que trocaram de conta não contam.
+    expect(resumo.expenseCents).toBe(2390)
+    expect(resumo.incomeCents).toBe(0)
+  })
+
+  it('sem as duas pontas, recusa a linha em vez de inventar uma despesa', () => {
+    const { rows } = lerLinha(
+      `Transferência,"R$${NB}100,00",2026-09-24,Aplicação no CDB,-,-,-,Já transferido`,
+    )
+    expect(rows[0]!.kind).toBe('transfer')
+    expect(rows[0]!.error).toMatch(/destino/i)
+  })
+
+  it('a coluna de destino manda mais que a frase', () => {
+    const texto = [
+      'Tipo,Valor,Data,Nome,Método,Destino,Status',
+      `Transferência,"R$${NB}100,00",2026-09-24,Transferência de Banco Azul para Poupança,Conta - Banco Azul,Poupança,Já transferido`,
+    ].join('\n')
+    const grade = parseCsv(texto, detectDelimiter(texto))
+    const map = detectColumns(grade[0]!)
+    const rows = buildRows(grade.slice(1), map)
+
+    expect(map.transferTo).toBe(5)
+    expect(rows[0]!.transferToLabel).toBe('Poupança')
   })
 })

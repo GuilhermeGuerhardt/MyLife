@@ -12,6 +12,7 @@ import {
   parseInstallment,
   parseKind,
   parsePaid,
+  parseTransferParties,
   readText,
   rowMatches,
   summarize,
@@ -115,6 +116,29 @@ describe('leitura de célula', () => {
     expect(parseKind('', '10,00')).toBe('income')
   })
 
+  it('reconhece transferência, que não é nem uma coisa nem outra', () => {
+    // Antes caía no fim da função e virava despesa: R$ 100 que só mudaram de
+    // conta eram contados como gasto do mês.
+    expect(parseKind('Transferência', 'R$ 100,00')).toBe('transfer')
+    expect(parseKind('transferencia entre contas', '100,00')).toBe('transfer')
+  })
+
+  it('lê as duas contas da frase da transferência', () => {
+    expect(parseTransferParties('Transferência de Banco Azul para Poupança')).toEqual({
+      de: 'Banco Azul',
+      para: 'Poupança',
+    })
+    expect(parseTransferParties('Transferência para o CDB')).toBeNull()
+    expect(parseTransferParties('Mercado')).toBeNull()
+  })
+
+  it('o traço de célula vazia não vira nome de conta', () => {
+    // Vários exportadores escrevem "-" no lugar de branco. Sem isto, o app
+    // ganhava uma conta chamada "-".
+    expect(cleanAccountLabel('-')).toBe('')
+    expect(cleanAccountLabel('Conta - Banco Azul')).toBe('Banco Azul')
+  })
+
   it('não confunde "Falta pagar" com pago', () => {
     // As duas frases contêm "pag" — a negação precisa ganhar.
     expect(parsePaid('Falta pagar')).toBe(false)
@@ -148,9 +172,9 @@ describe('linhas prontas', () => {
   }
 
   it('converte o extrato inteiro', () => {
-    const [moto, pedro, ifood, boleto] = rows()
+    const [parcelada, emprestimo, entrada, boleto] = rows()
 
-    expect(moto).toMatchObject({
+    expect(parcelada).toMatchObject({
       line: 2,
       date: '2026-09-23',
       kind: 'expense',
@@ -164,8 +188,8 @@ describe('linhas prontas', () => {
       error: null,
     })
 
-    expect(pedro).toMatchObject({ amountCents: 113000, paid: true, description: 'Empréstimo' })
-    expect(ifood).toMatchObject({ kind: 'income', amountCents: 28020, paid: true })
+    expect(emprestimo).toMatchObject({ amountCents: 113000, paid: true, description: 'Empréstimo' })
+    expect(entrada).toMatchObject({ kind: 'income', amountCents: 28020, paid: true })
     // "-" é célula vazia; "Internet" é complemento de verdade.
     expect(boleto!.detail).toBe('Internet')
   })
@@ -204,6 +228,7 @@ describe('deduplicação', () => {
     description,
     detail: null,
     accountLabel: '',
+    transferToLabel: '',
     categoryLabel: '',
     paid: true,
     installment: null,
@@ -239,6 +264,112 @@ describe('deduplicação', () => {
       [{ date: '2026-08-07', amount_cents: 540, description: 'Metro', kind: 'expense' }],
     )
     expect(marked.map((item) => item.duplicate)).toEqual([true, false])
+  })
+
+  /**
+   * As duas regras abaixo existem porque o app cria esses lançamentos antes de
+   * o extrato existir, com a data que ele podia saber na época. Comparando só
+   * pela data exata, toda parcela e toda assinatura entrava em dobro.
+   */
+  describe('o que o app criou sozinho, em outra data', () => {
+    const parcelada = (date: string, n: number, total: number): ImportRow => ({
+      ...row(date, 86959, 'Geladeira'),
+      installment: { n, total },
+    })
+
+    it('acha a parcela que o app guardou na data da compra', () => {
+      const marked = markDuplicates(
+        [parcelada('2026-09-23', 5, 48)],
+        [
+          {
+            date: '2026-08-23',
+            amount_cents: 86959,
+            description: 'Geladeira',
+            kind: 'expense',
+            installment_n: 5,
+            installment_total: 48,
+          },
+        ],
+      )
+      expect(marked[0]!.duplicate).toBe(true)
+    })
+
+    it('outra parcela do mesmo parcelamento continua sendo nova', () => {
+      const marked = markDuplicates(
+        [parcelada('2026-10-23', 6, 48)],
+        [
+          {
+            date: '2026-08-23',
+            amount_cents: 86959,
+            description: 'Geladeira',
+            kind: 'expense',
+            installment_n: 5,
+            installment_total: 48,
+          },
+        ],
+      )
+      expect(marked[0]!.duplicate).toBe(false)
+    })
+
+    it('acha a assinatura que a recorrência previu para outro dia do mês', () => {
+      const marked = markDuplicates(
+        [row('2026-09-15', 1290, 'Streaming')],
+        [
+          {
+            date: '2026-09-10',
+            amount_cents: 1290,
+            description: 'Streaming',
+            kind: 'expense',
+            recurring_id: 'r1',
+          },
+        ],
+      )
+      expect(marked[0]!.duplicate).toBe(true)
+    })
+
+    it('a cobrança do mês seguinte não é a previsão deste mês', () => {
+      const marked = markDuplicates(
+        [row('2026-10-15', 1290, 'Streaming')],
+        [
+          {
+            date: '2026-09-10',
+            amount_cents: 1290,
+            description: 'Streaming',
+            kind: 'expense',
+            recurring_id: 'r1',
+          },
+        ],
+      )
+      expect(marked[0]!.duplicate).toBe(false)
+    })
+
+    it('lançamento digitado à mão não vale pela tolerância do mês', () => {
+      // Sem `recurring_id`, a data foi escolhida por alguém. Dois almoços de
+      // R$ 42 no mesmo mês são dois almoços.
+      const marked = markDuplicates(
+        [row('2026-09-15', 4200, 'Almoço')],
+        [{ date: '2026-09-02', amount_cents: 4200, description: 'Almoço', kind: 'expense' }],
+      )
+      expect(marked[0]!.duplicate).toBe(false)
+    })
+
+    it('uma previsão só é reconhecida por uma linha', () => {
+      // A assinatura saiu duas vezes no mês e a regra previu uma: a primeira
+      // casa com a previsão, a segunda entra.
+      const marked = markDuplicates(
+        [row('2026-09-15', 1290, 'Streaming'), row('2026-09-28', 1290, 'Streaming')],
+        [
+          {
+            date: '2026-09-10',
+            amount_cents: 1290,
+            description: 'Streaming',
+            kind: 'expense',
+            recurring_id: 'r1',
+          },
+        ],
+      )
+      expect(marked.map((item) => item.duplicate)).toEqual([true, false])
+    })
   })
 })
 

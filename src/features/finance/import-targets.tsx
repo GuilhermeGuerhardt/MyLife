@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Field, Select } from '@/components/ui/field'
 import type { Account, Category } from '@/data/types'
-import { CREATE, IGNORE, type LabelKind } from './use-import'
+import { chaveDaCategoria, CREATE, IGNORE, type LabelKind } from './use-import'
 
 export function ImportAccounts({
   labels,
@@ -69,8 +69,16 @@ export function ImportCategories({
   labels: LabelKind[]
   categories: Category[]
   choice: Record<string, string>
-  onChoose: (label: string, value: string) => void
+  onChoose: (chave: string, value: string) => void
 }) {
+  // Um rótulo que aparece nos dois tipos vira dois campos. Sem dizer qual é
+  // qual, a tela mostraria "Empréstimo" duas vezes sem explicação.
+  const nosDoisTipos = new Set(
+    labels
+      .filter((atual) => labels.some((outro) => outro.label === atual.label && outro.kind !== atual.kind))
+      .map((item) => item.label),
+  )
+
   return (
     <Card>
       <CardHeader
@@ -85,10 +93,14 @@ export function ImportCategories({
           </p>
         ) : (
           labels.map(({ label, kind }) => (
-            <Field key={label} label={label}>
+            <Field
+              key={chaveDaCategoria(label, kind)}
+              label={label}
+              hint={nosDoisTipos.has(label) ? (kind === 'income' ? 'receita' : 'despesa') : undefined}
+            >
               <Select
-                value={choice[label] ?? CREATE}
-                onChange={(event) => onChoose(label, event.target.value)}
+                value={choice[chaveDaCategoria(label, kind)] ?? CREATE}
+                onChange={(event) => onChoose(chaveDaCategoria(label, kind), event.target.value)}
               >
                 <option value={CREATE}>+ Criar categoria "{label}"</option>
                 <option value={IGNORE}>— sem categoria —</option>
