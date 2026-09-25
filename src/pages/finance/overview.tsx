@@ -10,6 +10,7 @@ import { useCreateTransaction, useSetTransactionPaid } from '@/features/finance/
 import { CategoryIcon } from '@/features/finance/category-icons'
 import { CashFlowChart, CategoryDonut } from '@/features/finance/charts'
 import { MonthNav, TransactionList } from '@/features/finance/shared'
+import { useAvisoDeCompetencia } from '@/features/finance/aviso-de-competencia'
 import { TransactionForm } from '@/features/finance/transaction-form'
 import { useFinance } from '@/features/finance/use-finance'
 import { useTransactionEditor } from '@/features/finance/use-transaction-editor'
@@ -65,6 +66,7 @@ export function FinanceOverview() {
   const { create: createAccount } = useAccounts()
   const { data: categories } = useCategories()
   const createTransaction = useCreateTransaction()
+  const { avisar, aviso } = useAvisoDeCompetencia(competence, setCompetence)
   const setPaid = useSetTransactionPaid()
   const { open: openEditor, editor } = useTransactionEditor()
   const { data: rules } = useRecurring()
@@ -550,13 +552,14 @@ export function FinanceOverview() {
           categories={categories}
           onClose={() => setAddingTransaction(false)}
           onSave={async (draft) => {
-            await createTransaction(draft)
+            avisar(await createTransaction(draft))
             setAddingTransaction(false)
           }}
         />
       )}
 
       {editor}
+      {aviso}
     </div>
   )
 }

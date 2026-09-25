@@ -493,7 +493,9 @@ automático. O HTML gerado passa por sanitização antes de ir para a tela.
 a inclui: comprar dia 29 com fechamento dia 28 significa pagar só na fatura seguinte. Cada
 lançamento carrega uma competência (`AAAA-MM`) calculada a partir do ciclo do cartão, e é por
 isso que o "gasto do mês" bate com o extrato. O formulário mostra a fatura de destino antes de
-salvar.
+salvar — e, quando o lançamento cai fora do mês que está aberto, um aviso no canto diz para onde
+ele foi, com um atalho para lá. Acertar a fatura em silêncio parecia engolir a compra: ela não
+aparecia no mês da tela, e de fora não dava para distinguir isso de um erro.
 
 **Parcelamento que fecha a conta.** R$ 900 em 7x viram 6 parcelas de R$ 128,57 e uma primeira de
 R$ 128,58 — a sobra de centavos fica na primeira, como as operadoras fazem, e a soma devolve o

@@ -45,13 +45,20 @@ export function cardConfig(account: Account | undefined | null): CardConfig | nu
  *
  * A competência não vem da data: numa compra no cartão ela sai do ciclo de
  * fatura, e é isso que faz o gasto do mês bater com o extrato.
+ *
+ * Devolve a competência em que o lançamento caiu — a da primeira parcela, quando
+ * é parcelado — para a tela poder dizer onde ele foi parar. Uma compra feita
+ * depois do fechamento entra na fatura do mês seguinte e simplesmente não
+ * aparece no mês que está aberto; sem essa resposta, a tela não tinha como
+ * contar isso e o lançamento parecia ter sumido. `null` é a regra de
+ * recorrência, que não cria lançamento nenhum agora.
  */
 export function useCreateTransaction() {
   const { data: accounts } = useAccounts()
   const { create } = useTransactions()
   const { create: createRule } = useRecurring()
 
-  return async function createTransaction(draft: TransactionDraft): Promise<void> {
+  return async function createTransaction(draft: TransactionDraft): Promise<Competence | null> {
     // "Se repete" não cria linha nenhuma no extrato: cria a regra, e ela vira
     // pendente no mês. Lançar sozinho é justamente o que o app evita.
     if (draft.repeat && draft.kind !== 'transfer') {
@@ -66,7 +73,7 @@ export function useCreateTransaction() {
         end_date: draft.repeat.end_date,
         active: true,
       })
-      return
+      return null
     }
 
     const account = accounts.find((a) => a.id === draft.account_id)
@@ -91,7 +98,7 @@ export function useCreateTransaction() {
 
     if (draft.installments <= 1 || !card) {
       await create.mutateAsync(base)
-      return
+      return base.competence
     }
 
     const groupId = uid()
@@ -109,6 +116,8 @@ export function useCreateTransaction() {
         paid: false,
       })
     }
+
+    return plan[0]!.competence
   }
 }
 

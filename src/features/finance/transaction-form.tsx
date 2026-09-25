@@ -65,6 +65,7 @@ export function TransactionForm({
   const [endless, setEndless] = useState(false)
   const [repeatDay, setRepeatDay] = useState(() => Number((initial?.date ?? today()).slice(8, 10)))
   const [paid, setPaid] = useState(initial?.paid ?? true)
+  const [touchedPaid, setTouchedPaid] = useState(editing)
   const [notes, setNotes] = useState(initial?.notes ?? '')
   const [touchedCategory, setTouchedCategory] = useState(editing)
 
@@ -86,10 +87,15 @@ export function TransactionForm({
 
   // Compra no cartão não é dinheiro que saiu ainda — quem paga é a fatura.
   // Só na criação: ao editar, a situação gravada é a que vale.
+  //
+  // E acompanha a conta nos dois sentidos: só marcar como não paga deixava a
+  // regra grudada ao trocar o cartão por uma conta corrente, e o almoço em
+  // dinheiro era gravado como se ainda não tivesse saído do bolso. Quem mexeu
+  // no seletor à mão manda: dali em diante a escolha é dela.
   useEffect(() => {
-    if (editing) return
-    if (card && kind === 'expense') setPaid(false)
-  }, [card, kind, editing])
+    if (editing || touchedPaid) return
+    setPaid(!(card && kind === 'expense'))
+  }, [card, kind, editing, touchedPaid])
 
   // Parcelar divide um total; repetir multiplica um valor. Só a compra no
   // cartão parcela, e transferência não faz nem uma coisa nem outra.
@@ -273,7 +279,13 @@ export function TransactionForm({
 
           {(!card || editing) && (
             <Field label="Situação">
-              <Select value={paid ? '1' : '0'} onChange={(e) => setPaid(e.target.value === '1')}>
+              <Select
+                value={paid ? '1' : '0'}
+                onChange={(e) => {
+                  setTouchedPaid(true)
+                  setPaid(e.target.value === '1')
+                }}
+              >
                 <option value="1">Efetivado</option>
                 <option value="0">Previsto</option>
               </Select>

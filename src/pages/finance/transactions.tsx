@@ -9,6 +9,7 @@ import { useCategories } from '@/data/queries'
 import type { TransactionKind } from '@/data/types'
 import { useCreateTransaction, useSetTransactionPaid } from '@/features/finance/actions'
 import { MonthNav, TransactionList } from '@/features/finance/shared'
+import { useAvisoDeCompetencia } from '@/features/finance/aviso-de-competencia'
 import { TransactionForm } from '@/features/finance/transaction-form'
 import { useFinance } from '@/features/finance/use-finance'
 import { useTransactionEditor } from '@/features/finance/use-transaction-editor'
@@ -26,6 +27,7 @@ export function TransactionsPage() {
   const createTransaction = useCreateTransaction()
   const setPaid = useSetTransactionPaid()
   const { open: openEditor, editor } = useTransactionEditor()
+  const { avisar, aviso } = useAvisoDeCompetencia(competence, setCompetence)
 
   const [filter, setFilter] = useState<Filter>('all')
   const [search, setSearch] = useState('')
@@ -151,13 +153,14 @@ export function TransactionsPage() {
           categories={categories}
           onClose={() => setAdding(false)}
           onSave={async (draft) => {
-            await createTransaction(draft)
+            avisar(await createTransaction(draft))
             setAdding(false)
           }}
         />
       )}
 
       {editor}
+      {aviso}
     </div>
   )
 }

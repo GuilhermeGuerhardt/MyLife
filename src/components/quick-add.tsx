@@ -10,6 +10,7 @@ import {
   useSessions,
 } from '@/data/queries'
 import { guessCategory } from '@/data/seed-finance'
+import { competenceLabel, toCompetence } from '@/lib/finance/billing'
 import { useCreateTransaction } from '@/features/finance/actions'
 import { sessionCalories } from '@/lib/health/formulas'
 import { describeIntent, parseQuickAdd, type QuickIntent } from '@/lib/quick-add/parser'
@@ -154,7 +155,11 @@ export function QuickAdd({ open, onClose }: { open: boolean; onClose: () => void
         }
         const kind = value.kind === 'expense' ? 'expense' : 'income'
         const category = guessCategory(value.description, categories, kind)
-        await createTransaction({
+        // Compra no cartão não é dinheiro que já saiu: quem paga é a fatura, e
+        // é assim que o formulário completo grava. Marcar como paga aqui
+        // encheria a fatura em aberto de compras já quitadas.
+        const noCartao = account.kind === 'credit' && kind === 'expense'
+        const competencia = await createTransaction({
           account_id: account.id,
           transfer_account_id: null,
           category_id: category?.id ?? null,
@@ -163,13 +168,19 @@ export function QuickAdd({ open, onClose }: { open: boolean; onClose: () => void
           date: today(),
           description: value.description || (category?.name ?? ''),
           tags: [],
-          paid: true,
+          paid: !noCartao,
           installments: 1,
           notes: null,
         })
-        return category
-          ? `Lançado em ${category.name} · ${account.name}.`
-          : `Lançado em ${account.name}.`
+
+        const onde = category ? `${category.name} · ${account.name}` : account.name
+        // A fatura só é dita quando não é a do mês corrente: compra depois do
+        // fechamento entra na próxima, e sem isto ela some sem explicação.
+        const fatura =
+          competencia && competencia !== toCompetence(today())
+            ? `, na fatura de ${competenceLabel(competencia).toLowerCase()}`
+            : ''
+        return `Lançado em ${onde}${fatura}.`
       }
 
       default:
