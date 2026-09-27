@@ -41,23 +41,34 @@ const ACCOUNT_COLORS = ['#3b82f6', '#22c55e', '#f97316', '#a855f7', '#ef4444', '
 /**
  * Casa o rótulo do arquivo com uma conta que já existe.
  *
- * Compara normalizado e aceita conter: "Banco Azul" no arquivo encontra
- * "Inter" no app. Sem correspondência, sugere criar — melhor do que jogar tudo
- * numa conta qualquer e a pessoa descobrir depois.
+ * Primeiro pelo nome igual. Não havendo, aceita uma conter a outra —
+ * "Nubank Roxinho" no arquivo encontra "Nubank" no app.
+ *
+ * **Quando mais de uma conta serve, não escolhe nenhuma.** Antes ficava com a
+ * primeira da lista, e num extrato com `Banco Inter` e `Cartão Inter` o rótulo
+ * curto caía na conta corrente: as compras do cartão iam todas para o lugar
+ * errado e a fatura nunca se formava. Sugerir criar é visível na tela e a
+ * pessoa corrige em um clique; adivinhar errado só aparece semanas depois, no
+ * saldo.
  */
 export function suggestAccounts(labels: string[], accounts: Account[]): Record<string, string> {
   const result: Record<string, string> = {}
 
   for (const label of labels) {
     const target = normalizeText(label)
-    const exact = accounts.find((account) => normalizeText(account.name) === target)
-    const partial =
-      exact ??
-      accounts.find((account) => {
-        const name = normalizeText(account.name)
-        return name.includes(target) || target.includes(name)
-      })
-    result[label] = partial?.id ?? CREATE
+
+    const exata = accounts.find((account) => normalizeText(account.name) === target)
+    if (exata) {
+      result[label] = exata.id
+      continue
+    }
+
+    const parciais = accounts.filter((account) => {
+      const name = normalizeText(account.name)
+      return name.includes(target) || target.includes(name)
+    })
+
+    result[label] = parciais.length === 1 ? parciais[0]!.id : CREATE
   }
 
   return result

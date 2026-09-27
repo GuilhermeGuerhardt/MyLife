@@ -139,6 +139,15 @@ describe('leitura de célula', () => {
     expect(cleanAccountLabel('Conta - Banco Azul')).toBe('Banco Azul')
   })
 
+  it('a palavra "cartão" fica no rótulo, que é o que diz que não é a conta', () => {
+    // "Conta" e "Carteira" são genéricas e só atrapalham o nome. "Cartão" não:
+    // é a única pista no arquivo de que aquela linha pertence ao cartão, e sem
+    // ela "Cartão - Inter" virava "Inter", que casa com "Banco Inter".
+    expect(cleanAccountLabel('Cartão - Inter')).toBe('Cartão Inter')
+    expect(cleanAccountLabel('Cartao - Nubank')).toBe('Cartão Nubank')
+    expect(cleanAccountLabel('Carteira - Dinheiro')).toBe('Dinheiro')
+  })
+
   it('não confunde "Falta pagar" com pago', () => {
     // As duas frases contêm "pag" — a negação precisa ganhar.
     expect(parsePaid('Falta pagar')).toBe(false)
@@ -158,10 +167,11 @@ describe('leitura de célula', () => {
     expect(parseInstallment('Coisa (9/2)').installment).toBeNull()
   })
 
-  it('tira o prefixo do rótulo da conta', () => {
+  it('tira o prefixo genérico do rótulo da conta', () => {
     expect(cleanAccountLabel('Conta - Banco Azul')).toBe('Banco Azul')
-    expect(cleanAccountLabel('Cartão - Crédito Azul')).toBe('Crédito Azul')
     expect(cleanAccountLabel('Banco Azul')).toBe('Banco Azul')
+    // "Cartão" não é prefixo genérico: ver o teste logo abaixo.
+    expect(cleanAccountLabel('Cartão - Crédito Azul')).toBe('Cartão Crédito Azul')
   })
 })
 

@@ -4,8 +4,9 @@ import { Field, Input, Select } from '@/components/ui/field'
 import { Modal } from '@/components/ui/modal'
 import { Segmented, Toggle } from '@/components/ui/misc'
 import type { Account, BaseRow, Category, RecurringTransaction } from '@/data/types'
-import { parseAmount } from '@/lib/finance/money'
+import { centsToInput, parseAmount } from '@/lib/finance/money'
 import { today } from '@/lib/utils'
+import { InputDeDinheiro } from './input-de-dinheiro'
 import { sortCategories } from './use-finance'
 
 export type RecurringDraft = Omit<RecurringTransaction, keyof BaseRow>
@@ -35,9 +36,7 @@ export function RecurringForm({
 }) {
   const [description, setDescription] = useState(initial?.description ?? '')
   const [kind, setKind] = useState<RecurringDraft['kind']>(initial?.kind ?? 'expense')
-  const [amount, setAmount] = useState(
-    initial ? (initial.amount_cents / 100).toFixed(2).replace('.', ',') : '',
-  )
+  const [amount, setAmount] = useState(initial ? centsToInput(initial.amount_cents) : '')
   const [accountId, setAccountId] = useState(initial?.account_id ?? accounts[0]?.id ?? '')
   const [categoryId, setCategoryId] = useState(initial?.category_id ?? '')
   const [day, setDay] = useState(initial?.day_of_month ?? 5)
@@ -137,11 +136,9 @@ export function RecurringForm({
           </Field>
 
           <Field label="Valor" suffix="R$">
-            <Input
-              inputMode="decimal"
+            <InputDeDinheiro
               value={amount}
-              placeholder="0,00"
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={setAmount}
               className="text-lg font-semibold"
             />
           </Field>

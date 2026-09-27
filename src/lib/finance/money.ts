@@ -20,9 +20,40 @@ export function formatCents(cents: number): string {
   return brl.format(cents / 100)
 }
 
-/** Centavos para "1.234,56" (sem símbolo), para inputs. */
+/**
+ * Centavos para "1.234,56" (sem símbolo), para campos de digitação.
+ *
+ * Com o ponto do milhar, igual ao que a máscara escreve enquanto se digita: um
+ * valor que abre sem ponto e ganha ponto ao receber uma tecla pareceria que o
+ * campo mexeu no número sozinho.
+ */
 export function centsToInput(cents: number): string {
-  return (cents / 100).toFixed(2).replace('.', ',')
+  const [inteiro, decimal] = Math.abs(cents / 100)
+    .toFixed(2)
+    .split('.') as [string, string]
+  const agrupado = inteiro.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+  return `${cents < 0 ? '-' : ''}${agrupado},${decimal}`
+}
+
+/** Teto da máscara: 13 dígitos são 99 bilhões, mais do que cabe em qualquer vida. */
+const MAX_DIGITOS = 13
+
+/**
+ * O que mostrar enquanto a pessoa digita um valor.
+ *
+ * Conta pelos centavos, da direita para a esquerda, como o caixa eletrônico e
+ * todo app de banco: digitar `3550` escreve `35,50`, e o próximo dígito empurra
+ * tudo para o lado. Assim ninguém precisa procurar a vírgula no teclado nem
+ * lembrar de pôr o ponto do milhar — era isso que fazia o valor entrar errado
+ * quando a pressa batia.
+ *
+ * Só os dígitos contam: vírgula, ponto, `R$` e espaço colados de um extrato são
+ * ignorados, então colar `R$ 1.234,56` dá no mesmo que digitar `123456`.
+ */
+export function mascaraDeDinheiro(texto: string): string {
+  const digitos = texto.replace(/\D/g, '').replace(/^0+(?=\d)/, '').slice(0, MAX_DIGITOS)
+  if (!digitos) return ''
+  return centsToInput(Number(digitos))
 }
 
 /**

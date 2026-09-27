@@ -5,6 +5,7 @@ import { Modal } from '@/components/ui/modal'
 import { ACCOUNT_KIND_LABELS, type Account, type AccountKind, type BaseRow } from '@/data/types'
 import { centsToInput, parseAmount } from '@/lib/finance/money'
 import { cn } from '@/lib/utils'
+import { InputDeDinheiro } from './input-de-dinheiro'
 
 export type AccountDraft = Omit<Account, keyof BaseRow>
 
@@ -104,12 +105,7 @@ export function AccountForm({
         {isCard ? (
           <>
             <Field label="Limite" suffix="R$">
-              <Input
-                inputMode="decimal"
-                value={limit}
-                placeholder="0,00"
-                onChange={(e) => setLimit(e.target.value)}
-              />
+              <InputDeDinheiro value={limit} onChange={setLimit} />
             </Field>
 
             <div />
@@ -142,12 +138,7 @@ export function AccountForm({
           </>
         ) : (
           <Field label="Saldo inicial" suffix="R$">
-            <Input
-              inputMode="decimal"
-              value={balance}
-              placeholder="0,00"
-              onChange={(e) => setBalance(e.target.value)}
-            />
+            <InputDeDinheiro value={balance} onChange={setBalance} />
           </Field>
         )}
 

@@ -6,12 +6,19 @@ import {
   statementPeriod,
   toCompetence,
 } from './billing'
-import { centsToInput, formatCents, parseAmount, splitInstallments } from './money'
+import {
+  centsToInput,
+  formatCents,
+  mascaraDeDinheiro,
+  parseAmount,
+  splitInstallments,
+} from './money'
 import {
   accountBalance,
   availableLimit,
   budgetProgress,
   byCategory,
+  commitmentProjection,
   goalProjection,
   invoiceTotal,
   monthlyFlow,
@@ -36,6 +43,42 @@ describe('dinheiro', () => {
   it('formata centavos em reais', () => {
     expect(formatCents(123456)).toMatch(/1\.234,56/)
     expect(centsToInput(3550)).toBe('35,50')
+    expect(centsToInput(123456)).toBe('1.234,56')
+    expect(centsToInput(0)).toBe('0,00')
+  })
+
+  /**
+   * A máscara conta pelos centavos, como o caixa eletrônico: cada dígito novo
+   * empurra os outros para a esquerda. É o que tira da pessoa a tarefa de achar
+   * a vírgula e o ponto do milhar no meio da digitação.
+   */
+  it('escreve a vírgula sozinha enquanto se digita', () => {
+    expect(mascaraDeDinheiro('')).toBe('')
+    expect(mascaraDeDinheiro('3')).toBe('0,03')
+    expect(mascaraDeDinheiro('35')).toBe('0,35')
+    expect(mascaraDeDinheiro('355')).toBe('3,55')
+    expect(mascaraDeDinheiro('3550')).toBe('35,50')
+    expect(mascaraDeDinheiro('123456')).toBe('1.234,56')
+    expect(mascaraDeDinheiro('123456789')).toBe('1.234.567,89')
+  })
+
+  it('a máscara ignora o que não é dígito', () => {
+    // Colar de um extrato dá no mesmo que digitar os números.
+    expect(mascaraDeDinheiro('R$ 1.234,56')).toBe('1.234,56')
+    expect(mascaraDeDinheiro('35,50')).toBe('35,50')
+    expect(mascaraDeDinheiro('abc')).toBe('')
+  })
+
+  it('a máscara não deixa zero à esquerda crescer', () => {
+    // Apagar tudo e digitar de novo não pode deixar "0,0300" para trás.
+    expect(mascaraDeDinheiro('0003')).toBe('0,03')
+    expect(mascaraDeDinheiro('0')).toBe('0,00')
+  })
+
+  it('o que a máscara escreve, o parse lê de volta', () => {
+    for (const digitos of ['7', '35', '3550', '123456', '99999999']) {
+      expect(parseAmount(mascaraDeDinheiro(digitos))).toBe(Number(digitos))
+    }
   })
 
   it('não perde centavos ao parcelar', () => {
@@ -298,5 +341,67 @@ describe('fatura paga', () => {
       t.competence === '2026-03' ? { ...t, paid: true } : t,
     )
     expect(openInvoiceTotal('card', '2026-04', quitada)).toBe(5590)
+  })
+})
+
+describe('comprometido', () => {
+  const parcelas: TransactionLike[] = [
+    tx({ id: 'p1', competence: '2026-03', amount_cents: 20000, paid: false, installment_group_id: 'g1' }),
+    tx({ id: 'p2', competence: '2026-04', amount_cents: 20000, paid: false, installment_group_id: 'g1' }),
+    tx({ id: 'p3', competence: '2026-05', amount_cents: 20000, paid: false, installment_group_id: 'g1' }),
+    tx({ id: 'c1', competence: '2026-04', amount_cents: 7500, paid: false }),
+  ]
+
+  it('soma as despesas em aberto dos meses seguintes', () => {
+    const projecao = commitmentProjection(parcelas, '2026-03', 12)
+    expect(projecao.total).toBe(47500)
+    expect(projecao.months).toHaveLength(12)
+    expect(projecao.months[0]).toEqual({ competence: '2026-04', total: 27500 })
+    expect(projecao.months[1]).toEqual({ competence: '2026-05', total: 20000 })
+  })
+
+  it('o mês atual não entra: ele já está na tela', () => {
+    const projecao = commitmentProjection(parcelas, '2026-03', 12)
+    expect(projecao.months.some((mes) => mes.competence === '2026-03')).toBe(false)
+  })
+
+  it('o que já foi pago some da conta', () => {
+    const quitada = parcelas.map((t) => (t.id === 'p2' ? { ...t, paid: true } : t))
+    expect(commitmentProjection(quitada, '2026-03', 12).total).toBe(27500)
+  })
+
+  it('receita e transferência não comprometem nada', () => {
+    const outros: TransactionLike[] = [
+      tx({ id: 'r', competence: '2026-04', kind: 'income', amount_cents: 500000, paid: false }),
+      tx({ id: 't', competence: '2026-04', kind: 'transfer', amount_cents: 100000, paid: false }),
+    ]
+    expect(commitmentProjection(outros, '2026-03', 12).total).toBe(0)
+  })
+
+  it('aponta o mês mais pesado e quantas compras parceladas pesam', () => {
+    const projecao = commitmentProjection(parcelas, '2026-03', 12)
+    expect(projecao.heaviest).toEqual({ competence: '2026-04', total: 27500 })
+    expect(projecao.purchases).toBe(1)
+  })
+
+  it('sem nada à frente, não aponta mês nenhum', () => {
+    const projecao = commitmentProjection([tx({ id: 'a', paid: true })], '2026-03', 12)
+    expect(projecao.total).toBe(0)
+    expect(projecao.heaviest).toBeNull()
+    expect(projecao.lastCompetence).toBeNull()
+  })
+
+  /**
+   * A dívida que passa do período precisa aparecer de algum jeito: um carnê de
+   * 24 meses somado só até o décimo segundo esconderia metade de si mesmo.
+   */
+  it('diz até quando vai a dívida, mesmo além do período somado', () => {
+    const longa = [
+      ...parcelas,
+      tx({ id: 'p24', competence: '2028-02', amount_cents: 20000, paid: false, installment_group_id: 'g1' }),
+    ]
+    const projecao = commitmentProjection(longa, '2026-03', 12)
+    expect(projecao.total).toBe(47500)
+    expect(projecao.lastCompetence).toBe('2028-02')
   })
 })

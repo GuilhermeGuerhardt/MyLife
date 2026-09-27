@@ -133,8 +133,21 @@ export function cleanAccountLabel(value: string): string {
   // "-" é célula vazia em vários exportadores. Sem isto, o traço virava uma
   // conta chamada "-" no meio das contas de verdade.
   if (isBlank(text)) return ''
-  const match = /^(?:conta|cartao|cart[ãa]o|carteira)\s*[-–:]\s*(.+)$/i.exec(text)
-  return (match?.[1] ?? text).trim()
+
+  /*
+    "Cartão" fica; "Conta" e "Carteira" saem.
+
+    As duas últimas são genéricas e só engordam o nome. "Cartão" não é: num
+    extrato em que a conta se chama `Conta - Banco Inter` e o cartão
+    `Cartão - Inter`, tirar a palavra deixa o rótulo em "Inter" — que está
+    dentro de "Banco Inter" e fazia toda compra do cartão cair na conta
+    corrente, com a fatura nunca se formando.
+  */
+  const cartao = /^cart[ãa]o\s*[-–:]\s*(.+)$/i.exec(text)
+  if (cartao) return `Cartão ${cartao[1]!.trim()}`
+
+  const generico = /^(?:conta|carteira)\s*[-–:]\s*(.+)$/i.exec(text)
+  return (generico?.[1] ?? text).trim()
 }
 
 /** Placeholder de célula vazia usado por vários exportadores. */

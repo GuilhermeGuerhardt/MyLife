@@ -4,6 +4,8 @@ import { Field, Input, Select } from '@/components/ui/field'
 import { Modal } from '@/components/ui/modal'
 import type { BaseRow, Degree, Institution, Program, ProgramStatus, ProgramTrack } from '@/data/types'
 import { DEGREE_LABELS, PROGRAM_STATUS_LABELS } from '@/data/types'
+import { InputDeDinheiro } from '@/features/finance/input-de-dinheiro'
+import { centsToInput, parseAmount } from '@/lib/finance/money'
 import { CertificateField } from './certificate'
 
 export type ProgramDraft = Omit<Program, keyof BaseRow>
@@ -51,6 +53,10 @@ export function ProgramForm({
     notes: initial?.notes ?? null,
   }))
   const [newInstitution, setNewInstitution] = useState('')
+  // O custo é guardado em reais, mas a digitação passa pela máscara de centavos.
+  const [custo, setCusto] = useState(() =>
+    initial?.cost ? centsToInput(Math.round(initial.cost * 100)) : '',
+  )
 
   const set = <K extends keyof ProgramDraft>(key: K, value: ProgramDraft[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }))
@@ -223,10 +229,12 @@ export function ProgramForm({
             </Field>
 
             <Field label="Custo" suffix="R$" hint="Entra como despesa quando o financeiro chegar.">
-              <Input
-                inputMode="decimal"
-                value={form.cost ?? ''}
-                onChange={(e) => set('cost', Number(e.target.value.replace(',', '.')) || null)}
+              <InputDeDinheiro
+                value={custo}
+                onChange={(valor) => {
+                  setCusto(valor)
+                  set('cost', valor ? parseAmount(valor) / 100 : null)
+                }}
               />
             </Field>
 
