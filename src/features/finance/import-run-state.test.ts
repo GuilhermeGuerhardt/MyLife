@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { PARADO, reduzir, type EstadoDaImportacao } from './import-run-state'
 import type { ImportPlan } from './use-import'
 
-const plano: ImportPlan = { rows: [], accounts: {}, categories: {}, fallbackAccountId: 'conta-1' }
+const plano: ImportPlan = {
+  rows: [],
+  accounts: {},
+  categories: {},
+  fallbackAccountId: 'conta-1',
+  sugestoes: {},
+}
 const resultado = { transactions: 42, accountsCreated: 1, categoriesCreated: 0 }
 
 const comecar = (estado: EstadoDaImportacao = PARADO) =>

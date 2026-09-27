@@ -35,10 +35,17 @@
 
   /* Série de treino no gráfico semana a semana. Fica fora do accent do módulo
      porque o accent da Rotina é vermelho — a mesma cor do gasto —, e duas
-     barras lado a lado precisam ser distinguíveis uma da outra. */
-  --series-workout: oklch(0.62 0.15 250);
+     barras lado a lado precisam ser distinguíveis uma da outra.
 
-  --shadow-card: 0 1px 2px 0 oklch(0.2 0.02 250 / 0.05);
+     `--pending` é o azul de "ainda em aberto", pelo mesmo motivo: na Rotina o
+     accent é vermelho, e uma tarefa que só não foi feita ainda não é um erro
+     nem está vencida. */
+  --series-workout: oklch(0.62 0.15 250);
+  --pending: oklch(0.62 0.15 250);
+
+  --shadow-card:
+    0 1px 2px 0 oklch(0.2 0.02 250 / 0.06),
+    0 4px 12px -4px oklch(0.2 0.02 250 / 0.1);
   --ring: var(--accent);
 }
 
@@ -60,8 +67,11 @@
   --negative: oklch(0.68 0.18 25);
   --warning: oklch(0.78 0.15 75);
   --series-workout: oklch(0.7 0.14 250);
+  --pending: oklch(0.7 0.14 250);
 
-  --shadow-card: 0 1px 2px 0 oklch(0 0 0 / 0.3);
+  --shadow-card:
+    inset 0 1px 0 0 oklch(1 0 0 / 0.055),
+    0 1px 3px 0 oklch(0 0 0 / 0.40);
 }
 
 /* Escuro suave: o mesmo desenho do escuro, dois passos acima no cinza. Serve
@@ -84,8 +94,11 @@
   --negative: oklch(0.71 0.17 25);
   --warning: oklch(0.81 0.14 75);
   --series-workout: oklch(0.74 0.13 250);
+  --pending: oklch(0.74 0.13 250);
 
-  --shadow-card: 0 1px 2px 0 oklch(0 0 0 / 0.22);
+  --shadow-card:
+    inset 0 1px 0 0 oklch(1 0 0 / 0.060),
+    0 1px 3px 0 oklch(0 0 0 / 0.32);
 }
 
 /* Drácula, nas cores oficiais da paleta. */
@@ -107,8 +120,11 @@
   --negative: #ff5555;
   --warning: #f1fa8c;
   --series-workout: #8be9fd;
+  --pending: #8be9fd;
 
-  --shadow-card: 0 1px 2px 0 oklch(0 0 0 / 0.35);
+  --shadow-card:
+    inset 0 1px 0 0 oklch(1 0 0 / 0.060),
+    0 1px 3px 0 oklch(0 0 0 / 0.45);
 }
 
 /* Nord: azul-gelo nórdico, contraste baixo de propósito. */
@@ -130,8 +146,11 @@
   --negative: #bf616a;
   --warning: #ebcb8b;
   --series-workout: #81a1c1;
+  --pending: #81a1c1;
 
-  --shadow-card: 0 1px 2px 0 oklch(0 0 0 / 0.3);
+  --shadow-card:
+    inset 0 1px 0 0 oklch(1 0 0 / 0.060),
+    0 1px 3px 0 oklch(0 0 0 / 0.40);
 }
 
 /* Sépia, à base do Solarized claro: papel em vez de branco. */
@@ -153,8 +172,11 @@
   --negative: #dc322f;
   --warning: #b58900;
   --series-workout: #268bd2;
+  --pending: #268bd2;
 
-  --shadow-card: 0 1px 2px 0 oklch(0.4 0.05 80 / 0.08);
+  --shadow-card:
+    0 1px 2px 0 oklch(0.4 0.05 80 / 0.06),
+    0 4px 12px -4px oklch(0.4 0.05 80 / 0.1);
 }
 
 /* Latte, do Catppuccin: cinza-lavanda frio, o oposto do Sépia entre os claros. */
@@ -176,8 +198,11 @@
   --negative: #d20f39;
   --warning: #c98416;
   --series-workout: #7287fd;
+  --pending: #7287fd;
 
-  --shadow-card: 0 1px 2px 0 oklch(0.35 0.03 265 / 0.09);
+  --shadow-card:
+    0 1px 2px 0 oklch(0.35 0.03 265 / 0.06),
+    0 4px 12px -4px oklch(0.35 0.03 265 / 0.1);
 }
 
 /* Rosé, do Rosé Pine claro: base rosada e destaque ameixa — o único claro que
@@ -200,8 +225,11 @@
   --negative: #b4637a;
   --warning: #c1801f;
   --series-workout: #286983;
+  --pending: #286983;
 
-  --shadow-card: 0 1px 2px 0 oklch(0.4 0.04 20 / 0.08);
+  --shadow-card:
+    0 1px 2px 0 oklch(0.4 0.04 20 / 0.06),
+    0 4px 12px -4px oklch(0.4 0.04 20 / 0.1);
 }
 
 /* Cor de destaque por módulo: aplique .accent-health, .accent-finance, etc.
@@ -263,10 +291,12 @@
   --color-negative: var(--negative);
   --color-warning: var(--warning);
   --color-series-workout: var(--series-workout);
+  --color-pending: var(--pending);
 
   --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
 
-  --radius-card: 0.875rem;
+  --radius-card: 1rem;
+  --radius-control: 0.625rem;
 
   --animate-in: fade-in 0.18s ease-out;
 }
@@ -292,6 +322,15 @@
   }
   [data-scheme='dark'] {
     color-scheme: dark;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    /* O Inter abre demais em peso semibold: fechar um fio deixa o título com
+       a densidade que ele tem no desenho original. */
+    letter-spacing: -0.012em;
   }
 
   body {
@@ -342,7 +381,11 @@
    não a decoração. Substitui o plugin de typography, que não vale o peso aqui. */
 @layer components {
   .prose-notes {
-    color: var(--fg-muted);
+    /* O tom principal, não o secundário. Aqui é o corpo do texto que a pessoa
+       escreve e relê — legenda e rótulo é que são apagados de propósito. No
+       tema escuro a diferença é de 0,70 para 0,96 de luminosidade, e no claro
+       a nota inteira saía cinza. */
+    color: var(--fg);
     font-size: 0.875rem;
     line-height: 1.7;
   }
@@ -436,27 +479,169 @@
     color: var(--fg-subtle);
     font-style: italic;
   }
-  .prose-notes hr {
-    border-color: var(--border);
+
+  /* Destaque: a citação ao contrário. Ela recua e desbota, ele avança e
+     acende — é o parágrafo que não pode passar batido. */
+  .prose-notes blockquote[data-destaque] {
+    background: var(--accent-soft);
+    border-left-color: var(--accent);
+    border-radius: 0 0.5rem 0.5rem 0;
+    padding: 0.625rem 0.875rem;
+    color: var(--fg);
+    font-style: normal;
   }
+  .prose-notes blockquote[data-destaque] > :first-child {
+    margin-top: 0;
+  }
+
+  /* Bloco alternável. O triângulo padrão do navegador não acompanha o tema;
+     o nosso é o mesmo em todos eles. */
+  .prose-notes details {
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.75rem;
+  }
+  .prose-notes details > summary {
+    cursor: pointer;
+    font-weight: 500;
+    color: var(--fg);
+    list-style: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .prose-notes details > summary::-webkit-details-marker {
+    display: none;
+  }
+  .prose-notes details > summary::before {
+    content: '▶';
+    font-size: 0.625rem;
+    color: var(--fg-subtle);
+    transition: transform 150ms ease;
+  }
+  .prose-notes details[open] > summary::before {
+    transform: rotate(90deg);
+  }
+  .prose-notes details[open] > summary {
+    margin-bottom: 0.5rem;
+  }
+
+  /* Tabela. A mesma aparência no editor e na leitura: a borda é o que dá
+     sentido a uma grade, e um cabeçalho com fundo é o que separa o rótulo do
+     dado sem precisar de negrito em tudo. */
   .prose-notes table {
-    width: 100%;
+    /* A largura vem do conteúdo, não da linha: uma tabela de duas colunas de
+       "Sim/Não" não tem por que atravessar a anotação inteira. Passando da
+       largura disponível, quem rola é o `.tableWrapper` logo abaixo. */
+    width: auto;
+    max-width: 100%;
     border-collapse: collapse;
     font-size: 0.8125rem;
-    display: block;
-    overflow-x: auto;
   }
   .prose-notes th,
   .prose-notes td {
     border: 1px solid var(--border);
-    padding: 0.4rem 0.6rem;
+    padding: 0.375rem 0.625rem;
+    vertical-align: top;
     text-align: left;
+    position: relative;
+    /* Célula vazia não vira um risco: dá para clicar dentro e escrever. O valor
+       é o mesmo `LARGURA_MINIMA` de `lib/education/coluna-da-tabela.ts` — com um
+       piso maior aqui, o ajuste ao conteúdo gravava uma largura que a tela
+       depois ignorava, e o clique duplo parecia não fazer nada. */
+    min-width: 3.5rem;
   }
   .prose-notes th {
     background: var(--surface-2);
     color: var(--fg);
     font-weight: 600;
   }
+  .prose-notes th > p,
+  .prose-notes td > p {
+    margin: 0;
+  }
+  /* A tabela é o único bloco que pode não caber: rolagem própria, em vez de
+     empurrar a largura da anotação inteira. */
+  .prose-notes .tableWrapper {
+    overflow-x: auto;
+  }
+
+  /* A tabela respira um pouco mais que um parágrafo: ela é um bloco com grade
+     própria, e colada no texto de cima parece parte dele. */
+  .prose-notes .tableWrapper {
+    margin-block: 1rem;
+  }
+
+  /* Só no editor: a alça de redimensionar e a célula selecionada. */
+  .tiptap-area .column-resize-handle {
+    position: absolute;
+    right: -2px;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: var(--accent);
+    cursor: col-resize;
+  }
+  .tiptap-area .selectedCell::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--accent-soft);
+    pointer-events: none;
+  }
+  .tiptap-area.resize-cursor {
+    cursor: col-resize;
+  }
+  /* O mesmo bloco dentro do editor. Ali não é um `details` — a seta é um botão
+     de verdade, porque o triângulo do navegador abre por fora do documento e o
+     editor desfazia isso no redesenho seguinte. */
+  .tiptap-area .alternavel {
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+  }
+  .tiptap-area .alternavel-seta {
+    flex: none;
+    margin-top: 0.15rem;
+    font-size: 0.625rem;
+    line-height: 1;
+    color: var(--fg-subtle);
+    cursor: pointer;
+    transition: transform 150ms ease;
+  }
+  .tiptap-area .alternavel-seta:hover {
+    color: var(--fg);
+  }
+  .tiptap-area .alternavel[data-aberto='true'] .alternavel-seta {
+    transform: rotate(90deg);
+  }
+  .tiptap-area .alternavel-corpo {
+    flex: 1;
+    min-width: 0;
+  }
+  .tiptap-area .alternavel-corpo > summary {
+    display: block;
+    font-weight: 500;
+    color: var(--fg);
+    list-style: none;
+  }
+  .tiptap-area .alternavel-corpo > summary::-webkit-details-marker {
+    display: none;
+  }
+  /* Fechado, some tudo menos o título — e o texto continua no documento. */
+  .tiptap-area .alternavel[data-aberto='false'] .alternavel-corpo > *:not(summary) {
+    display: none;
+  }
+  .prose-notes hr {
+    border-color: var(--border);
+  }
+  /* A tabela é estilizada mais acima, junto com o resto da grade. O bloco que
+     existia aqui era anterior à tabela do editor e vinha depois na folha, então
+     ganhava: com `display: block` a tabela deixa de ser tabela, `table-layout`
+     para de valer e as colunas encolhem para os 25px mínimos do ProseMirror. */
   .prose-notes img {
     max-width: 100%;
     border-radius: 10px;
@@ -488,9 +673,7 @@
     color: var(--fg-muted);
     text-decoration: none;
   }
-}
 
-@layer components {
   /* ---------------------------------------------------------------------
      Editor de texto formatado (TipTap)
 

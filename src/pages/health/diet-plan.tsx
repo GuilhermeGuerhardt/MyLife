@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Field, Input } from '@/components/ui/field'
 import { Badge, EmptyState, Progress, SectionTitle, Stat } from '@/components/ui/misc'
+import { PageHeader } from '@/components/ui/page-header'
 import { useDailyMetrics, useDietPlans } from '@/data/queries'
 import { useHealthSummary } from '@/features/health/use-health-summary'
 import { WeightChart, type WeightPoint } from '@/features/health/weight-chart'
@@ -99,7 +100,7 @@ export function DietPlanPage() {
   if (!weight || !summary.hasProfile) {
     return (
       <div className="space-y-6">
-        <h1 className="text-fg text-xl font-semibold">Plano de emagrecimento</h1>
+        <PageHeader title="Plano de emagrecimento" />
         <Card>
           <EmptyState
             icon={<Target className="size-6" />}
@@ -125,13 +126,10 @@ export function DietPlanPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-fg text-xl font-semibold">Plano de emagrecimento</h1>
-        <p className="text-fg-muted mt-1 text-sm">
-          Mifflin-St Jeor para a TMB, gasto ajustado pelos seus treinos e déficit dentro de limites
-          seguros.
-        </p>
-      </div>
+      <PageHeader
+        title="Plano de emagrecimento"
+        description="Mifflin-St Jeor para a TMB, gasto ajustado pelos seus treinos e déficit dentro de limites seguros."
+      />
 
       <div className="grid gap-4 lg:grid-cols-[340px_minmax(0,1fr)]">
         <Card className="h-fit">

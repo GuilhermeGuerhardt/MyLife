@@ -21,8 +21,9 @@ import {
   type ColumnMap,
   type RowFilter,
 } from '@/lib/finance/import'
+import { treinar } from '@/lib/finance/classificador'
 import { useImportRun } from './import-run'
-import { labelKinds, suggestAccounts, suggestCategories } from './use-import'
+import { chaveDaCategoria, labelKinds, suggestAccounts, suggestCategories } from './use-import'
 
 export function useImportWizard() {
   const { data: accounts } = useAccounts()
@@ -43,6 +44,7 @@ export function useImportWizard() {
 
   const [selected, setSelected] = useState<Set<number>>(new Set())
   const [filter, setFilter] = useState<RowFilter>('all')
+  const [sugerindo, setSugerindo] = useState(true)
 
   const estado = execucao.estado
   const running = estado.kind === 'rodando'
@@ -99,6 +101,42 @@ export function useImportWizard() {
     if (!fallbackAccount && accounts.length > 0) setFallbackAccount(accounts[0]!.id)
   }, [accounts, fallbackAccount])
 
+  /**
+   * O que o seu histórico sabe sobre a categoria de cada linha.
+   *
+   * O extrato do banco não traz categoria, e sem isto toda importação despeja
+   * centenas de lançamentos sem classificação — que ninguém volta para
+   * classificar depois. O palpite sai dos lançamentos que você mesmo já
+   * categorizou, não de uma tabela pronta: ele conhece a padaria da sua esquina.
+   *
+   * Só entra onde ficaria vazio. Rótulo vindo do arquivo — inclusive um que
+   * você mandou ignorar — manda, e a sugestão nem é calculada.
+   */
+  const classificador = useMemo(() => treinar(transactions), [transactions])
+
+  const sugestoes = useMemo(() => {
+    const fora = new Map<number, { categoryId: string; nome: string; chave: string }>()
+    if (!sugerindo) return fora
+
+    const nomes = new Map(categories.map((categoria) => [categoria.id, categoria.name]))
+
+    for (const row of rows) {
+      if (row.error || row.kind === 'transfer') continue
+      // O arquivo já falou desta linha: a escolha daquele rótulo resolve.
+      if (categoryChoice[chaveDaCategoria(row.categoryLabel, row.kind)] !== undefined) continue
+
+      const palpite = classificador.sugerir(row.description, row.kind)
+      const nome = palpite && nomes.get(palpite.categoryId)
+      // Categoria apagada depois de ter sido usada: o histórico ainda aponta
+      // para ela, mas sugerir um nome que não existe mais não ajuda ninguém.
+      if (!palpite || !nome) continue
+
+      fora.set(row.line, { categoryId: palpite.categoryId, nome, chave: palpite.chave })
+    }
+
+    return fora
+  }, [rows, categoryChoice, categories, classificador, sugerindo])
+
   async function loadFile(file: File) {
     setReadError(null)
     limparRecibo()
@@ -146,6 +184,9 @@ export function useImportWizard() {
         accounts: accountChoice,
         categories: categoryChoice,
         fallbackAccountId: fallbackAccount,
+        sugestoes: Object.fromEntries(
+          [...sugestoes].map(([linha, palpite]) => [linha, palpite.categoryId]),
+        ),
       },
       fileName ?? 'planilha',
     )
@@ -178,6 +219,11 @@ export function useImportWizard() {
       setCategoryChoice((current) => ({ ...current, [chave]: value })),
 
     rows,
+    sugestoes,
+    sugerindo,
+    setSugerindo,
+    /** Zero quando o app ainda não tem histórico categorizado de onde aprender. */
+    baseDeAprendizado: classificador.base,
     summary: summarize(rows, (row) => selected.has(row.line)),
     selected,
     toggle,

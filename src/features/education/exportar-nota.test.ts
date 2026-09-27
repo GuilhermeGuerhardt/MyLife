@@ -47,6 +47,26 @@ describe('exportação', () => {
     expect(ultimo().conteudo).toBe('Aula 2\n\nTÓPICO\n\nCom negrito.\n')
   })
 
+  it('a tabela vira tabela de verdade no .docx', async () => {
+    // Montar o documento já prova que a estrutura serve: a biblioteca recusa
+    // linha e célula malformadas na montagem, antes de gerar um byte.
+    const html =
+      '<table><tbody><tr><th>Matéria</th><th>Nota</th></tr>' +
+      '<tr><td>Cálculo</td><td>8,5</td></tr></tbody></table>'
+    await exportarNota('Boletim', html, 'html', 'docx')
+
+    const bytes = ultimo().conteudo as Uint8Array
+    expect([bytes[0], bytes[1]]).toEqual([0x50, 0x4b])
+  })
+
+  it('a tabela no .txt sai como grade de barras', async () => {
+    const html =
+      '<table><tbody><tr><th>A</th><th>B</th></tr><tr><td>1</td><td>2</td></tr></tbody></table>'
+    await exportarNota('Grade', html, 'html', 'txt')
+    expect(ultimo().conteudo).toContain('A | B')
+    expect(ultimo().conteudo).toContain('1 | 2')
+  })
+
   it('o .docx sai como um arquivo do Word de verdade', async () => {
     const html =
       '<h1>Título</h1><p><span style="color: #0091ff">colorido</span> ' +

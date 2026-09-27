@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Select } from '@/components/ui/field'
 import { Badge, EmptyState, Progress, SectionTitle, Segmented, Stat } from '@/components/ui/misc'
+import { PageHeader } from '@/components/ui/page-header'
 import { useInstitutions, useNotes, usePrograms, useSubjects } from '@/data/queries'
 import { DEGREE_LABELS, type Subject } from '@/data/types'
 import { CertificateThumb } from '@/features/education/certificate'
@@ -95,11 +96,15 @@ export function ProgramDetail() {
             <ArrowLeft className="size-3.5" />
             Faculdade
           </Link>
-          <h1 className="text-fg text-xl font-semibold">{program.name}</h1>
-          <p className="text-fg-muted mt-1 text-sm">
-            {institution?.name ?? 'Sem instituição'} · {DEGREE_LABELS[program.degree]}
-            {program.current_term ? ` · ${program.current_term}º semestre` : ''}
-          </p>
+          <PageHeader
+            title={program.name}
+            description={
+              <>
+                {institution?.name ?? 'Sem instituição'} · {DEGREE_LABELS[program.degree]}
+                {program.current_term ? ` · ${program.current_term}º semestre` : ''}
+              </>
+            }
+          />
         </div>
         <div className="flex items-center gap-2">
           {ehImagem(program.certificate_url) && (

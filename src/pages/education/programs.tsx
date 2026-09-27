@@ -12,6 +12,7 @@ import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge, EmptyState, Progress, SectionTitle, Stat } from '@/components/ui/misc'
+import { PageHeader } from '@/components/ui/page-header'
 import { useInstitutions, useNotes, usePrograms } from '@/data/queries'
 import { DEGREE_LABELS, PROGRAM_STATUS_LABELS, type ProgramTrack } from '@/data/types'
 import { ProgramForm, type ProgramDraft } from '@/features/education/program-form'
@@ -44,29 +45,29 @@ function ProgramsPage({ track }: { track: ProgramTrack }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-fg text-xl font-semibold">{academic ? 'Faculdade' : 'Cursos'}</h1>
-          <p className="text-fg-muted mt-1 max-w-2xl text-sm">
-            {academic
-              ? 'Cadastre uma ou mais instituições. Cada curso tem grade curricular, notas, faltas e o cálculo do que ainda falta para formar.'
-              : 'Cursos livres de qualquer plataforma, com progresso por aula e ritmo necessário para bater o prazo.'}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Link to={`${base}/caderno`}>
-            <Button variant="secondary">
-              <NotebookPen />
-              Caderno
-              {totalNotes > 0 && <Badge>{totalNotes}</Badge>}
+      <PageHeader
+        title={academic ? 'Faculdade' : 'Cursos'}
+        description={
+          academic
+            ? 'Cadastre uma ou mais instituições. Cada curso tem grade curricular, notas, faltas e o cálculo do que ainda falta para formar.'
+            : 'Cursos livres de qualquer plataforma, com progresso por aula e ritmo necessário para bater o prazo.'
+        }
+        action={
+          <div className="flex gap-2">
+            <Link to={`${base}/caderno`}>
+              <Button variant="secondary">
+                <NotebookPen />
+                Caderno
+                {totalNotes > 0 && <Badge>{totalNotes}</Badge>}
+              </Button>
+            </Link>
+            <Button onClick={() => setCreating(true)}>
+              <Plus />
+              {academic ? 'Curso' : 'Novo curso'}
             </Button>
-          </Link>
-          <Button onClick={() => setCreating(true)}>
-            <Plus />
-            {academic ? 'Curso' : 'Novo curso'}
-          </Button>
-        </div>
-      </div>
+          </div>
+        }
+      />
 
       {active.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-3">

@@ -169,19 +169,25 @@ export interface MealPreset extends BaseRow {
  * nenhum por trás. Nenhum `Program` ou `Institution` nasce com esse trilho —
  * quem o carrega é sempre uma `Note` sem `program_id`.
  */
-export type Track = 'academic' | 'course' | 'free'
+export type Track = 'academic' | 'course' | 'free' | 'personal'
 
 /** Trilho de um programa — o subconjunto de `Track` que vira curso de verdade. */
-export type ProgramTrack = Exclude<Track, 'free'>
+export type ProgramTrack = Exclude<Track, 'free' | 'personal'>
 
+/**
+ * Os dois trilhos sem curso: `free` é estudo por conta, o que se aprende fora
+ * de uma matrícula, e `personal` não é estudo nenhum — ideia, rascunho, lista,
+ * o que a pessoa escreve e não quer no meio do material de aula.
+ */
 export const TRACK_LABELS: Record<Track, string> = {
   academic: 'Faculdade',
   course: 'Cursos',
   free: 'Estudos',
+  personal: 'Anotações',
 }
 
 /** A ordem em que os trilhos aparecem na árvore do caderno. */
-export const TRACK_ORDER: Track[] = ['academic', 'course', 'free']
+export const TRACK_ORDER: Track[] = ['academic', 'course', 'free', 'personal']
 
 export interface Institution extends BaseRow {
   name: string
@@ -421,6 +427,24 @@ export const LIFE_AREA_LABELS: Record<LifeArea, string> = {
   other: 'Pessoal',
 }
 
+/**
+ * A tarefa avulsa: o que precisa ser feito uma vez.
+ *
+ * O que o app já tinha não cobria isto. Prazo é de curso e exige data; hábito é
+ * o que se repete; caixa de anotação vive presa ao texto. Faltava onde escrever
+ * "renovar o seguro" — sem curso, sem repetição, e quase sempre sem data.
+ *
+ * Por isso `date` é nulo por padrão: a tarefa com prazo é a exceção, e é ela
+ * que aparece na agenda.
+ */
+export interface Task extends BaseRow {
+  title: string
+  done: boolean
+  /** Prazo, quando existe. */
+  date: string | null
+  notes: string | null
+}
+
 export interface Habit extends BaseRow {
   name: string
   icon: string
@@ -437,6 +461,39 @@ export interface Habit extends BaseRow {
 export interface HabitLog extends BaseRow {
   habit_id: string
   date: string
+}
+
+/**
+ * Uma tarefa do caderno que saiu do quadro.
+ *
+ * Nem toda caixinha escrita no meio de uma aula é uma tarefa de verdade: muita
+ * é exemplo, item de checklist da matéria, lembrete que já perdeu a validade.
+ * Tirar do quadro é só isso, tirar do quadro — o `- [ ]` continua escrito na
+ * anotação, do jeito que estava.
+ *
+ * Guarda a anotação e o texto, não a posição. A posição muda toda vez que
+ * alguém escreve uma caixinha acima, e a lista voltaria com outra tarefa
+ * escondida no lugar da que foi tirada.
+ */
+export interface HiddenTask extends BaseRow {
+  /** Id da anotação de onde a tarefa veio. */
+  nota: string
+  /** O texto da tarefa no momento em que saiu do quadro. */
+  texto: string
+}
+
+/**
+ * Um módulo do menu que o usuário escondeu.
+ *
+ * Só existe linha para o que ele mexeu — módulo novo numa versão futura
+ * aparece, em vez de sumir por não ter linha gravada. Esconder é do menu para
+ * fora: nada é apagado, a tela continua respondendo pelo endereço, e mostrar de
+ * volta devolve tudo como estava.
+ */
+export interface ModuleSetting extends BaseRow {
+  /** A rota do módulo, como em `NAV`: `/saude`, `/financeiro`. */
+  modulo: string
+  visible: boolean
 }
 
 export interface DashboardWidget extends BaseRow {

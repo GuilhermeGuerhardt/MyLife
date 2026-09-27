@@ -155,6 +155,11 @@ export interface ImportPlan {
   categories: Record<string, string>
   /** Conta usada quando a linha não traz rótulo nenhum. */
   fallbackAccountId: string
+  /**
+   * Linha → categoria adivinhada pelo histórico, para as que o arquivo deixou
+   * sem categoria. Vazio quando a pessoa desligou as sugestões.
+   */
+  sugestoes: Record<number, string>
 }
 
 /**
@@ -271,6 +276,25 @@ export interface AlvosDaImportacao {
   contasPorId: Map<string, Account>
   /** Conta usada quando a linha não traz rótulo nenhum. */
   fallbackAccountId: string
+  /** Linha → categoria sugerida pelo histórico, quando o arquivo não deu uma. */
+  sugestoes: Map<number, string>
+}
+
+/**
+ * A categoria de uma linha: o que o arquivo diz, e só então o palpite.
+ *
+ * A distinção entre "o arquivo não falou de categoria" e "o arquivo falou e a
+ * pessoa mandou ignorar" é `undefined` contra `null`, e ela importa: quem
+ * escolheu *Sem categoria* para um rótulo pediu nenhuma categoria, não pediu
+ * que o app escolhesse uma.
+ */
+function categoriaDaLinha(row: ImportRow, alvos: AlvosDaImportacao): string | null {
+  // Transferência não tem categoria: o dinheiro trocou de conta, não sumiu.
+  if (row.kind === 'transfer') return null
+
+  const daPlanilha = alvos.categorias.get(chaveDaCategoria(row.categoryLabel, row.kind))
+  if (daPlanilha !== undefined) return daPlanilha
+  return alvos.sugestoes.get(row.line) ?? null
 }
 
 /**
@@ -306,10 +330,7 @@ export function montarLancamentos(
     lancamentos.push({
       account_id: contaId,
       transfer_account_id: destinoId,
-      category_id:
-        row.kind === 'transfer'
-          ? null
-          : (alvos.categorias.get(chaveDaCategoria(row.categoryLabel, row.kind)) ?? null),
+      category_id: categoriaDaLinha(row, alvos),
       kind: row.kind,
       amount_cents: row.amountCents,
       date: row.date,
@@ -366,6 +387,9 @@ export function useRunImport() {
       categorias: categorias.ids,
       contasPorId: new Map(accounts.map((conta) => [conta.id, conta])),
       fallbackAccountId: plan.fallbackAccountId,
+      sugestoes: new Map(
+        Object.entries(plan.sugestoes).map(([linha, categoria]) => [Number(linha), categoria]),
+      ),
     })
 
     await createTransactions(lancamentos, (done) => onProgress?.({ done: feitos + done, total }))

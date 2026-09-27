@@ -2,22 +2,21 @@ import { Download, Info } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Field, Select } from '@/components/ui/field'
+import { Field, Input } from '@/components/ui/field'
 import { useAccounts, useCategories, useTransactions } from '@/data/queries'
-import { addMonths, competenceLabel, toCompetence } from '@/lib/finance/billing'
+import { toCompetence } from '@/lib/finance/billing'
 import {
   buildExportRows,
   exportFilename,
-  filterByScope,
-  SCOPE_LABELS,
+  filtrarPorPeriodo,
+  periodoDeTudo,
+  periodoValido,
   toCsvFile,
-  type ExportScope,
+  type Periodo,
 } from '@/lib/finance/export'
 import { integer } from '@/lib/format'
 import { PLANILHA_CSV, salvarArquivo } from '@/lib/salvar-arquivo'
 import { today } from '@/lib/utils'
-
-const SCOPES = Object.keys(SCOPE_LABELS) as ExportScope[]
 
 /**
  * Exportação dos lançamentos.
@@ -25,24 +24,35 @@ const SCOPES = Object.keys(SCOPE_LABELS) as ExportScope[]
  * Fica ao lado da importação de propósito: são a mesma porta, em sentidos
  * opostos, e o arquivo que sai daqui é exatamente o que aquela sabe ler de
  * volta.
+ *
+ * O recorte é um intervalo de meses em vez de uma lista de opções. A lista
+ * cobria três pedidos e deixava de fora o trimestre, o semestre e o ano
+ * fechado, que são justamente os recortes que alguém exporta para levar
+ * adiante.
  */
 export function ExportCard() {
   const { data: transactions } = useTransactions()
   const { data: accounts } = useAccounts()
   const { data: categories } = useCategories()
 
-  const [scope, setScope] = useState<ExportScope>('all')
+  // Nulo enquanto ninguém mexeu: o intervalo acompanha os lançamentos que
+  // forem chegando, em vez de travar no que existia na primeira renderização.
+  const [escolhido, setEscolhido] = useState<Periodo | null>(null)
   const [busy, setBusy] = useState(false)
   const [aviso, setAviso] = useState<string | null>(null)
 
-  const competence = toCompetence(today())
+  const tudo = useMemo(() => periodoDeTudo(transactions, toCompetence(today())), [transactions])
+  const periodo = escolhido ?? tudo
+  const valido = periodoValido(periodo)
 
   const selecionadas = useMemo(
-    () => filterByScope(transactions, scope, competence, addMonths),
-    [transactions, scope, competence],
+    () => filtrarPorPeriodo(transactions, periodo),
+    [transactions, periodo],
   )
 
   const transferencias = selecionadas.filter((tx) => tx.kind === 'transfer').length
+  const recortado = periodo.de !== tudo.de || periodo.ate !== tudo.ate
+  const aberto = !periodo.de || !periodo.ate
 
   async function exportar() {
     setBusy(true)
@@ -58,11 +68,7 @@ export function ExportCard() {
         }),
       )
 
-      const salvo = await salvarArquivo(
-        exportFilename(scope, competence, today()),
-        csv,
-        PLANILHA_CSV,
-      )
+      const salvo = await salvarArquivo(exportFilename(periodo, today()), csv, PLANILHA_CSV)
       if (salvo) setAviso(`${integer(selecionadas.length)} lançamentos exportados.`)
     } catch (causa) {
       setAviso(causa instanceof Error ? causa.message : 'Não foi possível gerar o arquivo.')
@@ -78,28 +84,55 @@ export function ExportCard() {
         description="Um CSV que abre no Excel — e que esta mesma tela sabe importar de volta."
       />
       <CardContent className="space-y-4">
+        {/*
+          Alinhado pela base: os campos têm a mesma altura — sem dica embaixo,
+          que só repetiria o mês que o próprio campo já escreve por extenso — e
+          assim os botões encostam na linha dos inputs sem margem chutada.
+        */}
         <div className="flex flex-wrap items-end gap-3">
-          <Field label="O que exportar" className="min-w-48 flex-1">
-            <Select value={scope} onChange={(e) => setScope(e.target.value as ExportScope)}>
-              {SCOPES.map((option) => (
-                <option key={option} value={option}>
-                  {SCOPE_LABELS[option]}
-                  {option === 'month' ? ` · ${competenceLabel(competence)}` : ''}
-                </option>
-              ))}
-            </Select>
+          <Field label="De" className="min-w-36 flex-1 sm:max-w-52">
+            <Input
+              type="month"
+              value={periodo.de}
+              onChange={(e) => setEscolhido({ ...periodo, de: e.target.value })}
+            />
           </Field>
 
-          <Button
-            onClick={() => void exportar()}
-            disabled={busy || selecionadas.length === 0}
-          >
-            <Download />
-            {busy ? 'Gerando…' : `Baixar ${integer(selecionadas.length)}`}
-          </Button>
+          <Field label="Até" className="min-w-36 flex-1 sm:max-w-52">
+            <Input
+              type="month"
+              value={periodo.ate}
+              onChange={(e) => setEscolhido({ ...periodo, ate: e.target.value })}
+            />
+          </Field>
+
+          <div className="flex items-center gap-2">
+            {recortado && (
+              <Button variant="ghost" onClick={() => setEscolhido(null)}>
+                Tudo
+              </Button>
+            )}
+            <Button
+              onClick={() => void exportar()}
+              disabled={busy || !valido || selecionadas.length === 0}
+            >
+              <Download />
+              {busy ? 'Gerando…' : `Baixar ${integer(selecionadas.length)}`}
+            </Button>
+          </div>
         </div>
 
-        {selecionadas.length === 0 ? (
+        {aberto && valido && (
+          <p className="text-fg-subtle text-[11px]">
+            {periodo.de
+              ? 'Sem o mês final, o arquivo vai até o último lançamento.'
+              : 'Sem o mês inicial, o arquivo começa no primeiro lançamento.'}
+          </p>
+        )}
+
+        {!valido ? (
+          <p className="text-negative text-xs">O mês final vem antes do inicial.</p>
+        ) : selecionadas.length === 0 ? (
           <p className="text-fg-muted text-xs">Nenhum lançamento neste recorte.</p>
         ) : (
           <p className="text-fg-subtle flex items-start gap-1.5 text-[11px] leading-relaxed">

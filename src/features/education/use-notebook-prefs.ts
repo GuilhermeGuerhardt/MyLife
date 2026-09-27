@@ -77,3 +77,32 @@ export function useNoteView(): [NoteView, (view: NoteView) => void] {
 
   return [view, change]
 }
+
+/** Onde a janela de escrita lembra se estava escrevendo ou lendo. */
+const WINDOW_MODE_KEY = 'life:caderno-janela-modo'
+
+function readWindowMode(): 'edit' | 'preview' {
+  try {
+    return localStorage.getItem(WINDOW_MODE_KEY) === 'preview' ? 'preview' : 'edit'
+  } catch {
+    return 'edit'
+  }
+}
+
+/**
+ * A janela separada abre escrevendo, e não lendo.
+ *
+ * É o contrário do painel: lá abrir uma anotação é para ler, e a caneta é um
+ * clique. Quem destaca a anotação numa janela só dela já decidiu que vai
+ * escrever — abrir no modo de leitura seria pedir o mesmo clique toda vez.
+ */
+export function useNoteWindowMode(): ['edit' | 'preview', (mode: 'edit' | 'preview') => void] {
+  const [mode, setMode] = useState<'edit' | 'preview'>(readWindowMode)
+
+  const change = useCallback((next: 'edit' | 'preview') => {
+    setMode(next)
+    write(WINDOW_MODE_KEY, next)
+  }, [])
+
+  return [mode, change]
+}

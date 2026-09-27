@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge, EmptyState, Progress, SectionTitle, Stat } from '@/components/ui/misc'
+import { PageHeader } from '@/components/ui/page-header'
 import { useAccounts } from '@/data/queries'
 import { ACCOUNT_KIND_LABELS, type Account } from '@/data/types'
 import { AccountForm } from '@/features/finance/account-form'
@@ -38,21 +39,19 @@ export function AccountsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-fg text-xl font-semibold">Contas e cartões</h1>
-          <p className="text-fg-muted mt-1 text-sm">
-            Saldo das contas e a fatura de cada cartão, por competência.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <MonthNav competence={competence} onChange={setCompetence} />
-          <Button onClick={() => setAdding(true)}>
-            <Plus />
-            Conta
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Contas e cartões"
+        description="Saldo das contas e a fatura de cada cartão, por competência."
+        action={
+          <div className="flex items-center gap-2">
+            <MonthNav competence={competence} onChange={setCompetence} />
+            <Button onClick={() => setAdding(true)}>
+              <Plus />
+              Conta
+            </Button>
+          </div>
+        }
+      />
 
       {finance.summaries.length === 0 ? (
         <Card>

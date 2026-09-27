@@ -170,3 +170,48 @@ describe('trecho do retrolink', () => {
     expect(trecho).not.toContain(']]')
   })
 })
+
+/**
+ * A anotação em texto formatado entra na mesma rede.
+ *
+ * O link é o mesmo `[[Título]]` nos dois editores. As primeiras anotações
+ * convertidas guardaram uma âncora com `data-nota` — elas não podem sumir do
+ * painel de menções por causa disso.
+ */
+describe('rede com anotação formatada', () => {
+  const alvo = { id: 'alvo', title: 'Arquitetura', content: '' }
+
+  it('o [[link]] escrito no editor formatado conta', () => {
+    const nota = { id: 'a', title: 'Aula', content: '<p>Ver [[Arquitetura]] aqui.</p>' }
+    expect(linksDoTexto(nota.content)).toEqual(['Arquitetura'])
+    expect(retrolinks(alvo, [nota]).map((r) => r.nota.id)).toEqual(['a'])
+  })
+
+  it('a âncora das anotações convertidas antes também conta', () => {
+    const nota = {
+      id: 'b',
+      title: 'Antiga',
+      content: '<p>Ver <a href="#nota" data-nota="Arquitetura">Arquitetura</a>.</p>',
+    }
+    expect(linksDoTexto(nota.content)).toEqual(['Arquitetura'])
+    expect(retrolinks(alvo, [nota]).map((r) => r.nota.id)).toEqual(['b'])
+  })
+
+  it('o trecho da menção não mostra etiqueta de HTML', () => {
+    const nota = {
+      id: 'c',
+      title: 'Aula',
+      content: '<p><strong>Antes</strong> de ver [[Arquitetura]], leia isto.</p>',
+    }
+    const [achado] = retrolinks(alvo, [nota])
+    expect(achado!.trecho).not.toMatch(/[<>]/)
+    expect(achado!.trecho).toContain('Antes de ver Arquitetura')
+  })
+
+  it('renomear conserta os dois jeitos de escrever o link', () => {
+    const markdown = 'Ver [[Arquitetura]].'
+    const antigo = '<a data-nota="Arquitetura">Arquitetura</a>'
+    expect(renomearNosTextos(markdown, 'Arquitetura', 'Hexagonal')).toBe('Ver [[Hexagonal]].')
+    expect(renomearNosTextos(antigo, 'Arquitetura', 'Hexagonal')).toContain('data-nota="Hexagonal"')
+  })
+})

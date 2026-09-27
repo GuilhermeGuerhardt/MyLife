@@ -4,6 +4,7 @@ import {
   useActivityTypes,
   useAssessments,
   useDeadlines,
+  useTasks,
   useDietPlans,
   useGoals,
   usePrograms,
@@ -17,6 +18,7 @@ import {
   billEvents,
   classEvents,
   deadlineEvents,
+  taskEvents,
   dietPlanEvents,
   goalEvents,
   groupByDay,
@@ -37,6 +39,7 @@ import {
 export function useAgenda(from: string, to: string) {
   const { data: subjects } = useSubjects()
   const { data: deadlines } = useDeadlines()
+  const { data: tasks } = useTasks()
   const { data: assessments } = useAssessments()
   const { data: sessions } = useSessions()
   const { data: activities } = useActivityTypes()
@@ -92,12 +95,14 @@ export function useAgenda(from: string, to: string) {
       ...goalEvents(goals, from, to),
       ...programEvents(programs, from, to),
       ...dietPlanEvents(dietPlans, from, to),
+      ...taskEvents(tasks, from, to),
     ])
 
     return { events, byDay: groupByDay(events) }
   }, [
     subjects,
     deadlines,
+    tasks,
     assessments,
     sessions,
     activities,

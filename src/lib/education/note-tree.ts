@@ -203,8 +203,16 @@ export function allTags(notes: SearchableNote[]): string[] {
 
 /** A anotação com o trilho, para a árvore poder agrupar por ele. */
 export interface TrackedNote extends SearchableNote {
-  track: 'academic' | 'course' | 'free'
+  track: string
 }
+
+/**
+ * Os trilhos que têm curso embaixo.
+ *
+ * Os outros — estudo por conta, anotação pessoal — não têm onde pendurar uma
+ * pasta de curso, e o nome deles é decidido por quem chama, não aqui.
+ */
+const TRILHOS_COM_CURSO = new Set(['academic', 'course'])
 
 export const TRACK_FOLDER_PREFIX = 'track:'
 
@@ -213,8 +221,8 @@ export function trackKey(track: string): string {
 }
 
 /**
- * A árvore do caderno reunido: um nível a mais no topo, com Faculdade, Cursos
- * e Estudos, e a árvore de cada trilho pendurada abaixo.
+ * A árvore do caderno reunido: um nível a mais no topo, com Faculdade, Cursos,
+ * Estudos e Anotações, e a árvore de cada trilho pendurada abaixo.
  *
  * Existe porque os dois cadernos viraram um. O curso desceu um degrau, e o
  * estudo livre — que não tem curso nenhum — ganhou onde morar em vez de cair
@@ -232,10 +240,11 @@ export function buildTrackTree(
     const doTrack = notes.filter((note) => note.track === track)
     if (doTrack.length === 0) continue
 
-    // Estudo livre não tem curso: uma pasta "Geral" dentro de "Estudos" seria
+    // Trilho sem curso não ganha pasta: uma "Geral" dentro de "Estudos" seria
     // um degrau sem informação nenhuma. As anotações ficam direto no trilho.
-    const children = track === 'free' ? [] : buildNoteTree(doTrack, programs, subjects)
-    const soltas = track === 'free' ? doTrack : []
+    const temCurso = TRILHOS_COM_CURSO.has(track)
+    const children = temCurso ? buildNoteTree(doTrack, programs, subjects) : []
+    const soltas = temCurso ? [] : doTrack
 
     folders.push({
       key: trackKey(track),

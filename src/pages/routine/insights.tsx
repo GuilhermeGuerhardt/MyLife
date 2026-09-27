@@ -1,6 +1,7 @@
 import { ArrowDown, ArrowUp, Lightbulb, Minus } from 'lucide-react'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge, EmptyState } from '@/components/ui/misc'
+import { PageHeader } from '@/components/ui/page-header'
 import { useInsights } from '@/features/routine/use-insights'
 import type { Insight, ReviewMetric } from '@/lib/insights/insights'
 import type { WeekStats } from '@/lib/insights/weeks'
@@ -26,13 +27,10 @@ export function InsightsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-fg text-xl font-semibold">Insights</h1>
-        <p className="text-fg-muted mt-1 max-w-2xl text-sm">
-          O que aparece quando os módulos são olhados juntos. Tudo aqui compara semanas — o dia é
-          ruído demais — e nada é afirmado sem pelo menos três semanas de cada lado.
-        </p>
-      </div>
+      <PageHeader
+        title="Insights"
+        description="O que aparece quando os módulos se cruzam. A comparação é sempre por semana, porque um dia sozinho oscila demais, e nenhuma frase sai daqui com menos de três semanas de cada lado."
+      />
 
       <Card>
         <CardHeader

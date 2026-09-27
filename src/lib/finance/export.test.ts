@@ -1,10 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { addMonths } from './billing'
 import {
   buildExportRows,
   escapeField,
   exportFilename,
-  filterByScope,
+  filtrarPorPeriodo,
+  periodoDeTudo,
+  periodoValido,
   toBrAmount,
   toBrDate,
   toCsv,
@@ -216,40 +217,79 @@ describe('ida e volta pelo importador', () => {
   })
 })
 
-describe('escopo', () => {
+describe('período', () => {
   const linhas = [
-    { competence: '2024-11' }, // fora da janela
-    { competence: '2025-04' }, // exatamente o limite: 11 meses atrás
+    { competence: '2024-11' },
+    { competence: '2025-04' },
     { competence: '2026-01' },
     { competence: '2026-03' },
   ]
 
-  it('mês aberto traz só a competência pedida', () => {
-    expect(filterByScope(linhas, 'month', '2026-03', addMonths)).toEqual([{ competence: '2026-03' }])
+  const meses = (periodo: { de: string; ate: string }) =>
+    filtrarPorPeriodo(linhas, periodo).map((l) => l.competence)
+
+  it('inclui os dois meses das pontas', () => {
+    expect(meses({ de: '2025-04', ate: '2026-01' })).toEqual(['2025-04', '2026-01'])
   })
 
-  it('doze meses corta o que é mais antigo que isso', () => {
-    const out = filterByScope(linhas, 'year', '2026-03', addMonths)
-    expect(out.map((l) => l.competence)).toEqual(['2025-04', '2026-01', '2026-03'])
+  it('traz um mês só quando as pontas são iguais', () => {
+    expect(meses({ de: '2026-03', ate: '2026-03' })).toEqual(['2026-03'])
   })
 
-  it('inclui o mês do limite, contando doze meses com o aberto dentro', () => {
-    const out = filterByScope([{ competence: '2025-04' }], 'year', '2026-03', addMonths)
-    expect(out).toHaveLength(1)
+  it('vai até o último lançamento quando o fim está vazio', () => {
+    expect(meses({ de: '2026-01', ate: '' })).toEqual(['2026-01', '2026-03'])
   })
 
-  it('tudo não filtra nada', () => {
-    expect(filterByScope(linhas, 'all', '2026-03', addMonths)).toHaveLength(4)
+  it('começa no primeiro lançamento quando o começo está vazio', () => {
+    expect(meses({ de: '', ate: '2025-04' })).toEqual(['2024-11', '2025-04'])
+  })
+
+  it('sem nenhuma ponta é tudo', () => {
+    expect(meses({ de: '', ate: '' })).toHaveLength(4)
+  })
+
+  it('não devolve nada quando o fim vem antes do começo', () => {
+    expect(meses({ de: '2026-03', ate: '2025-01' })).toEqual([])
+    expect(periodoValido({ de: '2026-03', ate: '2025-01' })).toBe(false)
+  })
+
+  it('aceita o intervalo com uma ponta aberta', () => {
+    expect(periodoValido({ de: '', ate: '2020-01' })).toBe(true)
+  })
+
+  it('abre cobrindo do primeiro ao último lançamento', () => {
+    expect(periodoDeTudo(linhas, '2026-09')).toEqual({ de: '2024-11', ate: '2026-03' })
+  })
+
+  it('sem lançamento nenhum, abre no mês de hoje', () => {
+    expect(periodoDeTudo([], '2026-09')).toEqual({ de: '2026-09', ate: '2026-09' })
   })
 })
 
 describe('nome do arquivo', () => {
-  it('carrega a competência no recorte mensal', () => {
-    expect(exportFilename('month', '2026-03', '2026-03-21')).toBe('life-lancamentos-2026-03.csv')
+  it('carrega o intervalo', () => {
+    expect(exportFilename({ de: '2026-01', ate: '2026-03' }, '2026-03-21')).toBe(
+      'life-lancamentos-2026-01-a-2026-03.csv',
+    )
   })
 
-  it('carrega a data nos demais', () => {
-    expect(exportFilename('all', '2026-03', '2026-03-21')).toBe('life-lancamentos-2026-03-21.csv')
+  it('usa só a competência quando é um mês só', () => {
+    expect(exportFilename({ de: '2026-03', ate: '2026-03' }, '2026-03-21')).toBe(
+      'life-lancamentos-2026-03.csv',
+    )
+  })
+
+  it('diz de onde vem, ou até onde vai, na ponta aberta', () => {
+    expect(exportFilename({ de: '2026-01', ate: '' }, '2026-03-21')).toBe(
+      'life-lancamentos-desde-2026-01.csv',
+    )
+    expect(exportFilename({ de: '', ate: '2026-01' }, '2026-03-21')).toBe(
+      'life-lancamentos-ate-2026-01.csv',
+    )
+  })
+
+  it('cai na data do dia quando as duas pontas estão abertas', () => {
+    expect(exportFilename({ de: '', ate: '' }, '2026-03-21')).toBe('life-lancamentos-2026-03-21.csv')
   })
 })
 

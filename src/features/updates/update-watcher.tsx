@@ -9,12 +9,17 @@ import { AlertTriangle, Download, WifiOff } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/misc'
 import { Toast, ToastArea } from '@/components/ui/toast'
+import { ehJanelaSecundaria } from '@/components/layout/janela-solta'
 import { useUpdater } from './use-updater'
 
 export function UpdateWatcher() {
   const { estado, instalar, dispensar } = useUpdater()
+  // Instalar fecha e reabre o app inteiro. Oferecer isso pela janela onde
+  // alguém está escrevendo uma anotação é pedir para interromper o trabalho
+  // pela porta dos fundos: o aviso é da janela principal.
+  const secundaria = ehJanelaSecundaria()
 
-  if (estado.kind === 'quieto') return null
+  if (secundaria || estado.kind === 'quieto') return null
 
   return (
     <ToastArea>

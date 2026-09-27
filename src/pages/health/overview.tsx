@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Field, Input, Textarea } from '@/components/ui/field'
 import { Modal } from '@/components/ui/modal'
 import { Badge, EmptyState, SectionTitle, Stat } from '@/components/ui/misc'
+import { PageHeader } from '@/components/ui/page-header'
 import { useMeasurements } from '@/data/queries'
 import { useHealthSummary } from '@/features/health/use-health-summary'
 import { WeightChart } from '@/features/health/weight-chart'
@@ -24,18 +25,16 @@ export function HealthOverview() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-fg text-xl font-semibold">Saúde</h1>
-          <p className="text-fg-muted mt-1 text-sm">
-            Peso, composição corporal e gasto energético.
-          </p>
-        </div>
-        <Button onClick={() => setOpen(true)}>
-          <Plus />
-          Pesagem
-        </Button>
-      </div>
+      <PageHeader
+        title="Saúde"
+        description="Peso, composição corporal e gasto energético."
+        action={
+          <Button onClick={() => setOpen(true)}>
+            <Plus />
+            Pesagem
+          </Button>
+        }
+      />
 
       {!summary.hasProfile && (
         <Card className="border-warning/40 bg-warning/5">

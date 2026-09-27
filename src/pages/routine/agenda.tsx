@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge, EmptyState } from '@/components/ui/misc'
+import { PageHeader } from '@/components/ui/page-header'
 import { useDeadlines } from '@/data/queries'
 import type { Deadline } from '@/data/types'
 import { DeadlineForm, type DeadlineDraft } from '@/features/routine/deadline-form'
@@ -25,10 +26,16 @@ import { cn } from '@/lib/utils'
 
 const WEEKDAYS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sáb']
 
+/*
+  A tela mostra o que está marcado aqui, e só isso. Uma área de fora desta
+  lista some do calendário sem nunca ter sido desmarcada — foi o que aconteceu
+  com as tarefas antes de `routine` entrar.
+*/
 const AREAS: { key: AgendaArea; label: string }[] = [
   { key: 'education', label: 'Faculdade e cursos' },
   { key: 'health', label: 'Saúde' },
   { key: 'finance', label: 'Financeiro' },
+  { key: 'routine', label: 'A fazer' },
 ]
 
 export function AgendaPage() {
@@ -74,26 +81,22 @@ export function AgendaPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-fg text-xl font-semibold">Agenda</h1>
-          <p className="text-fg-muted mt-1 max-w-2xl text-sm">
-            Aulas, provas, treinos, vencimentos, metas e prazos de curso no mesmo mês. É na
-            sobreposição que os conflitos aparecem — a prova na véspera da fatura, o treino no dia
-            da entrega.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="secondary" onClick={exportIcs}>
-            <Download />
-            Exportar .ics
-          </Button>
-          <Button onClick={() => setEditing(null)}>
-            <Plus />
-            Compromisso
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Agenda"
+        description="Aulas, provas, treinos, vencimentos, metas e prazos de curso no mesmo mês. Os conflitos aparecem quando duas coisas caem juntas: a prova na véspera da fatura, o treino no dia da entrega."
+        action={
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={exportIcs}>
+              <Download />
+              Exportar .ics
+            </Button>
+            <Button onClick={() => setEditing(null)}>
+              <Plus />
+              Compromisso
+            </Button>
+          </div>
+        }
+      />
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <Card>

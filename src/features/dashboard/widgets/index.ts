@@ -17,7 +17,13 @@ import type { ComponentType } from 'react'
 import { NextLessonWidget, StudiesWidget } from './education'
 import { FinanceWidget } from './finance'
 import { CaloriesWidget, DietPlanWidget, WeightWidget, WorkoutsWidget } from './health'
-import { AgendaWidget, HabitsWidget, InsightWidget, StreakWidget } from './routine'
+import {
+  AgendaWidget,
+  HabitsWidget,
+  InsightWidget,
+  StreakWidget,
+  TarefasWidget,
+} from './routine'
 
 export interface WidgetDef {
   id: string
@@ -27,6 +33,12 @@ export interface WidgetDef {
   /** Colunas ocupadas na grade de 4. */
   span: 1 | 2
   accent: string
+  /**
+   * De que módulos o widget fala. Só sai do painel quando *todos* estão
+   * escondidos: "Estudos" mostra faculdade e cursos juntos, e desligar um lado
+   * não deveria apagar o outro.
+   */
+  modulos: string[]
   defaultVisible: boolean
   Component: ComponentType
 }
@@ -38,6 +50,7 @@ export const WIDGETS: WidgetDef[] = [
     description: 'Média móvel de 7 dias e a tendência do mês.',
     span: 1,
     accent: 'accent-health',
+    modulos: ['/saude'],
     defaultVisible: true,
     Component: WeightWidget,
   },
@@ -47,6 +60,7 @@ export const WIDGETS: WidgetDef[] = [
     description: 'Quanto ainda cabe hoje, pelo alvo do plano.',
     span: 1,
     accent: 'accent-health',
+    modulos: ['/saude'],
     defaultVisible: true,
     Component: CaloriesWidget,
   },
@@ -56,6 +70,7 @@ export const WIDGETS: WidgetDef[] = [
     description: 'Sessões registradas contra a meta semanal.',
     span: 1,
     accent: 'accent-health',
+    modulos: ['/saude'],
     defaultVisible: true,
     Component: WorkoutsWidget,
   },
@@ -65,6 +80,7 @@ export const WIDGETS: WidgetDef[] = [
     description: 'Dias seguidos com pelo menos uma sessão.',
     span: 1,
     accent: 'accent-routine',
+    modulos: ['/saude'],
     defaultVisible: true,
     Component: StreakWidget,
   },
@@ -74,8 +90,19 @@ export const WIDGETS: WidgetDef[] = [
     description: 'Checklist do dia, marcável direto daqui.',
     span: 2,
     accent: 'accent-routine',
+    modulos: ['/rotina'],
     defaultVisible: true,
     Component: HabitsWidget,
+  },
+  {
+    id: 'tarefas',
+    title: 'A fazer',
+    description: 'O que está pendente, incluindo o que você escreveu nas anotações.',
+    span: 2,
+    accent: 'accent-routine',
+    modulos: ['/rotina', '/caderno'],
+    defaultVisible: true,
+    Component: TarefasWidget,
   },
   {
     id: 'agenda',
@@ -83,6 +110,7 @@ export const WIDGETS: WidgetDef[] = [
     description: 'Provas, entregas e vencimentos das próximas duas semanas.',
     span: 2,
     accent: 'accent-routine',
+    modulos: ['/rotina', '/faculdade', '/financeiro'],
     defaultVisible: true,
     Component: AgendaWidget,
   },
@@ -92,6 +120,7 @@ export const WIDGETS: WidgetDef[] = [
     description: 'Alvo diário, ritmo e progresso até a meta.',
     span: 2,
     accent: 'accent-health',
+    modulos: ['/saude'],
     defaultVisible: true,
     Component: DietPlanWidget,
   },
@@ -101,6 +130,7 @@ export const WIDGETS: WidgetDef[] = [
     description: 'Faculdade e cursos em andamento, com progresso.',
     span: 2,
     accent: 'accent-education',
+    modulos: ['/faculdade', '/cursos'],
     defaultVisible: true,
     Component: StudiesWidget,
   },
@@ -110,6 +140,7 @@ export const WIDGETS: WidgetDef[] = [
     description: 'Entrou, saiu, taxa de poupança e orçamentos estourando.',
     span: 2,
     accent: 'accent-finance',
+    modulos: ['/financeiro'],
     defaultVisible: true,
     Component: FinanceWidget,
   },
@@ -119,6 +150,7 @@ export const WIDGETS: WidgetDef[] = [
     description: 'De onde continuar no curso em andamento.',
     span: 1,
     accent: 'accent-courses',
+    modulos: ['/cursos'],
     defaultVisible: false,
     Component: NextLessonWidget,
   },
@@ -128,6 +160,7 @@ export const WIDGETS: WidgetDef[] = [
     description: 'O cruzamento mais forte entre os módulos.',
     span: 2,
     accent: 'accent-routine',
+    modulos: ['/rotina'],
     defaultVisible: false,
     Component: InsightWidget,
   },

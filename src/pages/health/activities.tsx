@@ -5,6 +5,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Field, Input, Select, Textarea } from '@/components/ui/field'
 import { Badge, EmptyState, Progress, SectionTitle, Toggle } from '@/components/ui/misc'
 import { Modal } from '@/components/ui/modal'
+import { PageHeader } from '@/components/ui/page-header'
 import { useActivityTypes, useSessions } from '@/data/queries'
 import type { ActivityType } from '@/data/types'
 import { useHealthSummary } from '@/features/health/use-health-summary'
@@ -39,19 +40,16 @@ export function ActivitiesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-fg text-xl font-semibold">Atividades</h1>
-          <p className="text-fg-muted mt-1 text-sm">
-            Escolha o que você pratica e registre as sessões. As calorias saem do valor MET de cada
-            atividade multiplicado pelo seu peso.
-          </p>
-        </div>
-        <Button variant="secondary" onClick={() => setCreatingCustom(true)}>
-          <Plus />
-          Personalizada
-        </Button>
-      </div>
+      <PageHeader
+        title="Atividades"
+        description="Escolha o que você pratica e registre as sessões. As calorias saem do valor MET de cada atividade multiplicado pelo seu peso."
+        action={
+          <Button variant="secondary" onClick={() => setCreatingCustom(true)}>
+            <Plus />
+            Personalizada
+          </Button>
+        }
+      />
 
       <div>
         <SectionTitle>Minhas atividades</SectionTitle>

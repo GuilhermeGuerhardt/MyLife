@@ -49,16 +49,53 @@ caloria de um alimento conserta todas as refeições que o usam.
 
 ### Caderno
 
-Anotações da faculdade, dos cursos e do que você estuda por conta, no mesmo lugar. Escrevendo
-`[[Título]]` uma anotação liga na outra, e o rodapé mostra quem menciona a que está aberta.
+Anotações da faculdade, dos cursos, do que você estuda por conta e do que não é estudo nenhum, no
+mesmo lugar. Escrevendo `[[Título]]` uma anotação liga na outra, e o rodapé mostra quem menciona a
+que está aberta.
+
+São quatro seções na árvore: **Faculdade** e **Cursos**, que penduram as anotações no curso e na
+disciplina, **Estudos**, para o que se aprende fora de uma matrícula, e **Anotações**, para ideia,
+rascunho e lista — o que você escreve e não quer no meio do material de aula.
 
 Anotação nova nasce em **texto formatado**, com barra de ferramentas: negrito, itálico,
-sublinhado, riscado, cor da letra, cor do sublinhado, marca-texto, títulos, listas, tarefas e
-citação. Quem prefere **Markdown** troca pelo botão da própria anotação — e ali as caixas de
-tarefa são clicáveis na leitura, sem precisar abrir o editor para digitar um `x`.
+sublinhado, riscado, cor da letra, cor do sublinhado, marca-texto, títulos, listas, tarefas,
+citação, **tabela** e mais dois blocos que o Notion popularizou — o **alternável**, um título que
+esconde o que vem embaixo (a demonstração inteira, a lista de comandos, o que ocupa espaço e
+raramente se olha; recolhido no editor, continua recolhido na leitura), e o **destaque**, o
+parágrafo que não pode passar batido. A tabela nasce 3×3 com cabeçalho, tem coluna
+redimensionável, e os comandos de linha e coluna só aparecem quando o cursor está dentro de uma —
+seis botões apagados não precisam ocupar a barra em toda anotação que não tem tabela. Ela também
+atravessa a exportação: vira tabela de verdade no `.docx` e grade de barras no `.txt`. Quem prefere
+**Markdown** troca
+pelo botão da própria anotação — e ali as caixas de tarefa são clicáveis na leitura, sem precisar
+abrir o editor para digitar um `x`.
+
+O `[[Título]]` é **o mesmo link nos dois editores**, com o mesmo autocompletar: digite `[[`, as
+anotações aparecem, Enter liga. Nome que ainda não existe também liga — a anotação nasce quando
+alguém clica. Escrever em texto formatado deixa de custar a rede.
+
+Tudo tem **atalho**, e o atalho aparece na dica de cada botão: `Ctrl+B`, `Ctrl+I`, `Ctrl+U`,
+`Ctrl+Shift+S`, `Ctrl+E`, `Ctrl+Shift+H` para o marca-texto, `Ctrl+Alt+1..3` para os títulos,
+`Ctrl+Shift+7/8/9` para as listas, `Ctrl+K` para o link, `Ctrl+Alt+T` e `Ctrl+Alt+D` para os dois
+blocos novos. A maioria já existia e ninguém tinha como descobrir — atalho escondido não existe.
 
 > As anotações antigas **não são convertidas**. Cada uma guarda o formato em que foi escrita, e
 > a troca é um botão na própria anotação, uma por vez.
+
+**A tela não rola inteira.** A barra de formatação e a árvore de pastas ficam onde estão; quem
+corre é só o texto. Numa anotação de mil palavras, a alternativa era perder as duas de vista
+justamente quando se precisa delas.
+
+**A anotação também abre em janela própria**, pelo botão no cabeçalho dela. É uma janela do sistema
+— arrastável para o segundo monitor — com o editor em tela cheia: sem menu lateral, sem árvore, sem
+o painel de menções. Escrever de um lado e consultar do outro deixa de exigir alternar de tela. O
+que você escreve lá aparece na janela principal na hora, sem recarregar nada.
+
+O mesmo vale para **qualquer módulo**: o botão no canto do cabeçalho abre a tela atual numa janela
+separada — Financeiro num monitor, Caderno no outro. A janela traz aquele módulo **inteiro e só
+ele**: o menu lista as telas dele — o Financeiro tem sete, que sem menu ficariam inalcançáveis — e
+não os outros módulos, que continuam na janela principal. A janela de escrita do Caderno é a
+exceção, e de propósito: lá o espaço é do texto.
 
 O caderno tem porta de entrada e de saída. **Importar** aceita `.md`, `.txt`, `.docx` e `.pdf`:
 o Markdown entra como Markdown, e o resto entra como texto formatado, editável. **Exportar**
@@ -72,6 +109,14 @@ Markdown sai em `.md` ou `.txt`.
 
 Hábitos diários e semanais, com sequência, meta da semana e heatmap de seis meses clicável para
 corrigir o passado. O dia de hoje nunca quebra uma sequência.
+
+**A fazer** é a lista do que acontece uma vez só — o que não é de curso, não se repete e não tem
+valor em dinheiro: renovar o seguro, ligar para o dentista. Prazo é opcional, e a tarefa que tem
+um aparece na Agenda no dia dela.
+
+A lista também mostra **as caixas de tarefa escritas dentro das anotações**, com o nome da anotação
+do lado — e marcar aqui marca lá. São a mesma tarefa vista de dois lugares, não duas: sem isso, o
+`- [ ]` anotado no meio de uma aula virava um cemitério que ninguém revisita.
 
 ![Tela de hábitos, com progresso da semana e heatmap de seis meses](docs/prints/rotina.png)
 
@@ -135,7 +180,7 @@ programa pode levar o banco junto, e o backup é o que sobrevive a isso.
 
 ### Atualizando
 
-**A partir da 0.2.4, o Life se atualiza sozinho.** Alguns segundos depois de abrir, ele consulta
+**A partir da 0.2, o Life se atualiza sozinho.** Alguns segundos depois de abrir, ele consulta
 as releases deste repositório. Se houver versão nova, aparece um aviso discreto no canto inferior
 direito, com as novidades e os botões **Atualizar** e **Agora não** — nada é baixado sem você
 mandar. Ao atualizar, o download aparece na barra de progresso e o programa reabre sozinho.
@@ -149,8 +194,8 @@ caso, vale o jeito manual: baixe o instalador da versão nova e execute por cima
 As atualizações são **assinadas**: o programa só aceita um pacote cuja assinatura bate com a
 chave pública embutida nele, o que impede que um download adulterado se passe por atualização.
 
-> **Vindo da 0.2.3 ou anterior?** O mecanismo só existe a partir da 0.2.4, então essa primeira
-> troca é manual. Da próxima em diante é automático.
+> **Vindo da 0.1?** O mecanismo não existia ainda, então essa primeira troca é manual. Da
+> próxima em diante é automático.
 
 Seus dados não são tocados em nenhum dos dois caminhos: o banco vive fora da pasta do programa.
 
@@ -375,9 +420,10 @@ Cursos/     Rust do zero/  …
 Estudos/    ← o que você estuda por conta, sem curso nenhum
 ```
 
-**Estudos** é o trilho novo. O `Track` ganhou um terceiro valor, `free`, que só existe em
-anotação: nenhum curso nasce com ele. No editor, o campo "Onde" resolve os dois de uma vez —
-escolher um curso põe a anotação naquele trilho, escolher "Estudo livre" a manda para Estudos.
+**Estudos** e **Anotações** são os trilhos sem curso: o `Track` ganhou `free`, para o que se
+aprende fora de uma matrícula, e `personal`, para o que não é estudo nenhum — ideia, rascunho,
+lista. Nenhum curso nasce com eles. No editor, o campo "Onde" resolve tudo de uma vez: escolher um
+curso põe a anotação naquele trilho, e as duas opções sem curso mandam para as seções delas.
 
 ### Ligações entre anotações
 
@@ -385,7 +431,7 @@ A pasta diz a que curso uma anotação **pertence** — um pai só. O link diz o
 quantos quiser, atravessando faculdade, curso e estudo livre. É a relação que nenhuma árvore
 expressa, e o que faz um caderno virar rede em vez de gaveta.
 
-Escrevendo `[[Título da anotação]]` no Markdown:
+Escrevendo `[[Título da anotação]]`, **nos dois editores**:
 
 - **Vira link.** Implementado como extensão do `marked`, não como troca de texto antes de
   converter — assim um `[[exemplo]]` dentro de bloco de código continua sendo o exemplo.
@@ -393,9 +439,13 @@ Escrevendo `[[Título da anotação]]` no Markdown:
   com aquele título. É o hábito que faz o caderno crescer sozinho.
 - **Aparece do outro lado.** No rodapé de cada anotação, um painel "Mencionada em" lista quem
   aponta para ela, com o trecho em volta da citação. Sem isso o link seria rua de mão única.
-- **Autocompleta.** Digitando `[[`, uma lista com os títulos existentes. Sem ela a funcionalidade
-  morreria na segunda semana: ligar por título exige lembrar o título exato.
+- **Autocompleta.** Digitando `[[`, uma lista com os títulos existentes — no campo de Markdown e
+  dentro do editor formatado. Sem ela a funcionalidade morreria na segunda semana: ligar por
+  título exige lembrar o título exato.
 - **Sobrevive a renomear.** Trocar o título de uma anotação reescreve os `[[ ]]` de quem a citava.
+- **Vale para os dois formatos.** O link é o mesmo texto na anotação em Markdown e na formatada.
+  Enquanto a formatada guardava o link de outro jeito, ela clicava mas não aparecia no painel de
+  menções — meia rede, e do lado que ninguém percebe.
   Link órfão é a pior forma de perder informação — ninguém percebe.
 
 A ligação é por **título** e não por id, de propósito: o Markdown do backup continua legível fora

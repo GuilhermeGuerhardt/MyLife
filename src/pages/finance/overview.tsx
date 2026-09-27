@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge, EmptyState, Progress, SectionTitle, Segmented, Stat } from '@/components/ui/misc'
+import { PageHeader } from '@/components/ui/page-header'
 import { useAccounts, useCategories } from '@/data/queries'
 import { AccountForm } from '@/features/finance/account-form'
 import { useCreateTransaction, useSetTransactionPaid } from '@/features/finance/actions'
@@ -93,12 +94,7 @@ export function FinanceOverview() {
   if (!finance.hasAccounts) {
     return (
       <div className="space-y-6">
-        <div>
-          <h1 className="text-fg text-xl font-semibold">Financeiro</h1>
-          <p className="text-fg-muted mt-1 text-sm">
-            Controle de gastos, orçamento e metas.
-          </p>
-        </div>
+        <PageHeader title="Financeiro" description="Controle de gastos, orçamento e metas." />
         <Card>
           <EmptyState
             icon={<Wallet className="size-6" />}
@@ -154,21 +150,19 @@ export function FinanceOverview() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-fg text-xl font-semibold">Financeiro</h1>
-          <p className="text-fg-muted mt-1 text-sm">
-            Fatura de cartão contada por competência, não pela data da compra.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <MonthNav competence={competence} onChange={setCompetence} />
-          <Button onClick={() => setAddingTransaction(true)}>
-            <Plus />
-            Lançamento
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Financeiro"
+        description="A fatura de cartão vai pela competência: a compra feita depois do fechamento cai no mês seguinte."
+        action={
+          <div className="flex items-center gap-2">
+            <MonthNav competence={competence} onChange={setCompetence} />
+            <Button onClick={() => setAddingTransaction(true)}>
+              <Plus />
+              Lançamento
+            </Button>
+          </div>
+        }
+      />
 
       {atrasos.count > 0 && (
         <div className="grid gap-3 sm:grid-cols-2">

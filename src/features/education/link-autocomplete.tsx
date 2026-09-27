@@ -36,7 +36,7 @@ export function useLinkAutocomplete({
   // evento de teclado de onde tirá-lo.
   const campoRef = useRef<HTMLTextAreaElement | null>(null)
 
-  const opcoes = aberto ? filtrar(notas, aberto.termo) : []
+  const opcoes = aberto ? filtrarSugestoes(notas, aberto.termo) : []
   // Termo digitado que não casa com nada vira "criar": escrever o nome do
   // conceito e preencher depois é o hábito que faz o caderno crescer.
   const criar = aberto !== null && aberto.termo.trim().length > 0 && !temExato(opcoes, aberto.termo)
@@ -117,13 +117,13 @@ export function useLinkAutocomplete({
   }
 }
 
-function filtrar(notas: Sugestao[], termo: string): Sugestao[] {
+export function filtrarSugestoes(notas: Sugestao[], termo: string): Sugestao[] {
   const chave = chaveTitulo(termo)
   if (!chave) return notas.slice(0, MAX)
   return notas.filter((nota) => chaveTitulo(nota.title).includes(chave)).slice(0, MAX)
 }
 
-function temExato(opcoes: Sugestao[], termo: string): boolean {
+export function temExato(opcoes: Sugestao[], termo: string): boolean {
   const chave = chaveTitulo(termo)
   return opcoes.some((opcao) => chaveTitulo(opcao.title) === chave)
 }

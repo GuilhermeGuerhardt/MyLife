@@ -1,8 +1,10 @@
 import {
   Command,
   Database,
+  ExternalLink,
   FolderSync,
   Globe,
+  HelpCircle,
   PanelLeftClose,
   PanelLeftOpen,
   User,
@@ -13,9 +15,15 @@ import { Avatar } from '@/components/avatar'
 import { RouteBoundary } from '@/components/route-boundary'
 import { storageMode, type StorageMode } from '@/data/adapters'
 import { useProfile } from '@/data/queries'
+import { useModulos } from '@/features/profile/use-modulos'
+import { TourGuiado } from '@/features/tutorial/tour'
+import { useTutorial } from '@/features/tutorial/use-tutorial'
+import { NovidadesModal, useNovidades } from '@/features/updates/novidades-modal'
 import { primeiroNome } from '@/lib/avatar'
 import { cn } from '@/lib/utils'
 import { Badge } from '../ui/misc'
+import { abrirJanela } from '@/lib/janela'
+import { ehJanelaSecundaria } from './janela-solta'
 import { NAV, accentForPath } from './nav'
 
 /**
@@ -91,13 +99,29 @@ function ModeIcon({ mode }: { mode: StorageMode }) {
 }
 
 export function AppShell({ onOpenPalette }: { onOpenPalette: () => void }) {
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
+  const secundaria = ehJanelaSecundaria()
   const accent = accentForPath(pathname)
   const mode = storageMode()
   const section = NAV.find((item) => item.to !== '/' && pathname.startsWith(item.to))
   const [collapsed, toggleSidebar] = useCollapsedSidebar()
   const { profile } = useProfile()
   const nome = profile?.name.trim() ?? ''
+  const { menu } = useModulos()
+  const tutorial = useTutorial(pathname)
+  const novidades = useNovidades()
+
+  /*
+    A janela destacada é daquele módulo, e só dele: o menu lista as telas do
+    módulo — o Financeiro tem sete, que sem menu nenhum ficariam inalcançáveis —
+    e não os outros módulos, que continuam na janela principal. Destacar o
+    Financeiro para ganhar um segundo Caderno ao lado não era o pedido.
+
+    Por isso ela ignora os módulos escondidos no Perfil: esconder é arrumar o
+    menu da janela principal, e não fazer sumir o menu de uma janela que a
+    pessoa abriu de propósito para aquele módulo.
+  */
+  const modulos = secundaria ? [section ?? NAV[0]!] : menu
 
   return (
     <div className="bg-bg flex min-h-dvh">
@@ -134,8 +158,8 @@ export function AppShell({ onOpenPalette }: { onOpenPalette: () => void }) {
           )}
         </div>
 
-        <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-2">
-          {NAV.map((item) => (
+        <nav data-tour="menu" className="flex-1 space-y-0.5 overflow-y-auto px-3 py-2">
+          {modulos.map((item) => (
             <div key={item.to}>
               <NavLink
                 to={item.to}
@@ -183,6 +207,7 @@ export function AppShell({ onOpenPalette }: { onOpenPalette: () => void }) {
         </nav>
 
         <div className="border-border-base space-y-2 border-t p-3">
+          {!secundaria && (
           <NavLink
             to="/perfil"
             title={collapsed ? 'Perfil' : undefined}
@@ -197,6 +222,7 @@ export function AppShell({ onOpenPalette }: { onOpenPalette: () => void }) {
             <User className="size-4 shrink-0" />
             {!collapsed && 'Perfil'}
           </NavLink>
+          )}
 
           {/*
             O tema mora só em Perfil > Aparência. Com seis paletas, um botão de
@@ -265,8 +291,44 @@ export function AppShell({ onOpenPalette }: { onOpenPalette: () => void }) {
           </span>
 
           <div className="flex items-center gap-2">
+            {/*
+              O guia da tela, de volta a pedido. Na janela destacada não: ela
+              existe para escrever sem nada em volta, e quem a abriu já conhece o
+              módulo.
+            */}
+            {!secundaria && tutorial.tutorial && (
+              <button
+                type="button"
+                onClick={tutorial.reabrir}
+                data-tour="ajuda"
+                title={`Como usar: ${tutorial.tutorial.titulo}`}
+                aria-label={`Como usar: ${tutorial.tutorial.titulo}`}
+                className="border-border-base bg-surface text-fg-subtle hover:border-border-strong hover:text-fg flex h-9 items-center rounded-lg border px-2.5 transition-colors"
+              >
+                <HelpCircle className="size-3.5" />
+              </button>
+            )}
+            {!secundaria && (
+              <button
+                type="button"
+                onClick={() =>
+                  void abrirJanela({
+                    rota: `${pathname}${search}`,
+                    titulo: section?.label ?? 'Life',
+                    largura: 1180,
+                    altura: 840,
+                  })
+                }
+                title="Abrir esta tela em outra janela"
+                aria-label="Abrir esta tela em outra janela"
+                className="border-border-base bg-surface text-fg-subtle hover:border-border-strong hover:text-fg hidden h-9 items-center rounded-lg border px-2.5 transition-colors lg:flex"
+              >
+                <ExternalLink className="size-3.5" />
+              </button>
+            )}
             <button
               type="button"
+              data-tour="registro-rapido"
               onClick={onOpenPalette}
               className="border-border-base bg-surface text-fg-subtle hover:border-border-strong flex h-9 items-center gap-2 rounded-lg border px-3 text-xs transition-colors"
             >
@@ -285,6 +347,15 @@ export function AppShell({ onOpenPalette }: { onOpenPalette: () => void }) {
             página falhar, o menu continua clicável e dá para ir para outra em
             vez de o app inteiro sumir.
           */}
+          {/*
+            O que mudou vem antes do guia da tela: quem acabou de atualizar
+            está procurando o que ganhou, e o guia do módulo continua ali
+            embaixo quando ele fechar.
+          */}
+          {!secundaria && (
+            <NovidadesModal novidades={novidades.pendentes} onFechar={novidades.fechar} />
+          )}
+
           <RouteBoundary>
             <Suspense fallback={<RouteFallback />}>
               <Outlet />
@@ -293,9 +364,25 @@ export function AppShell({ onOpenPalette }: { onOpenPalette: () => void }) {
         </main>
       </div>
 
+      {/*
+        O guia fica por fora da casca inteira, não dentro do miolo: ele precisa
+        iluminar o menu e os botões do topo, que vivem aqui fora.
+      */}
+      {!secundaria && tutorial.aberto && tutorial.tutorial && (
+        <TourGuiado
+          /* Trocar de módulo com o guia aberto recomeça do primeiro passo:
+             sem a chave, o índice do módulo anterior continuava valendo e o
+             guia abria no meio, ou num passo que aquele módulo nem tem. */
+          key={tutorial.tutorial.rota}
+          tutorial={tutorial.tutorial}
+          onFim={tutorial.entendi}
+          onPular={tutorial.pular}
+        />
+      )}
+
       {/* Navegação inferior — mobile */}
       <nav className="border-border-base bg-surface/95 fixed inset-x-0 bottom-0 z-40 flex border-t backdrop-blur lg:hidden">
-        {NAV.map((item) => (
+        {menu.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}

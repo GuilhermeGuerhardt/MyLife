@@ -25,8 +25,9 @@ export type AgendaSource =
   | 'goal'
   | 'term'
   | 'plan'
+  | 'task'
 
-export type AgendaArea = 'health' | 'education' | 'finance'
+export type AgendaArea = 'health' | 'education' | 'finance' | 'routine'
 
 export interface AgendaEvent {
   id: string
@@ -56,6 +57,7 @@ export const SOURCE_LABELS: Record<AgendaSource, string> = {
   goal: 'Meta',
   term: 'Curso',
   plan: 'Plano',
+  task: 'A fazer',
 }
 
 /**
@@ -71,20 +73,9 @@ export const AREA_ACCENT: Record<AgendaArea, string> = {
   health: 'accent-health',
   education: 'accent-education',
   finance: 'accent-finance',
+  routine: 'accent-routine',
 }
 
-const AREA_OF: Record<AgendaSource, AgendaArea> = {
-  class: 'education',
-  exam: 'education',
-  assignment: 'education',
-  workout: 'health',
-  bill: 'finance',
-  invoice: 'finance',
-  recurring: 'finance',
-  goal: 'finance',
-  term: 'education',
-  plan: 'health',
-}
 
 // ---------------------------------------------------------------------------
 // Aulas — a grade semanal projetada sobre o intervalo
@@ -135,6 +126,37 @@ export function classEvents(subjects: SubjectLike[], from: string, to: string): 
 // ---------------------------------------------------------------------------
 // Provas e entregas
 // ---------------------------------------------------------------------------
+
+export interface TaskLike {
+  id: string
+  title: string
+  done: boolean
+  /** Só entra na agenda a tarefa que tem prazo. */
+  date: string | null
+}
+
+/**
+ * A tarefa com prazo, no dia dela.
+ *
+ * Sem prazo não entra: a agenda é uma linha do tempo, e "algum dia" não tem
+ * onde ser desenhado. Essas ficam só na lista, que é o lugar delas.
+ */
+export function taskEvents(tasks: TaskLike[], from: string, to: string): AgendaEvent[] {
+  return tasks
+    .filter((task) => task.date !== null && task.date >= from && task.date <= to)
+    .map((task) => ({
+      id: `task:${task.id}`,
+      date: task.date!,
+      time: null,
+      endTime: null,
+      title: task.title,
+      detail: null,
+      source: 'task' as const,
+      area: 'routine' as const,
+      href: '/rotina/tarefas',
+      done: task.done,
+    }))
+}
 
 export interface DeadlineLike {
   id: string
@@ -635,10 +657,6 @@ export function upcoming(events: AgendaEvent[], from: string, limit = 5): Agenda
   return sortAgenda(events)
     .filter((event) => event.date >= from && !event.done && event.source !== 'workout')
     .slice(0, limit)
-}
-
-export function areaOf(source: AgendaSource): AgendaArea {
-  return AREA_OF[source]
 }
 
 /** Intervalo que a tela do mês precisa carregar (as 6 semanas visíveis). */

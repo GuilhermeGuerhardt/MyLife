@@ -8,6 +8,7 @@ import { setFolderStore } from './data/adapters'
 import { migrarDoLocalStorage } from './data/sqlite-store'
 import { restoreFolder } from './data/folder-store'
 import { ensureSeed } from './data/queries'
+import { SincroniaEntreJanelas } from './data/sincronia-entre-janelas'
 import { ImportRunProvider } from './features/finance/import-run'
 import { ImportWatcher } from './features/finance/import-watcher'
 import { UpdateWatcher } from './features/updates/update-watcher'
@@ -49,6 +50,9 @@ const AcademicNotebook = lazyRoute(() =>
 const CourseNotebook = lazyRoute(() =>
   import('./pages/education/notebook').then((m) => ({ default: m.CourseNotebook })),
 )
+const NotaJanela = lazyRoute(() =>
+  import('./pages/education/nota-janela').then((m) => ({ default: m.NotaJanela })),
+)
 const FinanceOverview = lazyRoute(() =>
   import('./pages/finance/overview').then((m) => ({ default: m.FinanceOverview })),
 )
@@ -72,6 +76,9 @@ const CategoriesPage = lazyRoute(() =>
 )
 const HabitsPage = lazyRoute(() =>
   import('./pages/routine/habits').then((m) => ({ default: m.HabitsPage })),
+)
+const TarefasPage = lazyRoute(() =>
+  import('./pages/routine/tarefas').then((m) => ({ default: m.TarefasPage })),
 )
 const AgendaPage = lazyRoute(() =>
   import('./pages/routine/agenda').then((m) => ({ default: m.AgendaPage })),
@@ -118,6 +125,10 @@ function Boot() {
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
+      // Quem já tratou a tecla manda: dentro do editor do Caderno, Ctrl+K é o
+      // atalho de link, como em qualquer editor de texto. Abrir a paleta por
+      // cima dele tiraria da pessoa o atalho que ela foi usar.
+      if (event.defaultPrevented) return
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault()
         setPaletteOpen((open) => !open)
@@ -137,8 +148,13 @@ function Boot() {
         {/* A importação de planilhas vive acima das rotas: começada na tela
             de Planilhas, ela continua gravando depois que a pessoa sai dali,
             e o andamento aparece no canto como o aviso de atualização. */}
+        <SincroniaEntreJanelas />
         <ImportRunProvider>
           <Routes>
+            {/* Fora da casca: a janela de escrita não tem menu lateral nem
+                cabeçalho de módulo — o espaço todo é do texto. */}
+            <Route path="janela/nota/:id" element={<NotaJanela />} />
+
             <Route element={<AppShell onOpenPalette={() => setPaletteOpen(true)} />}>
               <Route index element={<Dashboard onOpenPalette={() => setPaletteOpen(true)} />} />
               <Route path="saude" element={<HealthOverview />} />
@@ -162,6 +178,7 @@ function Boot() {
               <Route path="financeiro/categorias" element={<CategoriesPage />} />
               <Route path="financeiro/importar" element={<ImportPage />} />
               <Route path="rotina" element={<HabitsPage />} />
+            <Route path="rotina/tarefas" element={<TarefasPage />} />
               <Route path="rotina/agenda" element={<AgendaPage />} />
               <Route path="rotina/insights" element={<InsightsPage />} />
               <Route path="perfil" element={<ProfilePage />} />

@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge, EmptyState, Progress, Stat } from '@/components/ui/misc'
+import { PageHeader } from '@/components/ui/page-header'
 import { LIFE_AREA_LABELS, type Habit } from '@/data/types'
 import { HabitForm, type HabitDraft } from '@/features/routine/habit-form'
 import { Heatmap, HeatmapLegend } from '@/features/routine/heatmap'
@@ -53,20 +54,16 @@ export function HabitsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-fg text-xl font-semibold">Hábitos</h1>
-          <p className="text-fg-muted mt-1 max-w-2xl text-sm">
-            O que se repete é o que muda o resultado. Marque o dia com um toque — o dia de hoje
-            nunca quebra a sequência, e hábito semanal se mede por semana, não por uma terça-feira
-            perdida.
-          </p>
-        </div>
-        <Button onClick={() => setEditing(null)}>
-          <Plus />
-          Novo hábito
-        </Button>
-      </div>
+      <PageHeader
+        title="Hábitos"
+        description="Marque o dia com um toque. Hábito semanal se mede pela semana fechada, então uma terça-feira perdida não derruba a sequência."
+        action={
+          <Button onClick={() => setEditing(null)}>
+            <Plus />
+            Novo hábito
+          </Button>
+        }
+      />
 
       {board.items.length > 0 && (
         <div className="grid gap-4 sm:grid-cols-3">

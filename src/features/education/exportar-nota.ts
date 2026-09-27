@@ -106,8 +106,12 @@ async function montarDocx(titulo: string, blocos: Bloco[]): Promise<Uint8Array> 
     Packer,
     Paragraph,
     ShadingType,
+    Table,
+    TableCell,
+    TableRow,
     TextRun,
     UnderlineType,
+    WidthType,
   } = await import('docx')
 
   const NIVEIS = [
@@ -143,7 +147,32 @@ async function montarDocx(titulo: string, blocos: Bloco[]): Promise<Uint8Array> 
         : undefined,
     })
 
-  const paragrafos: InstanceType<typeof Paragraph>[] = [
+  /** A tabela do Word: uma linha por linha, uma célula por célula. */
+  const montarTabela = (bloco: Bloco) =>
+    new Table({
+      width: { size: 100, type: WidthType.PERCENTAGE },
+      rows: (bloco.linhas ?? []).map(
+        (linha) =>
+          new TableRow({
+            tableHeader: linha.cabecalho,
+            children: linha.celulas.map(
+              (celula) =>
+                new TableCell({
+                  shading: linha.cabecalho ? { type: ShadingType.CLEAR, fill: 'F4F4F5' } : undefined,
+                  children: [
+                    new Paragraph({
+                      children: [new TextRun({ text: celula, bold: linha.cabecalho })],
+                    }),
+                  ],
+                }),
+            ),
+          }),
+      ),
+    })
+
+  // Tabela não é parágrafo: o `docx` aceita as duas coisas lado a lado na
+  // seção, e é por isso que a lista guarda os dois tipos.
+  const paragrafos: Array<InstanceType<typeof Paragraph> | InstanceType<typeof Table>> = [
     new Paragraph({ text: titulo, heading: HeadingLevel.TITLE }),
   ]
 
@@ -202,6 +231,12 @@ async function montarDocx(titulo: string, blocos: Bloco[]): Promise<Uint8Array> 
         paragrafos.push(
           new Paragraph({ text: '', border: { bottom: { style: 'single', size: 6, color: 'CCCCCC' } } }),
         )
+        break
+      case 'tabela':
+        paragrafos.push(montarTabela(bloco))
+        // Um parágrafo vazio depois: duas tabelas seguidas sem nada no meio o
+        // Word funde numa só.
+        paragrafos.push(new Paragraph({ text: '' }))
         break
       default:
         paragrafos.push(new Paragraph({ children: trechos(bloco), indent: recuo, alignment: AlignmentType.LEFT }))

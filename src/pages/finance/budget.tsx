@@ -6,6 +6,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Field, Input, Select } from '@/components/ui/field'
 import { Badge, EmptyState, Progress, SectionTitle, Stat } from '@/components/ui/misc'
 import { Modal } from '@/components/ui/modal'
+import { PageHeader } from '@/components/ui/page-header'
 import { useBudgets, useGoals } from '@/data/queries'
 import type { FinancialGoal } from '@/data/types'
 import { CategoryIcon } from '@/features/finance/category-icons'
@@ -51,16 +52,13 @@ export function BudgetPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-fg text-xl font-semibold">Orçamento e metas</h1>
-          <p className="text-fg-muted mt-1 max-w-2xl text-sm">
-            Um limite por categoria no mês, no método envelope: quando o envelope esvazia, o
-            gasto daquela categoria acabou.
-          </p>
-        </div>
-        <MonthNav competence={competence} onChange={setCompetence} />
-      </div>
+      <PageHeader
+        title="Orçamento e metas"
+        description="Um limite por categoria no mês, no método envelope: quando o envelope esvazia, o gasto daquela categoria acabou."
+        action={
+          <MonthNav competence={competence} onChange={setCompetence} />
+        }
+      />
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Card>

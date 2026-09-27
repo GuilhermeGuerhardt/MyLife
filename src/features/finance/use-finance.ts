@@ -6,7 +6,7 @@ import {
   useGoals,
   useTransactions,
 } from '@/data/queries'
-import type { Account, Category, Transaction } from '@/data/types'
+import type { Account, Category } from '@/data/types'
 import { toCompetence, type Competence } from '@/lib/finance/billing'
 import {
   accountBalance,
@@ -123,7 +123,3 @@ export function sortCategories(categories: Category[], kind: 'income' | 'expense
     .sort((a, b) => a.name.localeCompare(b.name))
 }
 
-export function describeInstallment(transaction: Transaction): string | null {
-  if (!transaction.installment_total || transaction.installment_total <= 1) return null
-  return `${transaction.installment_n}/${transaction.installment_total}`
-}

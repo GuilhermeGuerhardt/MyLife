@@ -21,6 +21,7 @@ export type TipoDeBloco =
   | 'citacao'
   | 'codigo'
   | 'linha'
+  | 'tabela'
 
 export interface Marcas {
   negrito?: boolean
@@ -50,6 +51,14 @@ export interface Bloco {
   /** Recuo de sublista, a partir de zero. */
   recuo?: number
   trechos: Trecho[]
+  /** Só em `tabela`: as linhas, cada uma com o texto de suas células. */
+  linhas?: LinhaDeTabela[]
+}
+
+export interface LinhaDeTabela {
+  /** A primeira linha costuma ser o cabeçalho, e sai em negrito no Word. */
+  cabecalho: boolean
+  celulas: string[]
 }
 
 /** Só o texto, sem marca nenhuma — o que vai para o `.txt`. */
@@ -68,7 +77,15 @@ export function blocosDoHtml(html: string): Bloco[] {
   const doc = new DOMParser().parseFromString(html, 'text/html')
   const blocos: Bloco[] = []
   percorrer(doc.body, blocos, {}, 0)
-  return blocos.filter((b) => b.tipo === 'linha' || textoDoBloco(b).trim() !== '')
+  // Fora o que ficou sem nada dentro. A linha divisória não tem texto por
+  // natureza, e a tabela guarda o conteúdo nas células, não nos trechos —
+  // olhar só o texto jogava a tabela inteira fora.
+  return blocos.filter(
+    (b) =>
+      b.tipo === 'linha' ||
+      (b.linhas?.length ?? 0) > 0 ||
+      textoDoBloco(b).trim() !== '',
+  )
 }
 
 const TITULOS: Record<string, number> = { H1: 1, H2: 2, H3: 3, H4: 4, H5: 5, H6: 6 }
@@ -115,6 +132,29 @@ function percorrer(no: Node, blocos: Bloco[], marcas: Marcas, recuo: number): vo
     if (tag === 'BLOCKQUOTE') {
       blocos.push({ tipo: 'citacao', recuo, trechos: [] })
       percorrer(el, blocos, marcas, recuo)
+      continue
+    }
+
+    // O título do bloco alternável é um título de verdade no arquivo que sai:
+    // recolher não existe no Word nem no papel, então o que estava escondido
+    // aparece embaixo dele, e o documento continua fazendo sentido.
+    if (tag === 'SUMMARY') {
+      blocos.push({ tipo: 'titulo', nivel: 4, recuo, trechos: [] })
+      percorrer(el, blocos, marcas, recuo)
+      continue
+    }
+
+    // A tabela vira um bloco só, com as células já em texto: o modelo de
+    // parágrafos não tem como representar uma grade, e deixar as células
+    // caírem como parágrafos soltos embaralharia a informação inteira.
+    if (tag === 'TABLE') {
+      const linhas = [...el.querySelectorAll('tr')].map((tr) => ({
+        cabecalho: tr.querySelector('th') !== null,
+        celulas: [...tr.querySelectorAll('th, td')].map((celula) =>
+          (celula.textContent ?? '').replace(/\s+/g, ' ').trim(),
+        ),
+      }))
+      if (linhas.length > 0) blocos.push({ tipo: 'tabela', recuo, trechos: [], linhas })
       continue
     }
 
@@ -227,6 +267,20 @@ export function blocosParaTexto(blocos: Bloco[]): string {
       case 'linha':
         linhas.push('', '---', '')
         break
+      case 'tabela': {
+        // Uma grade em texto puro é a grade com barras. Sem alinhar as colunas
+        // de propósito: alinhar exigiria fonte de largura fixa, e o `.txt` abre
+        // em qualquer editor.
+        linhas.push('')
+        for (const linhaDaTabela of bloco.linhas ?? []) {
+          linhas.push(linhaDaTabela.celulas.join(' | '))
+          if (linhaDaTabela.cabecalho) {
+            linhas.push(linhaDaTabela.celulas.map(() => '---').join(' | '))
+          }
+        }
+        linhas.push('')
+        break
+      }
       default:
         linhas.push(texto)
     }

@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Progress } from '@/components/ui/misc'
+import { PageHeader } from '@/components/ui/page-header'
 import { ExportCard } from '@/features/finance/export-card'
 import { ImportColumns } from '@/features/finance/import-columns'
 import { ImportDone } from '@/features/finance/import-done'
@@ -44,9 +45,9 @@ export function ImportPage() {
             <Link to="/financeiro/transacoes" className="text-fg-subtle hover:text-fg">
               <ArrowLeft className="size-4" />
             </Link>
-            <h1 className="text-fg text-xl font-semibold">Planilhas</h1>
+            <PageHeader title="Planilhas" />
           </div>
-          <p className="text-fg-muted mt-1 max-w-2xl text-sm">
+          <p className="text-fg-muted mt-1.5 max-w-2xl text-sm leading-relaxed">
             Traga o extrato exportado de outro app em vez de redigitar, ou leve os seus lançamentos
             para fora. Tudo acontece no seu navegador — nada é enviado para lugar nenhum — e nada é
             gravado até você conferir a prévia.
@@ -106,6 +107,10 @@ export function ImportPage() {
                 onFilterChange={wizard.setFilter}
                 selected={wizard.selected}
                 onToggle={wizard.toggle}
+                sugestoes={wizard.sugestoes}
+                sugerindo={wizard.sugerindo}
+                onSugerirChange={wizard.setSugerindo}
+                baseDeAprendizado={wizard.baseDeAprendizado}
               />
 
               {wizard.running && wizard.progress && wizard.progress.total > 0 && (

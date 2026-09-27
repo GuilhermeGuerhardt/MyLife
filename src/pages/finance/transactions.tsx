@@ -5,6 +5,7 @@ import { Button, buttonStyles } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Field, Input, Select } from '@/components/ui/field'
 import { Segmented, Stat } from '@/components/ui/misc'
+import { PageHeader } from '@/components/ui/page-header'
 import { useCategories } from '@/data/queries'
 import type { TransactionKind } from '@/data/types'
 import { useCreateTransaction, useSetTransactionPaid } from '@/features/finance/actions'
@@ -51,25 +52,23 @@ export function TransactionsPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-fg text-xl font-semibold">Lançamentos</h1>
-          <p className="text-fg-muted mt-1 text-sm">
-            Agrupados por competência — no cartão, pela fatura que os inclui.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <MonthNav competence={competence} onChange={setCompetence} />
-          <Link to="/financeiro/importar" className={buttonStyles({ variant: 'secondary' })}>
-            <Upload />
-            Importar
-          </Link>
-          <Button onClick={() => setAdding(true)} disabled={!finance.hasAccounts}>
-            <Plus />
-            Lançamento
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Lançamentos"
+        description="Agrupados por competência. No cartão, pela fatura que inclui a compra."
+        action={
+          <div className="flex items-center gap-2">
+            <MonthNav competence={competence} onChange={setCompetence} />
+            <Link to="/financeiro/importar" className={buttonStyles({ variant: 'secondary' })}>
+              <Upload />
+              Importar
+            </Link>
+            <Button onClick={() => setAdding(true)} disabled={!finance.hasAccounts}>
+              <Plus />
+              Lançamento
+            </Button>
+          </div>
+        }
+      />
 
       <Card>
         <CardContent className="space-y-3">

@@ -21,6 +21,28 @@
 const LINK = /\[\[([^[\]\n]+)\]\]/g
 
 /**
+ * O link como as primeiras anotações convertidas para texto formatado o
+ * guardaram: uma âncora com o título no `data-nota`.
+ *
+ * Ficou para trás — hoje a conversão mantém o `[[Título]]` literal, que é o
+ * mesmo link nos dois editores —, mas quem converteu antes tem anotações assim
+ * gravadas, e elas não podem sumir da rede por causa de uma mudança de formato.
+ */
+const LINK_ANTIGO = /data-nota="([^"]+)"/g
+
+/** Os dois jeitos de um link estar escrito, na ordem em que aparecem. */
+function* citacoes(
+  conteudo: string,
+): Generator<{ titulo: string; indice: number; tamanho: number }> {
+  for (const achado of semCodigo(conteudo).matchAll(LINK)) {
+    yield { titulo: achado[1] ?? '', indice: achado.index ?? 0, tamanho: achado[0].length }
+  }
+  for (const achado of conteudo.matchAll(LINK_ANTIGO)) {
+    yield { titulo: achado[1] ?? '', indice: achado.index ?? 0, tamanho: achado[0].length }
+  }
+}
+
+/**
  * Compara títulos ignorando acento, caixa e espaço sobrando.
  *
  * Quem escreve `[[arquitetura hexagonal]]` no meio de uma frase quer a
@@ -52,8 +74,8 @@ function semCodigo(texto: string): string {
 /** Os títulos citados no texto, na ordem, sem repetir. */
 export function linksDoTexto(conteudo: string): string[] {
   const vistos = new Map<string, string>()
-  for (const [, titulo] of semCodigo(conteudo).matchAll(LINK)) {
-    const limpo = (titulo ?? '').trim()
+  for (const { titulo } of citacoes(conteudo)) {
+    const limpo = titulo.trim()
     if (!limpo) continue
     const chave = chaveTitulo(limpo)
     if (!vistos.has(chave)) vistos.set(chave, limpo)
@@ -102,10 +124,9 @@ export function retrolinks<T extends NotaLigavel>(alvo: NotaLigavel, notas: T[])
   const achados: Array<Retrolink<T>> = []
   for (const nota of notas) {
     if (nota.id === alvo.id) continue
-    const texto = semCodigo(nota.content)
-    for (const achado of texto.matchAll(LINK)) {
-      if (chaveTitulo(achado[1] ?? '') !== chave) continue
-      achados.push({ nota, trecho: trechoEmVolta(nota.content, achado.index ?? 0, achado[0].length) })
+    for (const { titulo, indice, tamanho } of citacoes(nota.content)) {
+      if (chaveTitulo(titulo) !== chave) continue
+      achados.push({ nota, trecho: trechoEmVolta(nota.content, indice, tamanho) })
       break // Uma entrada por anotação: dez citações na mesma não são dez fontes.
     }
   }
@@ -121,6 +142,11 @@ function trechoEmVolta(conteudo: string, inicio: number, tamanho: number): strin
     .replace(LINK, '$1')
     // O corte pode partir um link ao meio e deixar só metade dos colchetes.
     .replace(/\[\[|\]\]/g, '')
+    // Numa anotação formatada o trecho cai no meio das etiquetas de HTML, e o
+    // painel de menções mostraria `class="nota-link" data-nota=` como se fosse
+    // o que a pessoa escreveu.
+    .replace(/<[^>]*>?/g, ' ')
+    .replace(/&nbsp;/g, ' ')
     .replace(/[#*_>`]/g, '')
     .replace(/\s+/g, ' ')
     .trim()
@@ -136,9 +162,13 @@ function trechoEmVolta(conteudo: string, inicio: number, tamanho: number): strin
  */
 export function renomearNosTextos(conteudo: string, de: string, para: string): string {
   const chave = chaveTitulo(de)
-  return conteudo.replace(LINK, (inteiro, titulo: string) =>
-    chaveTitulo(titulo) === chave ? `[[${para}]]` : inteiro,
-  )
+  return conteudo
+    .replace(LINK, (inteiro, titulo: string) =>
+      chaveTitulo(titulo) === chave ? `[[${para}]]` : inteiro,
+    )
+    .replace(LINK_ANTIGO, (inteiro, titulo: string) =>
+      chaveTitulo(titulo) === chave ? `data-nota="${para}"` : inteiro,
+    )
 }
 
 /** As anotações cujo texto muda ao renomear — só elas precisam ser gravadas. */

@@ -107,22 +107,6 @@ export function isThemeId(value: unknown): value is ThemeId {
   return typeof value === 'string' && BY_ID.has(value as ThemeId)
 }
 
-/**
- * O que está guardado no navegador.
- *
- * Aceita `'light'` e `'dark'` porque foram os únicos valores gravados até a
- * versão 0.2.2 — quem já usava o app não perde a escolha ao atualizar.
- */
-export function readTheme(): ThemeId {
-  try {
-    const stored = localStorage.getItem(THEME_KEY)
-    if (isThemeId(stored)) return stored
-  } catch {
-    // Navegador com armazenamento bloqueado: vale o padrão.
-  }
-  return DEFAULT_THEME
-}
-
 const listeners = new Set<() => void>()
 
 /** Aplica no documento, grava a escolha e avisa quem estiver ouvindo. */

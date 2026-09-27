@@ -1,10 +1,11 @@
 import { ArrowLeft, NotebookPen, Plus, Search, Upload } from 'lucide-react'
 import { useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Field, Input, Select } from '@/components/ui/field'
 import { EmptyState, Segmented } from '@/components/ui/misc'
+import { PageHeader } from '@/components/ui/page-header'
 import { useNotes, usePrograms, useSubjects } from '@/data/queries'
 import { TRACK_LABELS, TRACK_ORDER, type Note, type ProgramTrack, type Track } from '@/data/types'
 import {
@@ -30,6 +31,7 @@ import {
   countTreeNotes,
   filterNotes,
 } from '@/lib/education/note-tree'
+import { abrirJanela } from '@/lib/janela'
 import { cn } from '@/lib/utils'
 
 /** O caderno inteiro — faculdade, cursos e estudo livre no mesmo lugar. */
@@ -51,7 +53,14 @@ function NotebookView({ track }: { track: ProgramTrack | null }) {
   const { data: programs } = usePrograms()
   const { data: subjects } = useSubjects()
 
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  /*
+    O endereço pode vir apontando uma anotação: é assim que a lista de tarefas
+    leva para a anotação de onde a tarefa saiu. Vale só na chegada — depois
+    disso quem manda é o clique na lista, e reagir ao endereço a cada render
+    prenderia a pessoa naquela anotação.
+  */
+  const [parametros] = useSearchParams()
+  const [selectedId, setSelectedId] = useState<string | null>(() => parametros.get('nota'))
   // Efêmero e sempre começando na leitura: abrir uma anotação é para ler. A
   // caneta vale enquanto aquela anotação está aberta e não sobrevive à saída —
   // voltar e encontrar o Markdown cru é o que fazia o caderno parecer um editor
@@ -217,7 +226,15 @@ function NotebookView({ track }: { track: ProgramTrack | null }) {
   )
 
   return (
-    <div className="space-y-5">
+    /*
+      No desktop a página ocupa a altura da janela e não rola: quem rola são as
+      duas colunas, cada uma por dentro. É o que mantém a barra de formatação e
+      a árvore de pastas no lugar enquanto o texto corre. A conta do `calc` é a
+      altura do cabeçalho da casca (3,5rem) mais o respiro do miolo (1,5 em cima
+      e 2,5 embaixo). No celular não: uma tela de bolso com barra embaixo fica
+      melhor rolando inteira.
+    */
+    <div className="flex flex-col gap-5 lg:h-[calc(100dvh-7.5rem)]">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           {base && (
@@ -229,17 +246,12 @@ function NotebookView({ track }: { track: ProgramTrack | null }) {
               {track === 'academic' ? 'Faculdade' : 'Cursos'}
             </Link>
           )}
-          <h1 className="text-fg text-xl font-semibold">Caderno</h1>
-          <p className="text-fg-muted mt-1 max-w-2xl text-sm">
-            {track
-              ? 'Anotações e resumos deste módulo.'
-              : 'Anotações e resumos — da faculdade, dos cursos e do que você estuda por conta.'}{' '}
-            Nas anotações em Markdown, escreva <code className="text-fg-subtle">[[</code> para
-            ligar uma à outra.
-          </p>
+          <PageHeader title="Caderno" />
         </div>
         <div className="flex flex-col items-end gap-1.5">
-          <div className="flex items-center gap-2">
+          {/* O guia desta tela aponta para cá. O cabeçalho comum marca sozinho
+              o botão de ação, mas aqui são dois botões e eles ficam fora dele. */}
+          <div data-tour="acao" className="flex items-center gap-2">
             <input
               ref={arquivo}
               type="file"
@@ -262,9 +274,9 @@ function NotebookView({ track }: { track: ProgramTrack | null }) {
         </div>
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-[300px_minmax(0,1fr)]">
+      <div className="grid gap-4 lg:min-h-0 lg:flex-1 lg:grid-cols-[300px_minmax(0,1fr)]">
         {/* Lista */}
-        <div className={cn('space-y-3', selected && 'hidden lg:block')}>
+        <div className={cn('flex flex-col gap-3 lg:min-h-0', selected && 'hidden lg:flex')}>
           <div className="flex items-center gap-2">
             <Segmented
               className="flex-1"
@@ -330,6 +342,7 @@ function NotebookView({ track }: { track: ProgramTrack | null }) {
             </div>
           )}
 
+          <div className="space-y-3 lg:min-h-0 lg:flex-1 lg:overflow-y-auto lg:pr-1">
           {visibleCount === 0 ? (
             <Card>
               <EmptyState
@@ -363,6 +376,7 @@ function NotebookView({ track }: { track: ProgramTrack | null }) {
               }}
             />
           )}
+          </div>
         </div>
 
         {/* Editor */}
@@ -386,6 +400,12 @@ function NotebookView({ track }: { track: ProgramTrack | null }) {
             existeNota={existeNota}
             titulosDisponiveis={titulosDisponiveis}
             nomeDoCurso={nomeDoCurso}
+            aoAbrirEmJanela={() =>
+              void abrirJanela({
+                rota: `/janela/nota/${selected.id}`,
+                titulo: selected.title || 'Anotação',
+              })
+            }
           />
         ) : (
           <Card className="hidden lg:block">

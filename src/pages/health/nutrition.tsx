@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { PageHeader } from '@/components/ui/page-header'
 import { useFoods, useMealLogs, useMealPresets } from '@/data/queries'
 import { MEAL_SLOTS, type MealLog, type MealPreset, type MealSlot } from '@/data/types'
 import { AddFoodModal } from '@/features/health/add-food-modal'
@@ -73,16 +74,13 @@ export function NutritionPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-fg text-xl font-semibold">Alimentação</h1>
-          <p className="text-fg-muted mt-1 text-sm">
-            Diário por refeição, com base na tabela TACO.
-          </p>
-        </div>
-
-        <DayNav date={date} onChange={setDate} />
-      </div>
+      <PageHeader
+        title="Alimentação"
+        description="Diário por refeição, com base na tabela TACO."
+        action={
+          <DayNav date={date} onChange={setDate} />
+        }
+      />
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-3">

@@ -11,7 +11,7 @@ export function Badge({
   className?: string
 }) {
   const tones = {
-    neutral: 'bg-surface-2 text-fg-muted border-border-base',
+    neutral: 'bg-surface-2 text-fg-muted border-transparent',
     accent: 'bg-accent-soft text-accent border-transparent',
     positive: 'bg-positive/10 text-positive border-transparent',
     negative: 'bg-negative/10 text-negative border-transparent',
@@ -76,16 +76,26 @@ export function Stat({
   const toneClass =
     tone === 'positive' ? 'text-positive' : tone === 'negative' ? 'text-negative' : 'text-fg'
   return (
-    <div className="space-y-1">
+    <div className="space-y-1.5">
       <div className="text-fg-muted flex items-center gap-1.5 text-xs font-medium">
         {icon}
         {label}
       </div>
-      <div className={cn('flex items-baseline gap-1 text-2xl font-semibold', toneClass)}>
+      {/* Entrelinha curta e tracking fechado: o número ganha presença sem
+          crescer de corpo. Crescer não cabe — "R$ 3.382,60" já ocupa a largura
+          inteira da coluna num monitor estreito. */}
+      <div
+        className={cn(
+          'flex items-baseline gap-1 text-2xl leading-none font-semibold tracking-[-0.02em]',
+          toneClass,
+        )}
+      >
         {value}
-        {unit && <span className="text-fg-subtle text-sm font-medium">{unit}</span>}
+        {unit && (
+          <span className="text-fg-subtle text-sm font-medium tracking-normal">{unit}</span>
+        )}
       </div>
-      {hint && <div className="text-fg-subtle text-xs">{hint}</div>}
+      {hint && <div className="text-fg-subtle text-xs leading-snug">{hint}</div>}
     </div>
   )
 }
@@ -154,10 +164,13 @@ export function Toggle({
   checked,
   onChange,
   label,
+  disabled,
 }: {
   checked: boolean
   onChange: (checked: boolean) => void
   label?: string
+  /** Travado em vez de ausente: some o botão, some a explicação do porquê. */
+  disabled?: boolean
 }) {
   return (
     <button
@@ -165,9 +178,10 @@ export function Toggle({
       role="switch"
       aria-checked={checked}
       aria-label={label}
+      disabled={disabled}
       onClick={() => onChange(!checked)}
       className={cn(
-        'relative h-5 w-9 shrink-0 rounded-full transition-colors',
+        'relative h-5 w-9 shrink-0 rounded-full transition-colors disabled:cursor-not-allowed disabled:opacity-40',
         checked ? 'bg-accent' : 'bg-border-strong',
       )}
     >
@@ -207,10 +221,19 @@ export function Callout({
   )
 }
 
+/**
+ * Divisor de assunto dentro de uma tela.
+ *
+ * O traço embaixo do texto é da cor do módulo e tem a largura do título, não da
+ * tela: divide sem cortar a página em faixas, que era o que uma régua de ponta
+ * a ponta fazia entre dois grupos de cartões.
+ */
 export function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
-    <div className="mb-3 flex items-center justify-between gap-4">
-      <h2 className="text-fg text-base font-semibold">{children}</h2>
+    <div className="mb-4 flex items-baseline justify-between gap-4">
+      <h2 className="text-fg border-accent border-b-2 pb-1.5 text-base font-semibold tracking-[-0.01em]">
+        {children}
+      </h2>
       {action}
     </div>
   )

@@ -2,7 +2,7 @@ import type { ComponentPropsWithRef, InputHTMLAttributes, ReactNode, SelectHTMLA
 import { cn } from '@/lib/utils'
 
 const control =
-  'bg-surface-2 border-border-base text-fg placeholder:text-fg-subtle h-9.5 w-full rounded-lg border px-3 text-sm outline-none transition-colors focus:border-accent disabled:opacity-50'
+  'bg-surface-2 border-border-base text-fg placeholder:text-fg-subtle h-9.5 w-full rounded-[var(--radius-control)] border px-3 text-sm outline-none transition-colors hover:border-border-strong focus:border-accent disabled:opacity-50'
 
 export function Field({
   label,

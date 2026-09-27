@@ -119,7 +119,6 @@ export type StorageMode = 'folder' | 'sqlite' | 'local'
 const NO_DESKTOP = isTauri()
 
 let folderStore: FolderStore | null = null
-const listeners = new Set<() => void>()
 
 /**
  * Liga ou desliga o modo pasta. Chamado depois que o usuário escolhe (ou
@@ -127,7 +126,6 @@ const listeners = new Set<() => void>()
  */
 export function setFolderStore(store: FolderStore | null): void {
   folderStore = store
-  for (const listener of listeners) listener()
 }
 
 export function currentFolder(): FolderStore | null {
@@ -137,11 +135,6 @@ export function currentFolder(): FolderStore | null {
 export function storageMode(): StorageMode {
   if (folderStore) return 'folder'
   return NO_DESKTOP ? 'sqlite' : 'local'
-}
-
-export function subscribeStorage(listener: () => void): () => void {
-  listeners.add(listener)
-  return () => listeners.delete(listener)
 }
 
 /**

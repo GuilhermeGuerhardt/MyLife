@@ -55,18 +55,8 @@ export function eachDay(from: string, to: string): string[] {
   return days
 }
 
-/** Os N dias que terminam em `end` (o próprio `end` incluído). */
-export function lastDays(end: string, count: number): string[] {
-  return eachDay(addDays(end, -(count - 1)), end)
-}
-
 export function startOfMonth(competence: string): string {
   return `${competence}-01`
-}
-
-export function endOfMonth(competence: string): string {
-  const [year, month] = competence.split('-').map(Number) as [number, number]
-  return `${competence}-${String(new Date(year, month, 0).getDate()).padStart(2, '0')}`
 }
 
 /**

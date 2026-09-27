@@ -137,8 +137,8 @@ export function DietPlanWidget() {
         ) : (
           <div className="flex flex-col items-start gap-3 py-2">
             <p className="text-fg-muted text-sm">
-              Informe peso, altura e meta que o app calcula TMB, gasto diário, déficit seguro e
-              macros — e recalibra sozinho conforme você avança.
+              Informe peso, altura e meta. O app calcula TMB, gasto diário, déficit seguro e
+              macros, e recalibra sozinho conforme você avança.
             </p>
             <Link to="/saude/plano">
               <Button size="sm">Montar plano</Button>

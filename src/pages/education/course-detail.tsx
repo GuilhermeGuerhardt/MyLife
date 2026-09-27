@@ -16,6 +16,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Field, Input, Textarea } from '@/components/ui/field'
 import { Badge, EmptyState, Progress, Stat } from '@/components/ui/misc'
 import { Modal } from '@/components/ui/modal'
+import { PageHeader } from '@/components/ui/page-header'
 import { useCourseLessons, useInstitutions, useNotes, usePrograms } from '@/data/queries'
 import { PROGRAM_STATUS_LABELS } from '@/data/types'
 import { CertificateThumb } from '@/features/education/certificate'
@@ -133,12 +134,12 @@ export function CourseDetail() {
             <ArrowLeft className="size-3.5" />
             Cursos
           </Link>
-          <h1 className="text-fg text-xl font-semibold">{program.name}</h1>
-          <p className="text-fg-muted mt-1 text-sm">
-            {[institution?.name, program.instructor, PROGRAM_STATUS_LABELS[program.status]]
+          <PageHeader
+            title={program.name}
+            description={[institution?.name, program.instructor, PROGRAM_STATUS_LABELS[program.status]]
               .filter(Boolean)
               .join(' · ')}
-          </p>
+          />
         </div>
         <div className="flex items-center gap-2">
           {ehImagem(program.certificate_url) && (
@@ -272,7 +273,7 @@ export function CourseDetail() {
         <Card>
           <EmptyState
             title="Nenhuma aula cadastrada"
-            description="Cole a lista de aulas do curso de uma vez — uma por linha — e o progresso passa a ser calculado sozinho."
+            description="Cole a lista de aulas do curso de uma vez, uma por linha, e o progresso passa a ser calculado sozinho."
             action={
               <Button size="sm" onClick={() => setAdding(true)}>
                 Adicionar aulas

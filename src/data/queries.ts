@@ -23,6 +23,9 @@ import type {
   Food,
   Habit,
   HabitLog,
+  HiddenTask,
+  ModuleSetting,
+  Task,
   Institution,
   MealLog,
   MealPreset,
@@ -35,6 +38,7 @@ import type {
   WorkoutSession,
 } from './types'
 import { uid } from '@/lib/utils'
+import { avisarMudanca } from '@/lib/sincronia'
 
 export const TABLES = {
   profiles: 'profiles',
@@ -61,7 +65,10 @@ export const TABLES = {
   recurring: 'recurring_transactions',
   habits: 'habits',
   habitLogs: 'habit_logs',
+  tasks: 'tasks',
+  hiddenTasks: 'hidden_tasks',
   widgets: 'dashboard_widgets',
+  modules: 'modules',
 } as const
 
 const collections = {
@@ -89,7 +96,10 @@ const collections = {
   recurring: collection<RecurringTransaction>(TABLES.recurring),
   habits: collection<Habit>(TABLES.habits),
   habitLogs: collection<HabitLog>(TABLES.habitLogs),
+  tasks: collection<Task>(TABLES.tasks),
+  hiddenTasks: collection<HiddenTask>(TABLES.hiddenTasks),
   widgets: collection<DashboardWidget>(TABLES.widgets),
+  modules: collection<ModuleSetting>(TABLES.modules),
 }
 
 type CollectionName = keyof typeof collections
@@ -264,7 +274,12 @@ function useCollection<T extends BaseRow>(name: CollectionName, key: QueryKey = 
 
   const query = useQuery({ queryKey: key, queryFn: () => store.list() })
 
-  const invalidate = () => client.invalidateQueries({ queryKey: key })
+  // Relê aqui e conta para as outras janelas relerem também: o banco é
+  // compartilhado, o cache de cada janela não.
+  const invalidate = () => {
+    avisarMudanca(name)
+    return client.invalidateQueries({ queryKey: key })
+  }
 
   const create = useMutation({
     mutationFn: (item: Parameters<Collection<T>['insert']>[0]) => store.insert(item),
@@ -379,6 +394,18 @@ export function useCourseLessons() {
 
 export function useNotes() {
   return useCollection<Note>('notes')
+}
+
+export function useModules() {
+  return useCollection<ModuleSetting>('modules')
+}
+
+export function useHiddenTasks() {
+  return useCollection<HiddenTask>('hiddenTasks')
+}
+
+export function useTasks() {
+  return useCollection<Task>('tasks')
 }
 
 export function useDeadlines() {

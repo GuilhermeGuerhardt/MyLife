@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge, EmptyState, SectionTitle } from '@/components/ui/misc'
+import { PageHeader } from '@/components/ui/page-header'
 import { useCategories, useTransactions } from '@/data/queries'
 import type { Category } from '@/data/types'
 import { CategoryForm, type CategoryDraft } from '@/features/finance/category-form'
@@ -63,19 +64,16 @@ export function CategoriesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-fg text-xl font-semibold">Categorias</h1>
-          <p className="text-fg-muted mt-1 max-w-2xl text-sm">
-            A cor de cada uma é a cor da fatia em “Onde foi o dinheiro”. As palavras-chave são o
-            que faz o registro rápido e a importação de planilha adivinharem sozinhos.
-          </p>
-        </div>
-        <Button onClick={() => setAdding(true)}>
-          <Plus />
-          Categoria
-        </Button>
-      </div>
+      <PageHeader
+        title="Categorias"
+        description="A cor de cada uma é a cor da fatia em “Onde foi o dinheiro”. As palavras-chave ensinam o registro rápido e a importação de planilha a acertar a categoria sozinhos."
+        action={
+          <Button onClick={() => setAdding(true)}>
+            <Plus />
+            Categoria
+          </Button>
+        }
+      />
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div>

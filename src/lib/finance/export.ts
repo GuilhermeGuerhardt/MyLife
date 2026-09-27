@@ -137,30 +137,63 @@ export function toCsvFile(rows: readonly (readonly string[])[], delimiter = ';')
   return `﻿${toCsv(rows, delimiter)}\r\n`
 }
 
-export type ExportScope = 'month' | 'year' | 'all'
+// ---------------------------------------------------------------------------
+// O recorte
+// ---------------------------------------------------------------------------
 
-export const SCOPE_LABELS: Record<ExportScope, string> = {
-  month: 'Mês aberto',
-  year: 'Últimos 12 meses',
-  all: 'Tudo',
+/**
+ * O intervalo de competências que sai no arquivo.
+ *
+ * Antes eram três recortes prontos — mês aberto, últimos doze meses, tudo — e
+ * nenhum deles dava conta de "janeiro a abril", que é o pedido de quem fecha um
+ * trimestre ou manda o ano para o contador. Ponta vazia é ponta aberta: sem
+ * `de` o arquivo começa no primeiro lançamento, sem `ate` termina no último.
+ */
+export interface Periodo {
+  de: Competence | ''
+  ate: Competence | ''
 }
 
-/** Os lançamentos que o escopo escolhido alcança, pela competência. */
-export function filterByScope<T extends { competence: Competence }>(
+/** Se o intervalo faz sentido. Começo depois do fim não é recorte, é engano. */
+export function periodoValido({ de, ate }: Periodo): boolean {
+  return !de || !ate || de <= ate
+}
+
+/** Os lançamentos dentro do período, pela competência. */
+export function filtrarPorPeriodo<T extends { competence: Competence }>(
   transactions: readonly T[],
-  scope: ExportScope,
-  competence: Competence,
-  addMonths: (competence: Competence, months: number) => Competence,
+  periodo: Periodo,
 ): T[] {
-  if (scope === 'all') return [...transactions]
-  if (scope === 'month') return transactions.filter((tx) => tx.competence === competence)
-
-  const desde = addMonths(competence, -11)
-  return transactions.filter((tx) => tx.competence >= desde && tx.competence <= competence)
+  if (!periodoValido(periodo)) return []
+  const { de, ate } = periodo
+  return transactions.filter((tx) => (!de || tx.competence >= de) && (!ate || tx.competence <= ate))
 }
 
-export function exportFilename(scope: ExportScope, competence: Competence, isoDate: string): string {
-  if (scope === 'month') return `life-lancamentos-${competence}.csv`
-  if (scope === 'year') return `life-lancamentos-12-meses-${isoDate}.csv`
+/**
+ * O intervalo que cobre tudo o que existe, que é como a tela abre.
+ *
+ * Abrir com os campos vazios obrigaria a escolher duas datas até para exportar
+ * o arquivo inteiro. Abrir no mês corrente esconderia o resto sem avisar.
+ */
+export function periodoDeTudo<T extends { competence: Competence }>(
+  transactions: readonly T[],
+  hoje: Competence,
+): Periodo {
+  if (transactions.length === 0) return { de: hoje, ate: hoje }
+  const competencias = transactions.map((tx) => tx.competence)
+  return {
+    de: competencias.reduce((a, b) => (a <= b ? a : b)),
+    ate: competencias.reduce((a, b) => (a >= b ? a : b)),
+  }
+}
+
+/** O nome do arquivo carrega o recorte, senão a pasta enche de arquivo igual. */
+export function exportFilename(periodo: Periodo, isoDate: string): string {
+  const { de, ate } = periodo
+  if (de && ate) {
+    return de === ate ? `life-lancamentos-${de}.csv` : `life-lancamentos-${de}-a-${ate}.csv`
+  }
+  if (de) return `life-lancamentos-desde-${de}.csv`
+  if (ate) return `life-lancamentos-ate-${ate}.csv`
   return `life-lancamentos-${isoDate}.csv`
 }

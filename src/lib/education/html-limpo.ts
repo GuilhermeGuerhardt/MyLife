@@ -18,7 +18,17 @@ import DOMPurify from 'dompurify'
 
 const LIMPEZA = {
   USE_PROFILES: { html: true },
-  ADD_ATTR: ['style', 'data-nota', 'data-cor', 'data-type', 'data-checked'],
+  ADD_ATTR: [
+    'style',
+    'data-nota',
+    'data-cor',
+    'data-type',
+    'data-checked',
+    'data-destaque',
+    'open',
+    // A largura de cada coluna da tabela, ajustada pela alça.
+    'colwidth',
+  ],
 }
 
 export function htmlLimpoDaNota(html: string): string {

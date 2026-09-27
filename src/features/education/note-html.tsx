@@ -8,6 +8,7 @@
 
 import { useMemo, type MouseEvent } from 'react'
 import { htmlLimpoDaNota } from '@/lib/education/html-limpo'
+import { comWikilinks } from '@/lib/education/wikilink-html'
 import { cn } from '@/lib/utils'
 
 export function NoteHtml({
@@ -15,14 +16,24 @@ export function NoteHtml({
   className,
   onAbrirNota,
   onAlternarTarefa,
+  existeNota,
 }: {
   content: string
   className?: string
   onAbrirNota?: (titulo: string) => void
+  /** Sem isto, todo `[[link]]` sairia com a cor de "ainda não existe". */
+  existeNota?: (titulo: string) => boolean
   /** Marca a enésima tarefa do documento, na ordem em que aparecem. */
   onAlternarTarefa?: (ordinal: number, estavaMarcada: boolean) => void
 }) {
-  const html = useMemo(() => htmlLimpoDaNota(content), [content])
+  // Limpa primeiro, liga depois: o `[[x]]` vira âncora nossa, com os atributos
+  // que nós escolhemos, e não algo que veio colado de fora.
+  const html = useMemo(
+    // O bloco alternável chega como a pessoa o deixou: aberto ou fechado é
+    // escolha dela, gravada na anotação, e não algo que a leitura decide.
+    () => comWikilinks(htmlLimpoDaNota(content), { existe: existeNota ?? (() => false) }),
+    [content, existeNota],
+  )
 
   const clicou = (evento: MouseEvent<HTMLDivElement>) => {
     const alvo = evento.target as HTMLElement

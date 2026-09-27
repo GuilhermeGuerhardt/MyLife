@@ -66,8 +66,8 @@ export function contarPalavras(conteudo: string, formato: FormatoDaNota): number
  * listas, tarefas, citação, código, negrito, itálico e link. O que escapar vira
  * parágrafo, que é texto preservado, não texto perdido.
  *
- * Os `[[links]]` viram texto simples com a marca `data-nota`: eles continuam
- * legíveis e continuam achando a anotação de destino na leitura.
+ * Os `[[links]]` atravessam intactos: são o mesmo link nos dois editores, e a
+ * leitura os transforma em link clicável dos dois lados.
  */
 export function markdownParaHtml(markdown: string): string {
   const linhas = markdown.split('\n')
@@ -179,9 +179,9 @@ function emLinha(texto: string): string {
     .replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>')
     .replace(/(^|[^_])_([^_]+)_/g, '$1<em>$2</em>')
     .replace(/~~([^~]+)~~/g, '<s>$1</s>')
-    .replace(
-      /\[\[([^[\]\n]+)\]\]/g,
-      '<a href="#nota" class="nota-link" data-nota="$1">$1</a>',
-    )
+    // O `[[Título]]` atravessa a conversão como está escrito: é o mesmo link
+    // nos dois editores, e é ele que o painel de menções procura. Virar âncora
+    // aqui era o que tirava a anotação convertida da rede.
+    .replace(/\[\[([^[\]\n]+)\]\]/g, '[[$1]]')
     .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2">$1</a>')
 }

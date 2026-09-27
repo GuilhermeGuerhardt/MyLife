@@ -136,3 +136,40 @@ describe('nome de arquivo', () => {
     expect(nomeDeArquivo('///')).toBe('anotacao')
   })
 })
+
+describe('tabela', () => {
+  const TABELA =
+    '<table><tbody>' +
+    '<tr><th>Matéria</th><th>Nota</th></tr>' +
+    '<tr><td>Cálculo</td><td>8,5</td></tr>' +
+    '<tr><td>Redes</td><td>7,0</td></tr>' +
+    '</tbody></table>'
+
+  it('vira um bloco só, com as linhas dentro', () => {
+    const [bloco] = blocosDoHtml(TABELA)
+    expect(bloco!.tipo).toBe('tabela')
+    expect(bloco!.linhas).toEqual([
+      { cabecalho: true, celulas: ['Matéria', 'Nota'] },
+      { cabecalho: false, celulas: ['Cálculo', '8,5'] },
+      { cabecalho: false, celulas: ['Redes', '7,0'] },
+    ])
+  })
+
+  /** Como parágrafos soltos, as células viravam uma sopa sem colunas. */
+  it('as células não escapam como parágrafos', () => {
+    expect(blocosDoHtml(TABELA)).toHaveLength(1)
+  })
+
+  it('no texto puro sai como grade de barras', () => {
+    expect(blocosParaTexto(blocosDoHtml(TABELA))).toBe(
+      'Matéria | Nota' + String.fromCharCode(10) +
+      '--- | ---' + String.fromCharCode(10) +
+      'Cálculo | 8,5' + String.fromCharCode(10) +
+      'Redes | 7,0' + String.fromCharCode(10),
+    )
+  })
+
+  it('tabela vazia não vira bloco', () => {
+    expect(blocosDoHtml('<table></table>')).toEqual([])
+  })
+})

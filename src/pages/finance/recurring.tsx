@@ -5,6 +5,7 @@ import { buttonStyles } from '@/components/ui/button'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge, EmptyState, SectionTitle, Stat } from '@/components/ui/misc'
+import { PageHeader } from '@/components/ui/page-header'
 import { useCategories, useRecurring, useTransactions } from '@/data/queries'
 import type { RecurringTransaction } from '@/data/types'
 import { CategoryIcon } from '@/features/finance/category-icons'
@@ -68,22 +69,19 @@ export function RecurringPage() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-fg text-xl font-semibold">Recorrentes</h1>
-          <p className="text-fg-muted mt-1 text-sm">
-            O que se repete todo mês. Uma recorrente nasce em Lançamentos, marcando
-            "Se repete" — aqui você acompanha, pausa e edita.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <MonthNav competence={competence} onChange={setCompetence} />
-          <Link to="/financeiro/transacoes" className={buttonStyles({ variant: 'secondary' })}>
-            <Plus />
-            Nova pelo lançamento
-          </Link>
-        </div>
-      </div>
+      <PageHeader
+        title="Recorrentes"
+        description={'O que se repete todo mês. A recorrente nasce em Lançamentos, na opção "Se repete". Aqui você acompanha, pausa e edita.'}
+        action={
+          <div className="flex items-center gap-2">
+            <MonthNav competence={competence} onChange={setCompetence} />
+            <Link to="/financeiro/transacoes" className={buttonStyles({ variant: 'secondary' })}>
+              <Plus />
+              Nova pelo lançamento
+            </Link>
+          </div>
+        }
+      />
 
       {pending.length > 0 && (
         <Card className="border-warning/40">

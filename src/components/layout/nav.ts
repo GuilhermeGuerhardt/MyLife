@@ -77,6 +77,7 @@ export const NAV: NavItem[] = [
     accent: 'accent-routine',
     children: [
       { to: '/rotina', label: 'Hábitos' },
+      { to: '/rotina/tarefas', label: 'A fazer' },
       { to: '/rotina/agenda', label: 'Agenda' },
       { to: '/rotina/insights', label: 'Insights' },
     ],

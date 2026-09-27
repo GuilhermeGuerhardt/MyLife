@@ -3,14 +3,18 @@ import { useEffect, useState } from 'react'
 import { useProfile } from '@/data/queries'
 import { AvatarField } from '@/features/profile/avatar-field'
 import { BackupCard } from '@/features/profile/backup-card'
+import { ModulosCard } from '@/features/profile/modulos-card'
+import { TarefasForaCard } from '@/features/profile/tarefas-fora-card'
 import { ThemeCard } from '@/features/profile/theme-card'
 import { WorkspaceCard } from '@/features/profile/workspace-card'
+import { GuiasCard } from '@/features/tutorial/guias-card'
 import { UpdatesCard } from '@/features/updates/updates-card'
 import { ACTIVITY_LABELS, type ActivityLevel, type Sex } from '@/lib/health/formulas'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Field, Input, Select } from '@/components/ui/field'
 import { SectionTitle } from '@/components/ui/misc'
+import { PageHeader } from '@/components/ui/page-header'
 
 export function ProfilePage() {
   const { profile, save, isSaving } = useProfile()
@@ -44,12 +48,10 @@ export function ProfilePage() {
 
   return (
     <div className="max-w-2xl space-y-6">
-      <div>
-        <h1 className="text-fg text-xl font-semibold">Perfil</h1>
-        <p className="text-fg-muted mt-1 text-sm">
-          Estes dados alimentam os cálculos de TMB, TDEE e do plano de emagrecimento.
-        </p>
-      </div>
+      <PageHeader
+        title="Perfil"
+        description="Estes dados alimentam os cálculos de TMB, TDEE e do plano de emagrecimento."
+      />
 
       <Card>
         <CardHeader title="Dados pessoais" />
@@ -134,6 +136,13 @@ export function ProfilePage() {
       <div className="space-y-4">
         <SectionTitle>Aparência</SectionTitle>
         <ThemeCard />
+      </div>
+
+      <div className="space-y-4">
+        <SectionTitle>O que aparece</SectionTitle>
+        <ModulosCard />
+        <GuiasCard />
+        <TarefasForaCard />
       </div>
 
       <div className="space-y-4">

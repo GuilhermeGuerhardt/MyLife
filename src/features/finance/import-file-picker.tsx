@@ -1,8 +1,10 @@
-import { Info, Upload } from 'lucide-react'
+import { FileDown, Info, Upload } from 'lucide-react'
 import { useRef, useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { cn } from '@/lib/utils'
+import { MODELO_NOME, modeloDeImportacao } from '@/lib/finance/modelo-importacao'
+import { PLANILHA_CSV, salvarArquivo } from '@/lib/salvar-arquivo'
+import { cn, today } from '@/lib/utils'
 
 /** A porta de entrada da importação: arrastar o CSV ou escolher pelo diálogo. */
 export function ImportFilePicker({
@@ -14,6 +16,16 @@ export function ImportFilePicker({
 }) {
   const input = useRef<HTMLInputElement>(null)
   const [dragging, setDragging] = useState(false)
+  const [baixando, setBaixando] = useState(false)
+
+  async function baixarModelo() {
+    setBaixando(true)
+    try {
+      await salvarArquivo(MODELO_NOME, modeloDeImportacao(today()), PLANILHA_CSV)
+    } finally {
+      setBaixando(false)
+    }
+  }
 
   return (
     <Card>
@@ -41,9 +53,19 @@ export function ImportFilePicker({
             Exporte o extrato do outro app em CSV. O cabeçalho é reconhecido sozinho — e se o seu
             for diferente, dá para corrigir coluna por coluna na tela seguinte.
           </p>
-          <Button className="mt-4" variant="secondary" onClick={() => input.current?.click()}>
-            Escolher arquivo
-          </Button>
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+            <Button variant="secondary" onClick={() => input.current?.click()}>
+              Escolher arquivo
+            </Button>
+            {/* O modelo fica ao lado da porta de entrada porque é ali que a
+                dúvida aparece: a pessoa está com o arquivo na mão, sem saber se
+                ele serve. Baixar um que serve responde mais rápido do que ler a
+                explicação das colunas. */}
+            <Button variant="ghost" disabled={baixando} onClick={() => void baixarModelo()}>
+              <FileDown />
+              Baixar modelo
+            </Button>
+          </div>
           <input
             ref={input}
             type="file"

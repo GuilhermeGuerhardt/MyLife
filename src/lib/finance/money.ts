@@ -25,10 +25,6 @@ export function centsToInput(cents: number): string {
   return (cents / 100).toFixed(2).replace('.', ',')
 }
 
-export function centsToNumber(cents: number): number {
-  return cents / 100
-}
-
 /**
  * Converte o que a pessoa digitou em centavos.
  *

@@ -1,5 +1,5 @@
-import { ArrowLeft, Download, Eye, Pen, Pin, Trash2, Type } from 'lucide-react'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { ArrowLeft, Download, ExternalLink, Eye, Pen, Pin, Trash2, Type } from 'lucide-react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Button, buttonStyles } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Field, Input, Select, Textarea } from '@/components/ui/field'
@@ -15,6 +15,8 @@ import {
   type FormatoDaNota,
 } from '@/lib/education/formato'
 import { alternarTarefa } from '@/lib/education/tarefas'
+import { lazyRoute } from '@/lib/lazy-route'
+import { useMenuFlutuante } from '@/components/ui/use-menu-flutuante'
 import { cn } from '@/lib/utils'
 import {
   exportarNota,
@@ -26,7 +28,18 @@ import { LinkSuggestions, useLinkAutocomplete } from './link-autocomplete'
 import { Markdown } from './markdown'
 import { NoteBacklinks } from './note-backlinks'
 import { NoteHtml } from './note-html'
-import { RichEditor } from './rich-editor'
+/*
+  O editor formatado é o pedaço mais pesado do app — ele traz o TipTap inteiro
+  junto. Abrir uma anotação para ler não precisa de nada disso, e ler é o que
+  mais se faz: agora ele só desce quando a pessoa entra no modo de edição.
+
+  Vai pelo `lazyRoute` e não pelo `lazy` do React para herdar a recuperação de
+  chunk que sumiu — depois de uma atualização, a aba antiga pede um arquivo que
+  não existe mais, e sem isso o editor abriria em branco.
+*/
+const RichEditor = lazyRoute(() =>
+  import('./rich-editor').then((modulo) => ({ default: modulo.RichEditor })),
+)
 
 export type NoteMode = 'edit' | 'preview'
 
@@ -43,7 +56,16 @@ export const NOTE_TEMPLATE = `<h2>Resumo</h2><p></p><h2>Pontos principais</h2><u
 const AUTOSAVE_MS = 800
 
 /** O valor do select "Onde" quando a anotação não pertence a curso nenhum. */
-const LIVRE = '__livre__'
+/**
+ * Os dois destinos que não são curso.
+ *
+ * O prefixo esquisito é de propósito: o valor do select ou é um id de curso ou
+ * é um destes, e um id nunca começa com underscore.
+ */
+const SEM_CURSO: Array<{ valor: string; track: Track; rotulo: string }> = [
+  { valor: '__estudos__', track: 'free', rotulo: 'Estudo livre' },
+  { valor: '__anotacoes__', track: 'personal', rotulo: 'Anotações' },
+]
 
 export function NoteEditor({
   note,
@@ -60,6 +82,8 @@ export function NoteEditor({
   existeNota,
   titulosDisponiveis,
   nomeDoCurso,
+  variante = 'painel',
+  aoAbrirEmJanela,
 }: {
   note: Note
   /** Vem de fora: o editor remonta a cada troca de anotação, o modo não. */
@@ -78,6 +102,14 @@ export function NoteEditor({
   existeNota: (titulo: string) => boolean
   titulosDisponiveis: Array<{ id: string; title: string }>
   nomeDoCurso: (note: Note) => string | null
+  /**
+   * `janela` é o mesmo editor sem a mobília que só faz sentido ao lado da
+   * lista: voltar, escolher onde a anotação mora, ver quem a menciona. Numa
+   * janela só de escrever, cada uma dessas linhas é espaço tirado do texto.
+   */
+  variante?: 'painel' | 'janela'
+  /** Ausente na própria janela — de lá não há o que destacar. */
+  aoAbrirEmJanela?: () => void
 }) {
   const [form, setForm] = useState({
     title: note.title,
@@ -184,10 +216,11 @@ export function NoteEditor({
     onModeChange('edit')
   }
 
-  /** O select "Onde": um curso, ou estudo livre. O trilho vem junto. */
+  /** O select "Onde": um curso, estudo livre ou anotação solta. O trilho vem junto. */
   const mudarOnde = (valor: string) => {
-    if (valor === LIVRE) {
-      set({ track: 'free', program_id: '', subject_id: '' })
+    const semCurso = SEM_CURSO.find((opcao) => opcao.valor === valor)
+    if (semCurso) {
+      set({ track: semCurso.track, program_id: '', subject_id: '' })
       return
     }
     const program = programs.find((p) => p.id === valor)
@@ -198,26 +231,38 @@ export function NoteEditor({
   const formato = form.format
   const academicos = programs.filter((p) => p.track === 'academic')
   const cursos = programs.filter((p) => p.track === 'course')
-  const ondeAtual = form.program_id || (form.track === 'free' ? LIVRE : '')
+  const ondeAtual =
+    form.program_id || (SEM_CURSO.find((opcao) => opcao.track === form.track)?.valor ?? '')
   const words = contarPalavras(form.content, formato)
+  const naJanela = variante === 'janela'
 
   return (
-    <Card className="flex min-h-[70vh] flex-col">
-      <div className="border-border-base flex flex-wrap items-center gap-2 border-b px-4 py-3">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onBack}
-          className="lg:hidden"
-          aria-label="Voltar"
-        >
-          <ArrowLeft />
-        </Button>
+    <Card
+      className={cn(
+        'flex flex-col',
+        naJanela ? 'h-full min-h-0 rounded-none border-0' : 'min-h-[70vh] lg:h-full lg:min-h-0',
+      )}
+    >
+      <div className="border-border-base flex shrink-0 flex-wrap items-center gap-2 border-b px-4 py-3">
+        {!naJanela && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onBack}
+            className="lg:hidden"
+            aria-label="Voltar"
+          >
+            <ArrowLeft />
+          </Button>
+        )}
         <Input
           value={form.title}
           onChange={(e) => set({ title: e.target.value })}
           placeholder="Título da anotação"
-          className="h-9 flex-1 border-transparent bg-transparent px-0 text-base font-semibold"
+          /* Largura mínima para o título não ser espremido a nada: numa janela
+             estreita a fila de botões quebra para a linha de baixo, em vez de
+             engolir o nome da anotação. */
+          className="h-9 min-w-40 flex-1 border-transparent bg-transparent px-0 text-base font-semibold"
         />
         <Segmented
           value={mode}
@@ -227,6 +272,17 @@ export function NoteEditor({
             { value: 'preview', label: <Eye className="size-3.5" />, ariaLabel: 'Visualizar' },
           ]}
         />
+        {aoAbrirEmJanela && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={aoAbrirEmJanela}
+            aria-label="Abrir em outra janela"
+            title="Abrir em outra janela"
+          >
+            <ExternalLink />
+          </Button>
+        )}
         <MenuExportar
           formato={formato}
           onEscolher={(saida) => {
@@ -255,24 +311,33 @@ export function NoteEditor({
         >
           <Pin />
         </Button>
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => {
-            void confirmar('Remover esta anotação?', { confirmar: 'Remover' }).then((ok) => {
-              if (ok) onRemove()
-            })
-          }}
-          aria-label="Remover anotação"
-        >
-          <Trash2 />
-        </Button>
+        {!naJanela && (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              void confirmar('Remover esta anotação?', { confirmar: 'Remover' }).then((ok) => {
+                if (ok) onRemove()
+              })
+            }}
+            aria-label="Remover anotação"
+          >
+            <Trash2 />
+          </Button>
+        )}
       </div>
 
-      <div className="border-border-base grid gap-3 border-b px-4 py-3 sm:grid-cols-3">
-        <Field label="Onde" hint="Sem curso, vai para Estudos">
+      {/* Onde a anotação mora e as etiquetas: decisão que se toma ao lado da
+          lista, não no meio de escrever. Na janela, some e vira texto. */}
+      {!naJanela && (
+      <div className="border-border-base grid shrink-0 gap-3 border-b px-4 py-3 sm:grid-cols-3">
+        <Field label="Onde">
           <Select value={ondeAtual} onChange={(e) => mudarOnde(e.target.value)}>
-            <option value={LIVRE}>Estudo livre</option>
+            {SEM_CURSO.map((opcao) => (
+              <option key={opcao.valor} value={opcao.valor}>
+                {opcao.rotulo}
+              </option>
+            ))}
             {/* A anotação antiga sem curso guarda o trilho dela: some da lista
                 se for editada, mas até lá continua onde estava. */}
             {ondeAtual === '' && <option value="">Sem curso</option>}
@@ -322,18 +387,28 @@ export function NoteEditor({
           />
         </Field>
       </div>
+      )}
 
-      <CardContent className="relative flex min-h-0 flex-1 flex-col p-0">
+      {/* O único pedaço que rola. A barra de formatação está dentro do editor,
+          acima desta área, e por isso fica parada com o texto correndo. */}
+      <CardContent className="relative flex min-h-0 flex-1 flex-col overflow-hidden p-0">
         {formato === 'html' ? (
           mode === 'edit' ? (
-            <RichEditor content={form.content} onChange={(html) => set({ content: html })} />
+            <Suspense fallback={<CarregandoEditor />}>
+              <RichEditor
+                content={form.content}
+                onChange={(html) => set({ content: html })}
+                notas={titulosDisponiveis}
+              />
+            </Suspense>
           ) : (
-            <div className="px-5 py-4">
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
               {textoPuro(form.content, 'html').trim() ? (
                 <NoteHtml
                   content={form.content}
                   onAbrirNota={onAbrirPorTitulo}
                   onAlternarTarefa={alternarTarefaNoHtml}
+                  existeNota={existeNota}
                 />
               ) : (
                 <p className="text-fg-subtle text-sm">Nada escrito ainda.</p>
@@ -355,7 +430,7 @@ export function NoteEditor({
               onClick={auto.sincronizar}
               onBlur={auto.fechar}
               placeholder="Escreva em Markdown. Use [[ para ligar a outra anotação."
-              className="h-full min-h-[50vh] resize-none rounded-none border-0 bg-transparent px-5 py-4 font-mono text-[13px] leading-relaxed"
+              className="min-h-[50vh] flex-1 resize-none overflow-y-auto rounded-none border-0 bg-transparent px-5 py-4 font-mono text-[13px] leading-relaxed lg:min-h-0"
             />
             {auto.aberto && (
               <LinkSuggestions
@@ -368,7 +443,7 @@ export function NoteEditor({
             )}
           </>
         ) : (
-          <div className="px-5 py-4">
+          <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4">
             {form.content.trim() ? (
               <Markdown
                 content={form.content}
@@ -383,9 +458,13 @@ export function NoteEditor({
         )}
       </CardContent>
 
-      <NoteBacklinks itens={backlinks} onAbrir={onAbrirNota} nomeDoCurso={nomeDoCurso} />
+      {!naJanela && (
+        <div className="shrink-0">
+          <NoteBacklinks itens={backlinks} onAbrir={onAbrirNota} nomeDoCurso={nomeDoCurso} />
+        </div>
+      )}
 
-      <div className="border-border-base text-fg-subtle flex items-center justify-between border-t px-4 py-2 text-[11px]">
+      <div className="border-border-base text-fg-subtle flex shrink-0 items-center justify-between border-t px-4 py-2 text-[11px]">
         <span>{words} palavras</span>
         <Badge tone={saved ? 'neutral' : 'accent'}>{saved ? 'Salvo' : 'Salvando...'}</Badge>
       </div>
@@ -396,8 +475,8 @@ export function NoteEditor({
 /**
  * O menu de exportação, com o que aquele formato sabe entregar.
  *
- * `<details>` pelo mesmo motivo das paletas do editor: fecha sozinho ao clicar
- * fora, anda pelo teclado e não pede estado no React.
+ * `<details>` pelo mesmo motivo das paletas do editor: anda pelo teclado e não
+ * pede estado no React. Fechar ao clicar fora vem de `useMenuFlutuante`.
  */
 function MenuExportar({
   formato,
@@ -406,8 +485,10 @@ function MenuExportar({
   formato: FormatoDaNota
   onEscolher: (saida: FormatoDeSaida) => void
 }) {
+  const menu = useMenuFlutuante()
+
   return (
-    <details className="relative">
+    <details ref={menu} className="relative">
       <summary
         title="Exportar"
         aria-label="Exportar"
@@ -434,6 +515,24 @@ function MenuExportar({
         ))}
       </div>
     </details>
+  )
+}
+
+/**
+ * O lugar do editor enquanto ele desce.
+ *
+ * Ocupa a altura da barra de formatação e do texto, para a tela não pular
+ * quando ele chega. Sem a palavra "carregando": em disco local isso dura um
+ * piscar, e um aviso que aparece e some incomoda mais do que um espaço parado.
+ */
+function CarregandoEditor() {
+  return (
+    <div aria-hidden className="flex min-h-0 flex-1 flex-col">
+      <div className="border-border-base bg-surface-2 h-16 shrink-0 border-b" />
+      <div className="min-h-0 flex-1 px-5 py-4">
+        <div className="bg-surface-2 h-3.5 w-2/5 rounded" />
+      </div>
+    </div>
   )
 }
 

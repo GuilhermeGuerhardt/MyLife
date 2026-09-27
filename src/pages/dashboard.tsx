@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { EmptyState } from '@/components/ui/misc'
+import { PageHeader } from '@/components/ui/page-header'
 import { useProfile } from '@/data/queries'
 import { CustomizeDashboard } from '@/features/dashboard/customize'
 import { useDashboardLayout } from '@/features/dashboard/use-dashboard-layout'
@@ -21,29 +22,31 @@ export function Dashboard({ onOpenPalette }: { onOpenPalette: () => void }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="text-fg text-xl font-semibold">
+      <PageHeader
+        title={
+          <>
             {greeting()}
             {profile?.name ? `, ${profile.name.split(' ')[0]}` : ''}
-          </h1>
-          <p className="text-fg-muted mt-1 text-sm first-letter:uppercase">{longDate(today())}</p>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Personalizar dashboard"
-            onClick={() => setCustomizing(true)}
-          >
-            <LayoutGrid />
-          </Button>
-          <Button variant="secondary" onClick={onOpenPalette}>
-            <Command />
-            Registrar rápido
-          </Button>
-        </div>
-      </div>
+          </>
+        }
+        description={<span className="first-letter:uppercase">{longDate(today())}</span>}
+        action={
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Personalizar dashboard"
+              onClick={() => setCustomizing(true)}
+            >
+              <LayoutGrid />
+            </Button>
+            <Button variant="secondary" onClick={onOpenPalette}>
+              <Command />
+              Registrar rápido
+            </Button>
+          </div>
+        }
+      />
 
       {layout.visible.length === 0 ? (
         <Card>

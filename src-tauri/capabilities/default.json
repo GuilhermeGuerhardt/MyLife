@@ -3,7 +3,8 @@
   "identifier": "default",
   "description": "O que a interface do Life pode pedir ao processo nativo.",
   "windows": [
-    "main"
+    "main",
+    "janela-*"
   ],
   "permissions": [
     "core:default",
@@ -17,6 +18,9 @@
     "sql:allow-execute",
     "sql:allow-select",
     "sql:allow-close",
-    "updater:default"
+    "updater:default",
+    "core:webview:allow-create-webview-window",
+    "core:window:allow-set-focus",
+    "core:window:allow-unminimize"
   ]
 }

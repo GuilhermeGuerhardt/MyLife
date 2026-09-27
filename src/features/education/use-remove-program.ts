@@ -86,8 +86,3 @@ export function useRemoveProgram() {
   }
 }
 
-/** O curso pelo id, para a tela de detalhe não repetir a busca. */
-export function useProgram(id: string | undefined) {
-  const { data: programs } = usePrograms()
-  return programs.find((p) => p.id === id) ?? null
-}

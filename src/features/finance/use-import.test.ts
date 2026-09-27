@@ -121,6 +121,7 @@ describe('linhas viram lançamentos', () => {
   })
 
   const alvos = (over: Partial<AlvosDaImportacao> = {}): AlvosDaImportacao => ({
+    sugestoes: new Map(),
     contas: new Map([
       ['Banco Azul', 'conta-1'],
       ['Poupança', 'conta-2'],

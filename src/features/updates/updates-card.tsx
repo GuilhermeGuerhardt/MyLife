@@ -1,7 +1,10 @@
 import { isTauri } from '@tauri-apps/api/core'
 import { useState } from 'react'
+import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Toggle } from '@/components/ui/misc'
+import { novidadesDesde, type Novidade } from './novidades'
+import { NovidadesModal } from './novidades-modal'
 import { buscaAtivada, definirBusca } from './use-updater'
 
 /**
@@ -15,6 +18,9 @@ import { buscaAtivada, definirBusca } from './use-updater'
  */
 export function UpdatesCard() {
   const [ativa, setAtiva] = useState(buscaAtivada)
+  /* Reler o que mudou. Fechar o aviso da atualização por engano é de um clique,
+     e sem isto a única forma de rever seria abrir a página de releases. */
+  const [relendo, setRelendo] = useState<Novidade[]>([])
 
   if (!isTauri()) return null
 
@@ -28,6 +34,14 @@ export function UpdatesCard() {
       <CardHeader
         title="Atualizações"
         description="Vale para este aparelho, como o tema."
+        action={
+          <Button
+            variant="ghost"
+            onClick={() => setRelendo(novidadesDesde('0.0.0', __VERSAO__).slice(0, 1))}
+          >
+            O que mudou
+          </Button>
+        }
       />
       <CardContent>
         <div className="flex items-start justify-between gap-4">
@@ -41,6 +55,8 @@ export function UpdatesCard() {
           </div>
           <Toggle checked={ativa} onChange={alternar} label="Buscar atualizações ao abrir" />
         </div>
+
+        <NovidadesModal novidades={relendo} onFechar={() => setRelendo([])} />
       </CardContent>
     </Card>
   )

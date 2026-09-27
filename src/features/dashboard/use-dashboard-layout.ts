@@ -1,6 +1,8 @@
 import { useMemo } from 'react'
 import { useWidgets } from '@/data/queries'
 import type { DashboardWidget } from '@/data/types'
+import { useModulos } from '@/features/profile/use-modulos'
+import { moduloAtivo } from '@/lib/modulos'
 import { WIDGETS, type WidgetDef } from './widgets'
 
 export interface LayoutItem {
@@ -18,14 +20,21 @@ export interface LayoutItem {
  * aparece com o padrão dele no fim da lista, em vez de sumir por não ter linha
  * salva — assim uma versão nova do app não deixa a tela de alguém desatualizada
  * e vazia.
+ *
+ * Módulo desligado no Perfil tira os widgets dele daqui e da personalização:
+ * oferecer "Peso" a quem escondeu Saúde é oferecer um cartão que fala de uma
+ * tela que não está mais no menu. A linha salva de cada um continua intacta, e
+ * religar o módulo devolve o painel como estava.
  */
 export function useDashboardLayout() {
   const { data: rows, create, update, remove } = useWidgets()
+  const { fora } = useModulos()
 
   const items = useMemo(() => {
     const byWidget = new Map(rows.map((row) => [row.widget, row]))
+    const catalogo = WIDGETS.filter((def) => moduloAtivo(def.modulos, fora))
 
-    const merged: LayoutItem[] = WIDGETS.map((def, index) => {
+    const merged: LayoutItem[] = catalogo.map((def, index) => {
       const row = byWidget.get(def.id) ?? null
       return {
         def,
@@ -37,7 +46,7 @@ export function useDashboardLayout() {
     })
 
     return merged.sort((a, b) => a.position - b.position)
-  }, [rows])
+  }, [rows, fora])
 
   /**
    * Materializa a ordem atual no banco. Chamada antes de qualquer edição:

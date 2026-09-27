@@ -3,6 +3,16 @@ import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import { fileURLToPath, URL } from 'node:url'
+import { readFileSync } from 'node:fs'
+
+/*
+  A versão do package.json entra no pacote como constante.
+
+  O app precisa dela para saber que abriu depois de uma atualização e mostrar o
+  que mudou. Ler em tempo de execução exigiria a API do Tauri, que não existe no
+  navegador; assado no build, o número é o mesmo nos dois.
+*/
+const versao = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')).version
 
 /**
  * O Tauri define `TAURI_ENV_PLATFORM` durante o build do programa de desktop.
@@ -15,6 +25,7 @@ import { fileURLToPath, URL } from 'node:url'
 const noTauri = Boolean(process.env.TAURI_ENV_PLATFORM)
 
 export default defineConfig({
+  define: { __VERSAO__: JSON.stringify(versao) },
   plugins: [
     react(),
     tailwindcss(),
