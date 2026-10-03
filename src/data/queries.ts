@@ -282,6 +282,24 @@ function respirar(): Promise<void> {
   })
 }
 
+/**
+ * Gravação em lote que parou no meio.
+ *
+ * Carrega quantos já tinham ido: sem isso a tela só saberia dizer "deu erro",
+ * e quem mandou apagar dez não saberia se sumiram zero, quatro ou nove.
+ */
+export class LoteInterrompido extends Error {
+  readonly feitos: number
+  readonly total: number
+
+  constructor(feitos: number, total: number, causa: unknown) {
+    super(`Gravação interrompida: ${feitos} de ${total} feitos`, { cause: causa })
+    this.name = 'LoteInterrompido'
+    this.feitos = feitos
+    this.total = total
+  }
+}
+
 function useCollection<T extends BaseRow>(name: CollectionName, key: QueryKey = [name]) {
   const client = useQueryClient()
   const store = collections[name] as unknown as Collection<T>
@@ -343,6 +361,38 @@ function useCollection<T extends BaseRow>(name: CollectionName, key: QueryKey = 
     return created
   }
 
+  /**
+   * Altera vários de uma vez, relendo a coleção uma vez só — o mesmo motivo de
+   * `createMany`.
+   *
+   * A releitura fica no `finally`: se a gravação parar no meio, o que já foi
+   * gravado precisa aparecer na tela. Sem isso a lista mostraria o estado de
+   * antes, e repetir a ação daria a impressão de que nada tinha acontecido.
+   */
+  async function updateMany(items: Array<{ id: string; patch: Partial<T> }>): Promise<void> {
+    await emLote(items, ({ id, patch }) => store.update(id, patch))
+  }
+
+  /** Remove vários de uma vez, nas mesmas condições de `updateMany`. */
+  async function removeMany(ids: string[]): Promise<void> {
+    await emLote(ids, (id) => store.remove(id))
+  }
+
+  async function emLote<I>(items: I[], gravar: (item: I) => Promise<unknown>): Promise<void> {
+    if (items.length === 0) return
+    let feitos = 0
+    try {
+      for (const item of items) {
+        await gravar(item)
+        feitos++
+      }
+    } catch (causa) {
+      throw new LoteInterrompido(feitos, items.length, causa)
+    } finally {
+      await invalidate()
+    }
+  }
+
   return {
     data: (query.data ?? []) as T[],
     isLoading: query.isLoading,
@@ -350,7 +400,9 @@ function useCollection<T extends BaseRow>(name: CollectionName, key: QueryKey = 
     create,
     createMany,
     update,
+    updateMany,
     remove,
+    removeMany,
   }
 }
 

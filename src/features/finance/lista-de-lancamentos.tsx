@@ -1,9 +1,11 @@
 import { AlertTriangle, Check, Clock, Pencil, Repeat } from 'lucide-react'
 import { useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
+import { CaixaDeSelecao } from '@/components/ui/caixa-de-selecao'
 import { Badge, EmptyState } from '@/components/ui/misc'
 import type { Account, Category, Transaction } from '@/data/types'
 import { formatCents } from '@/lib/finance/money'
 import { isOverdue } from '@/lib/finance/reports'
+import { aguardaFatura, podeMarcarPagamento } from '@/lib/finance/selecao'
 import { shortDate } from '@/lib/format'
 import { cn, today } from '@/lib/utils'
 import { CategoryIcon } from './category-icons'
@@ -56,10 +58,12 @@ const SWIPE_MAX = 140
 function SwipeRow({
   onSetPaid,
   onOpen,
+  selecionada = false,
   children,
 }: {
   onSetPaid?: (paid: boolean) => void
   onOpen?: () => void
+  selecionada?: boolean
   children: ReactNode
 }) {
   const [offset, setOffset] = useState(0)
@@ -165,8 +169,12 @@ function SwipeRow({
           onOpen?.()
         }}
         className={cn(
-          'bg-surface relative flex items-center gap-3 px-4 py-2.5',
-          onOpen && 'hover:bg-surface-2 cursor-pointer transition-colors',
+          'relative flex items-center gap-3 px-4 py-2.5',
+          // Realce só de fundo: borda ou peso mudariam a altura da linha, e a
+          // lista pularia a cada caixa marcada.
+          selecionada ? 'bg-accent-soft' : 'bg-surface',
+          onOpen && 'cursor-pointer transition-colors',
+          onOpen && !selecionada && 'hover:bg-surface-2',
         )}
         style={{
           transform: `translateX(${offset}px)`,
@@ -222,12 +230,18 @@ function StatusBadge({
   return <Badge tone="warning">previsto</Badge>
 }
 
+/** Impede que o clique na caixa chegue à linha, que abriria o editor ou começaria o arrasto. */
+function pararNaCaixa(event: { stopPropagation: () => void }) {
+  event.stopPropagation()
+}
+
 export function TransactionList({
   transactions,
   accounts,
   categoryById,
   onEdit,
   onSetPaid,
+  selecao,
   emptyTitle = 'Nenhum lançamento',
   emptyDescription,
 }: {
@@ -236,6 +250,8 @@ export function TransactionList({
   categoryById: Map<string, Category>
   onEdit?: (transaction: Transaction) => void
   onSetPaid?: (transaction: Transaction, paid: boolean) => void
+  /** Presente = cada linha ganha a caixa de marcar, para as ações em massa. */
+  selecao?: { selecionados: ReadonlySet<string>; alternar: (id: string) => void }
   emptyTitle?: string
   emptyDescription?: string
 }) {
@@ -252,20 +268,37 @@ export function TransactionList({
           ? categoryById.get(transaction.category_id)
           : null
         const account = accountById.get(transaction.account_id)
-        // Compra no cartão não se marca como paga: quem paga é a fatura, e deixar
-        // o selo clicável permitia quitar meia fatura sem nenhum dinheiro sair.
-        const naFatura = account?.kind === 'credit' && !transaction.paid
-        const podeMarcar = onSetPaid && !naFatura
+        // A regra mora em `lib/finance/selecao`, e não aqui, porque a ação em
+        // massa precisa obedecer à mesma: a linha e o lote não podem divergir.
+        const naFatura = aguardaFatura(transaction, account)
+        const podeMarcar = onSetPaid && podeMarcarPagamento(transaction, account)
         const target = transaction.transfer_account_id
           ? accountById.get(transaction.transfer_account_id)
           : null
+        const selecionada = selecao?.selecionados.has(transaction.id) ?? false
+        const titulo = transaction.description || category?.name || 'Lançamento'
 
         return (
           <SwipeRow
             key={transaction.id}
             onSetPaid={podeMarcar ? (paid) => onSetPaid!(transaction, paid) : undefined}
             onOpen={onEdit && (() => onEdit(transaction))}
+            selecionada={selecionada}
           >
+            {selecao && (
+              // `contents` não ocupa lugar na linha: o invólucro existe só para
+              // segurar o clique e o toque antes que subam para ela.
+              <span className="contents" onClick={pararNaCaixa} onPointerDown={pararNaCaixa}>
+                <CaixaDeSelecao
+                  checked={selecionada}
+                  onChange={() => selecao.alternar(transaction.id)}
+                  // Data e valor no nome: dois "Uber" no mês soavam iguais no
+                  // leitor de tela, e não dava para saber qual se marcava.
+                  aria-label={`Selecionar ${titulo}, ${shortDate(transaction.date)}, ${formatCents(transaction.amount_cents)}`}
+                />
+              </span>
+            )}
+
             <span
               className="flex size-8 shrink-0 items-center justify-center rounded-lg text-sm"
               style={{ background: `${category?.color ?? '#71717a'}1f` }}
@@ -279,7 +312,7 @@ export function TransactionList({
 
             <div className="min-w-0 flex-1">
               <p className={cn('truncate text-sm', transaction.paid ? 'text-fg' : 'text-fg-muted')}>
-                {transaction.description || category?.name || 'Lançamento'}
+                {titulo}
                 {transaction.installment_total && transaction.installment_total > 1 && (
                   <span className="text-fg-subtle ml-1.5 text-xs">
                     {transaction.installment_n}/{transaction.installment_total}
@@ -322,7 +355,14 @@ export function TransactionList({
 
             <Amount cents={transaction.amount_cents} kind={transaction.kind} />
 
-            {onEdit && <Pencil aria-hidden className="text-fg-subtle size-3.5 shrink-0" />}
+            {/* No celular a caixa ocupa o lugar do lápis: a linha já não tinha
+                folga, e o lápis só repete que tocar nela abre o lançamento. */}
+            {onEdit && (
+              <Pencil
+                aria-hidden
+                className={cn('text-fg-subtle size-3.5 shrink-0', selecao && 'max-sm:hidden')}
+              />
+            )}
           </SwipeRow>
         )
       })}

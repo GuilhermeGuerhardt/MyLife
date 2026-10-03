@@ -9,6 +9,7 @@
 
 import { X } from 'lucide-react'
 import { useEffect, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { cn } from '@/lib/utils'
 
 export type ToastTone = 'neutral' | 'accent'
@@ -86,11 +87,26 @@ export function Toast({
   )
 }
 
-/** O canto onde os avisos se empilham. Não captura cliques fora dos cartões. */
+let pilha: HTMLElement | null = null
+
+function pilhaDeAvisos(): HTMLElement {
+  if (!pilha?.isConnected) {
+    pilha = document.createElement('div')
+    pilha.className =
+      'pointer-events-none fixed right-4 bottom-4 z-50 flex flex-col items-end gap-2'
+    document.body.append(pilha)
+  }
+  return pilha
+}
+
+/**
+ * O canto onde os avisos se empilham. Não captura cliques fora dos cartões.
+ *
+ * Toda `ToastArea` do app despeja no mesmo canto, uma pilha só. Com um
+ * contêiner fixo para cada uma, dois avisos abertos ao mesmo tempo ficavam
+ * exatamente um sobre o outro, e o que viesse depois no DOM escondia o outro
+ * inteiro — a pessoa nunca lia o de baixo.
+ */
 export function ToastArea({ children }: { children: ReactNode }) {
-  return (
-    <div className="pointer-events-none fixed right-4 bottom-4 z-50 flex flex-col items-end gap-2">
-      {children}
-    </div>
-  )
+  return createPortal(children, pilhaDeAvisos())
 }

@@ -8,6 +8,7 @@ import {
 } from '@/lib/finance/billing'
 import { invoiceItems, openInvoiceTotal } from '@/lib/finance/reports'
 import type { PendingOccurrence } from '@/lib/finance/recurring'
+import { separarParaPagamento } from '@/lib/finance/selecao'
 import { uid } from '@/lib/utils'
 
 /** Quando o lançamento é, na verdade, uma regra que se repete todo mês. */
@@ -191,6 +192,47 @@ export function useSetTransactionPaid() {
   return async function setPaid(transaction: Transaction, paid: boolean): Promise<void> {
     if (transaction.paid === paid) return
     await update.mutateAsync({ id: transaction.id, patch: { paid } })
+  }
+}
+
+/**
+ * Marca ou desmarca o pagamento de vários lançamentos de uma vez.
+ *
+ * Passa pela mesma regra da linha: a compra no cartão em aberto fica de fora e
+ * volta em `ignorados`, para a tela contar o que não foi feito em vez de
+ * deixar a pessoa achar que a fatura foi quitada.
+ *
+ * As contas vêm todas, arquivadas inclusive: uma compra antiga num cartão já
+ * arquivado continua sendo compra no cartão.
+ */
+export function useSetTransactionsPaid() {
+  const { data: accounts } = useAccounts()
+  const { updateMany } = useTransactions()
+
+  return async function setPaidMany(
+    transactions: Transaction[],
+    paid: boolean,
+  ): Promise<{ aplicados: number; ignorados: Transaction[] }> {
+    const accountById = new Map(accounts.map((a) => [a.id, a]))
+    const { aplicar, ignorados } = separarParaPagamento(transactions, accountById, paid)
+    await updateMany(aplicar.map((t) => ({ id: t.id, patch: { paid } })))
+    return { aplicados: aplicar.length, ignorados }
+  }
+}
+
+/**
+ * Apaga exatamente os lançamentos recebidos.
+ *
+ * Diferente da exclusão pelo editor, aqui uma parcela leva só ela mesma: quem
+ * marca linha a linha está escolhendo linhas, e apagar em silêncio as outras
+ * parcelas da compra — que nem estavam na tela — seria apagar o que não foi
+ * marcado.
+ */
+export function useRemoveTransactions() {
+  const { removeMany } = useTransactions()
+
+  return async function removeTransactions(transactions: Transaction[]): Promise<void> {
+    await removeMany(transactions.map((t) => t.id))
   }
 }
 
