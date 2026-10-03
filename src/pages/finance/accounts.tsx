@@ -154,8 +154,8 @@ export function AccountsPage() {
           accounts={finance.accounts.filter((a) => a.kind !== 'credit')}
           defaultDate={today()}
           onClose={() => setPayingCard(null)}
-          onConfirm={async (fromAccountId, date) => {
-            await payInvoice(payingCard, competence, fromAccountId, date)
+          onConfirm={async (fromAccountId, date, valorCents) => {
+            await payInvoice(payingCard, competence, fromAccountId, date, valorCents)
             setPayingCard(null)
           }}
         />

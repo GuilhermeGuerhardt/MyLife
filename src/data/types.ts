@@ -363,6 +363,14 @@ export interface Transaction extends BaseRow {
   installment_n: number | null
   installment_total: number | null
   recurring_id: string | null
+  /**
+   * Só em pagamento de fatura: a competência da fatura quitada.
+   *
+   * Sem isso, um pagamento parcial era indistinguível de uma transferência
+   * qualquer para o cartão, e não havia como saber quanto daquela fatura já
+   * tinha sido pago.
+   */
+  invoice_competence: string | null
   notes: string | null
 }
 

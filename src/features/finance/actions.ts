@@ -7,6 +7,7 @@ import {
   type CardConfig,
   type Competence,
 } from '@/lib/finance/billing'
+import { openInvoiceTotal } from '@/lib/finance/reports'
 import type { PendingOccurrence } from '@/lib/finance/recurring'
 import { uid } from '@/lib/utils'
 
@@ -94,6 +95,7 @@ export function useCreateTransaction() {
       installment_n: null,
       installment_total: null,
       recurring_id: null,
+      invoice_competence: null,
       notes: draft.notes,
     }
 
@@ -277,6 +279,7 @@ export function useMaterializeRecurring() {
         installment_n: null,
         installment_total: null,
         recurring_id: rule.id,
+        invoice_competence: null,
         notes: null,
       })
     }
@@ -300,20 +303,26 @@ export function usePayInvoice() {
     competence: Competence,
     fromAccountId: string,
     date: string,
+    /** Quanto está sendo pago. Vazio = a fatura inteira. */
+    valorCents?: number,
   ): Promise<{ paid: number; amountCents: number }> {
     const items = transactions.filter(
       (t) => t.account_id === card.id && t.competence === competence && !t.paid,
     )
 
-    // O sinal segue o mesmo critério do resto do financeiro: despesa soma na
-    // fatura, estorno abate.
-    const amountCents = items.reduce(
-      (total, t) => total + (t.kind === 'income' ? -t.amount_cents : t.amount_cents),
-      0,
-    )
+    const aberto = openInvoiceTotal(card.id, competence, transactions)
+    // Pagar mais do que se deve não existe: o excedente viraria crédito que o
+    // app não sabe representar.
+    const amountCents = Math.min(valorCents ?? aberto, aberto)
 
-    for (const item of items) {
-      await update.mutateAsync({ id: item.id, patch: { paid: true } })
+    // Compra só vira paga quando a fatura fecha em zero. Num pagamento parcial
+    // ninguém paga "metade do mercado" — o que foi pago foi a fatura, e o resto
+    // dela continua em aberto.
+    const quitou = amountCents >= aberto
+    if (quitou) {
+      for (const item of items) {
+        await update.mutateAsync({ id: item.id, patch: { paid: true } })
+      }
     }
 
     if (amountCents > 0) {
@@ -332,10 +341,11 @@ export function usePayInvoice() {
         installment_n: null,
         installment_total: null,
         recurring_id: null,
+        invoice_competence: competence,
         notes: null,
       })
     }
 
-    return { paid: items.length, amountCents }
+    return { paid: quitou ? items.length : 0, amountCents }
   }
 }

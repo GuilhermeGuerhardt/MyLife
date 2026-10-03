@@ -140,13 +140,10 @@ export function markDuplicates(rows: ImportRow[], existing: ExistingLike[]): Imp
     return true
   }
 
-  const noArquivo = new Map<string, number>()
-
   return rows.map((row) => {
     if (row.error) return row
 
     const chave = dedupKey(row)
-    const repetidaNoArquivo = (noArquivo.get(chave) ?? 0) > 0
 
     const jaExiste =
       reservar(iguais, chave) ||
@@ -162,7 +159,6 @@ export function markDuplicates(rows: ImportRow[], existing: ExistingLike[]): Imp
 
     if (jaExiste) return { ...row, duplicate: true }
 
-    noArquivo.set(chave, (noArquivo.get(chave) ?? 0) + 1)
-    return { ...row, repeated: repetidaNoArquivo }
+    return row
   })
 }

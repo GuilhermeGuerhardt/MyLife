@@ -2,7 +2,9 @@ import { describe, expect, it } from 'vitest'
 import {
   balanceOn,
   compareBalances,
+  daysSinceCheck,
   lastCheck,
+  needsCheck,
   unchecked,
   type CheckLike,
 } from './conferencia'
@@ -141,5 +143,33 @@ describe('o que falta conferir', () => {
       tx({ id: 'e', date: '2026-03-22', account_id: 'acc2', transfer_account_id: 'acc1' }),
     ]
     expect(unchecked(comTransferencia, 'acc1', check()).map((t) => t.id)).toEqual(['c', 'e'])
+  })
+})
+
+describe('lembrete de conferência', () => {
+  const hoje = '2026-10-02'
+
+  it('conta a distância em dias desde a última', () => {
+    expect(daysSinceCheck(check({ date: '2026-09-30' }), hoje)).toBe(2)
+    expect(daysSinceCheck(check({ date: '2026-08-01' }), hoje)).toBe(62)
+    expect(daysSinceCheck(null, hoje)).toBeNull()
+  })
+
+  /**
+   * Cobrar conferência de conta parada é ruído, e ruído ensina a ignorar o
+   * aviso: sem movimento novo, não há o que procurar no extrato.
+   */
+  it('conta sem movimento novo não cobra nada', () => {
+    expect(needsCheck(null, hoje, 0)).toBe(false)
+    expect(needsCheck(check({ date: '2026-01-01' }), hoje, 0)).toBe(false)
+  })
+
+  it('nunca conferida com movimento entra no lembrete', () => {
+    expect(needsCheck(null, hoje, 3)).toBe(true)
+  })
+
+  it('depois de um mes sem conferir, lembra', () => {
+    expect(needsCheck(check({ date: '2026-09-25' }), hoje, 3)).toBe(false)
+    expect(needsCheck(check({ date: '2026-09-02' }), hoje, 3)).toBe(true)
   })
 })

@@ -5,10 +5,11 @@ import { SectionTitle } from '@/components/ui/misc'
 import { ACCOUNT_KIND_LABELS, type Account, type AccountCheck } from '@/data/types'
 import { LinhaDeConta } from '@/features/finance/linha-de-conta'
 import type { AccountSummary } from '@/features/finance/use-finance'
-import { lastCheck, unchecked } from '@/lib/finance/conferencia'
+import { daysSinceCheck, lastCheck, needsCheck, unchecked } from '@/lib/finance/conferencia'
 import { formatCents } from '@/lib/finance/money'
 import type { TransactionLike } from '@/lib/finance/reports'
 import { shortDate } from '@/lib/format'
+import { today } from '@/lib/utils'
 
 /**
  * As contas que têm saldo — corrente, poupança, carteira.
@@ -41,6 +42,8 @@ export function ListaDeContas({
           {contas.map(({ account, balance }) => {
             const ultima = lastCheck(conferencias, account.id)
             const pendentes = unchecked(movimento, account.id, ultima).length
+            const dias = daysSinceCheck(ultima, today())
+            const lembrar = needsCheck(ultima, today(), pendentes)
 
             return (
               <LinhaDeConta
@@ -54,13 +57,19 @@ export function ListaDeContas({
                     {account.bank ?? ACCOUNT_KIND_LABELS[account.kind]}
                     {ultima
                       ? ` · conferido até ${shortDate(ultima.date)}${
-                          pendentes > 0 ? `, ${pendentes} depois` : ''
-                        }`
+                          dias !== null && dias >= 30 ? ` (há ${dias} dias)` : ''
+                        }${pendentes > 0 ? `, ${pendentes} depois` : ''}`
                       : ' · extrato nunca conferido'}
                   </>
                 }
               >
-                <Button variant="ghost" size="sm" onClick={() => onConferir(account)}>
+                {/* O botao sobe de tom quando passou do mes ou nunca houve
+                    conferencia e ja ha movimento: e lembrete, nao alarme. */}
+                <Button
+                  variant={lembrar ? 'secondary' : 'ghost'}
+                  size="sm"
+                  onClick={() => onConferir(account)}
+                >
                   Conferir
                 </Button>
                 <button

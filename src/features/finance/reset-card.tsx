@@ -10,6 +10,7 @@ import {
   totalFinanceRows,
   useAccounts,
   useBudgets,
+  useAccountChecks,
   useGoals,
   useRecurring,
   useTransactions,
@@ -36,6 +37,7 @@ export function ResetFinanceCard() {
   const { data: budgets } = useBudgets()
   const { data: goals } = useGoals()
   const { data: recurring } = useRecurring()
+  const { data: checks } = useAccountChecks()
 
   const counts: FinanceCounts = {
     accounts: accounts.length,
@@ -43,6 +45,7 @@ export function ResetFinanceCard() {
     budgets: budgets.length,
     goals: goals.length,
     recurring: recurring.length,
+    checks: checks.length,
   }
   const total = totalFinanceRows(counts)
 
@@ -123,6 +126,7 @@ function ResetDialog({
     ['Orçamentos', counts.budgets],
     ['Metas', counts.goals],
     ['Recorrentes', counts.recurring],
+    ['Conferências de extrato', counts.checks],
   ]
 
   async function apagar() {

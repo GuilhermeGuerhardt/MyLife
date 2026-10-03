@@ -355,6 +355,7 @@ export function montarLancamentos(
       installment_n: row.installment?.n ?? null,
       installment_total: row.installment?.total ?? null,
       recurring_id: null,
+      invoice_competence: null,
       notes: row.detail,
     })
   }

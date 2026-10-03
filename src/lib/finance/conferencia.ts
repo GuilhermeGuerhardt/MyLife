@@ -96,3 +96,32 @@ export function unchecked<T extends TransactionLike>(
     return check === null || tx.date > check.date
   })
 }
+
+/** Quantos dias desde a última conferência. `null` quando nunca houve uma. */
+export function daysSinceCheck(check: CheckLike | null, today: string): number | null {
+  if (!check) return null
+  const dia = 86_400_000
+  const diferenca =
+    new Date(`${today}T12:00:00`).getTime() - new Date(`${check.date}T12:00:00`).getTime()
+  return Math.max(Math.floor(diferenca / dia), 0)
+}
+
+/** Depois de um mês sem conferir, a procura por uma diferença já fica longa. */
+const DIAS_ATE_LEMBRAR = 30
+
+/**
+ * Vale lembrar de conferir esta conta?
+ *
+ * Só quando há movimento para conferir — cobrar conferência de uma conta parada
+ * é ruído, e ruído ensina a ignorar o aviso. Conta nunca conferida entra na
+ * conta assim que tem o primeiro lançamento efetivado.
+ */
+export function needsCheck(
+  check: CheckLike | null,
+  today: string,
+  movimentosDepois: number,
+): boolean {
+  if (movimentosDepois === 0) return false
+  const dias = daysSinceCheck(check, today)
+  return dias === null || dias >= DIAS_ATE_LEMBRAR
+}

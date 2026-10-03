@@ -4,14 +4,13 @@ import { useNavigate } from 'react-router-dom'
 import {
   useAccounts,
   useActivityTypes,
-  useCategories,
   useDailyMetrics,
   useMeasurements,
   useSessions,
 } from '@/data/queries'
-import { guessCategory } from '@/data/seed-finance'
 import { competenceLabel, toCompetence } from '@/lib/finance/billing'
 import { useCreateTransaction } from '@/features/finance/actions'
+import { useSugestaoDeCategoria } from '@/features/finance/sugerir-categoria'
 import { sessionCalories } from '@/lib/health/formulas'
 import { describeIntent, parseQuickAdd, type QuickIntent } from '@/lib/quick-add/parser'
 import { today } from '@/lib/utils'
@@ -41,8 +40,8 @@ export function QuickAdd({ open, onClose }: { open: boolean; onClose: () => void
   const { create: createSession } = useSessions()
   const { data: metrics, create: createMetric, update: updateMetric } = useDailyMetrics()
   const { data: accounts } = useAccounts()
-  const { data: categories } = useCategories()
   const createTransaction = useCreateTransaction()
+  const sugerirCategoria = useSugestaoDeCategoria()
   const { currentWeight } = useHealthSummary()
   const board = useHabitBoard(7)
 
@@ -154,7 +153,7 @@ export function QuickAdd({ open, onClose }: { open: boolean; onClose: () => void
           return null
         }
         const kind = value.kind === 'expense' ? 'expense' : 'income'
-        const category = guessCategory(value.description, categories, kind)
+        const category = sugerirCategoria(value.description, kind)
         // Compra no cartão não é dinheiro que já saiu: quem paga é a fatura, e
         // é assim que o formulário completo grava. Marcar como paga aqui
         // encheria a fatura em aberto de compras já quitadas.

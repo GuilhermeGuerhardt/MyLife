@@ -200,21 +200,28 @@ export interface FinanceCounts {
   budgets: number
   goals: number
   recurring: number
+  checks: number
 }
 
 export function totalFinanceRows(counts: FinanceCounts): number {
   return (
-    counts.accounts + counts.transactions + counts.budgets + counts.goals + counts.recurring
+    counts.accounts +
+    counts.transactions +
+    counts.budgets +
+    counts.goals +
+    counts.recurring +
+    counts.checks
   )
 }
 
 async function financeCounts(): Promise<FinanceCounts> {
-  const [accounts, transactions, budgets, goals, recurring] = await Promise.all([
+  const [accounts, transactions, budgets, goals, recurring, checks] = await Promise.all([
     collections.accounts.list(),
     collections.transactions.list(),
     collections.budgets.list(),
     collections.goals.list(),
     collections.recurring.list(),
+    collections.accountChecks.list(),
   ])
   return {
     accounts: accounts.length,
@@ -222,6 +229,7 @@ async function financeCounts(): Promise<FinanceCounts> {
     budgets: budgets.length,
     goals: goals.length,
     recurring: recurring.length,
+    checks: checks.length,
   }
 }
 

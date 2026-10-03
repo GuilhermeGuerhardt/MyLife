@@ -27,7 +27,6 @@ const linha = (categoryLabel: string, kind: 'income' | 'expense'): ImportRow => 
   installment: null,
   error: null,
   duplicate: false,
-  repeated: false,
 })
 
 const categoria = (name: string, kind: 'income' | 'expense'): Category => ({

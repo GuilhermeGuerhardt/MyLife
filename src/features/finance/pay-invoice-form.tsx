@@ -4,7 +4,8 @@ import { Field, Input, Select } from '@/components/ui/field'
 import { Modal } from '@/components/ui/modal'
 import type { Account } from '@/data/types'
 import { competenceLabel, type Competence } from '@/lib/finance/billing'
-import { formatCents } from '@/lib/finance/money'
+import { centsToInput, formatCents, parseAmount } from '@/lib/finance/money'
+import { InputDeDinheiro } from './input-de-dinheiro'
 
 /**
  * Quitação da fatura do cartão.
@@ -12,6 +13,11 @@ import { formatCents } from '@/lib/finance/money'
  * Pede a conta de onde o dinheiro sai porque pagar a fatura é uma transferência
  * de verdade: sem ela, as compras virariam pagas e o saldo da conta continuaria
  * como se nada tivesse saído.
+ *
+ * O valor vem preenchido com a fatura inteira, mas pode ser menor: quem paga o
+ * mínimo e rola o resto precisa que o app represente isso. No pagamento parcial
+ * nenhuma compra vira paga — ninguém paga "metade do mercado" —, o que fica
+ * registrado é o pagamento, e o que sobra continua na fatura.
  */
 export function PayInvoiceForm({
   card,
@@ -33,22 +39,30 @@ export function PayInvoiceForm({
   accounts: Account[]
   defaultDate: string
   onClose: () => void
-  onConfirm: (fromAccountId: string, date: string) => Promise<void>
+  onConfirm: (fromAccountId: string, date: string, valorCents: number) => Promise<void>
 }) {
   const [fromAccountId, setFromAccountId] = useState(accounts[0]?.id ?? '')
   const [date, setDate] = useState(defaultDate)
+  const [valor, setValor] = useState(() => centsToInput(amountCents))
   const [erro, setErro] = useState<string | null>(null)
   const [pagando, setPagando] = useState(false)
+
+  const valorCents = Math.min(parseAmount(valor), amountCents)
+  const sobra = amountCents - valorCents
 
   async function confirmar() {
     if (!fromAccountId) {
       setErro('Escolha de qual conta o pagamento sai.')
       return
     }
+    if (valorCents <= 0) {
+      setErro('Informe quanto está sendo pago.')
+      return
+    }
     setErro(null)
     setPagando(true)
     try {
-      await onConfirm(fromAccountId, date)
+      await onConfirm(fromAccountId, date, valorCents)
     } catch (causa) {
       setErro(causa instanceof Error ? causa.message : 'Não foi possível quitar a fatura.')
       setPagando(false)
@@ -67,7 +81,7 @@ export function PayInvoiceForm({
             Cancelar
           </Button>
           <Button onClick={() => void confirmar()} disabled={pagando || accounts.length === 0}>
-            {pagando ? 'Quitando…' : `Quitar ${formatCents(amountCents)}`}
+            {pagando ? 'Pagando…' : `Pagar ${formatCents(valorCents)}`}
           </Button>
         </>
       }
@@ -79,8 +93,9 @@ export function PayInvoiceForm({
             <span className="font-semibold">{formatCents(amountCents)}</span>.
           </p>
           <p className="text-fg-muted mt-0.5 text-xs">
-            Elas passam a pagas e uma transferência sai da conta escolhida. Parcelas de
-            faturas futuras não são tocadas.
+            {sobra > 0
+              ? `Pagando ${formatCents(valorCents)}, ficam ${formatCents(sobra)} em aberto nesta fatura.`
+              : 'Elas passam a pagas e uma transferência sai da conta escolhida. Parcelas de faturas futuras não são tocadas.'}
           </p>
         </div>
 
@@ -105,6 +120,15 @@ export function PayInvoiceForm({
 
             <Field label="Data do pagamento">
               <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            </Field>
+
+            <Field
+              label="Valor"
+              suffix="R$"
+              className="sm:col-span-2"
+              hint="Menos que o total deixa o resto na fatura."
+            >
+              <InputDeDinheiro value={valor} onChange={setValor} />
             </Field>
           </div>
         )}

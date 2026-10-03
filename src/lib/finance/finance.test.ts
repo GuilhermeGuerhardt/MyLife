@@ -28,6 +28,7 @@ import {
   isOverdue,
   openInvoiceTotal,
   overdueSummary,
+  paidOnInvoice,
   type AccountLike,
   type TransactionLike,
 } from './reports'
@@ -550,5 +551,82 @@ describe('quem vence é a fatura', () => {
     }
     const abertos = [tx({ id: 'b', competence: '2026-09', paid: false })]
     expect(lateInvoices([corrente], abertos, hoje)).toEqual([])
+  })
+})
+
+describe('pagamento parcial da fatura', () => {
+  const cartao: AccountLike = {
+    id: 'card',
+    kind: 'credit',
+    initial_balance_cents: 0,
+    credit_limit_cents: 500000,
+    closing_day: 25,
+    due_day: 5,
+  }
+
+  const compras: TransactionLike[] = [
+    tx({ id: 'c1', account_id: 'card', competence: '2026-09', amount_cents: 30000, paid: false }),
+    tx({ id: 'c2', account_id: 'card', competence: '2026-09', amount_cents: 20000, paid: false }),
+  ]
+
+  /** O pagamento mora na conta de onde o dinheiro saiu, apontando para a fatura. */
+  const pagamento = (amount_cents: number) =>
+    tx({
+      id: `p${amount_cents}`,
+      account_id: 'acc1',
+      transfer_account_id: 'card',
+      kind: 'transfer',
+      competence: '2026-10',
+      invoice_competence: '2026-09',
+      amount_cents,
+      paid: true,
+    })
+
+  it('o que falta pagar desconta o que ja foi pago', () => {
+    expect(openInvoiceTotal('card', '2026-09', compras)).toBe(50000)
+    expect(openInvoiceTotal('card', '2026-09', [...compras, pagamento(20000)])).toBe(30000)
+  })
+
+  it('dois pagamentos parciais somam', () => {
+    const comPagamentos = [...compras, pagamento(20000), pagamento(15000)]
+    expect(paidOnInvoice('card', '2026-09', comPagamentos)).toBe(35000)
+    expect(openInvoiceTotal('card', '2026-09', comPagamentos)).toBe(15000)
+  })
+
+  it('pagamento nao vaza para a fatura do mes seguinte', () => {
+    const outroMes = [
+      ...compras,
+      tx({ id: 'c3', account_id: 'card', competence: '2026-10', amount_cents: 12000, paid: false }),
+      pagamento(50000),
+    ]
+    expect(openInvoiceTotal('card', '2026-09', outroMes)).toBe(0)
+    expect(openInvoiceTotal('card', '2026-10', outroMes)).toBe(12000)
+  })
+
+  /**
+   * A fatura paga pela metade continua existindo, e continua vencendo: é
+   * justamente ela que precisa aparecer no aviso.
+   */
+  it('a fatura paga pela metade continua em aberto, pelo que falta', () => {
+    const atrasadas = lateInvoices([cartao], [...compras, pagamento(20000)], '2026-10-08')
+    expect(atrasadas).toHaveLength(1)
+    expect(atrasadas[0]!.totalCents).toBe(30000)
+  })
+
+  it('fatura paga inteira some do aviso mesmo sem marcar compra por compra', () => {
+    expect(lateInvoices([cartao], [...compras, pagamento(50000)], '2026-10-08')).toEqual([])
+  })
+
+  it('transferencia comum para o cartao nao conta como pagamento de fatura', () => {
+    const transferenciaSolta = tx({
+      id: 't',
+      account_id: 'acc1',
+      transfer_account_id: 'card',
+      kind: 'transfer',
+      amount_cents: 20000,
+      competence: '2026-10',
+      paid: true,
+    })
+    expect(openInvoiceTotal('card', '2026-09', [...compras, transferenciaSolta])).toBe(50000)
   })
 })

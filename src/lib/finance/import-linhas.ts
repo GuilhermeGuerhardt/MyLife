@@ -38,8 +38,20 @@ export interface ImportRow {
   error: string | null
   /** Igual a um lançamento que já existe no app. */
   duplicate: boolean
-  /** Igual a outra linha do próprio arquivo, mais acima. */
-  repeated: boolean
+}
+
+/**
+ * A linha que é a fatura inteira, e não uma compra dentro dela.
+ *
+ * Alguns extratos exportam a fatura do cartão como mais um lançamento —
+ * "Fatura - Inter", marcada como `credit_card_bill`. Importá-la soma de novo o
+ * que as compras já somam: aqui a fatura nunca é um lançamento, é o total das
+ * compras daquela competência. Por isso ela entra como linha recusada, com o
+ * motivo à vista, em vez de sumir em silêncio.
+ */
+function ehFaturaDeCartao(descricao: string, detalhe: string, conta: string): boolean {
+  if (detalhe.trim().toLowerCase() === 'credit_card_bill') return true
+  return /^fatura\b/i.test(descricao.trim()) && /^cart[ãa]o/i.test(conta.trim())
 }
 
 function cell(cells: string[], index: number | undefined): string {
@@ -82,7 +94,9 @@ export function buildRows(dataRows: string[][], map: ColumnMap, firstLine = 2): 
     }
 
     let error: string | null = null
-    if (!date) error = rawDate.trim() ? `Data inválida: "${rawDate.trim()}"` : 'Sem data'
+    if (ehFaturaDeCartao(parsed.description, rawDetail, origem)) {
+      error = 'Fatura do cartão: ela já vem da soma das compras, e importá-la contaria duas vezes'
+    } else if (!date) error = rawDate.trim() ? `Data inválida: "${rawDate.trim()}"` : 'Sem data'
     else if (amountCents === 0) error = rawAmount.trim() ? `Valor inválido: "${rawAmount.trim()}"` : 'Sem valor'
     else if (!parsed.description) error = 'Sem descrição'
     else if (kind === 'transfer' && !destino) {
@@ -106,7 +120,6 @@ export function buildRows(dataRows: string[][], map: ColumnMap, firstLine = 2): 
       installment: parsed.installment,
       error,
       duplicate: false,
-      repeated: false,
     }
   })
 }

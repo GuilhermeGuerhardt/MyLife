@@ -12,6 +12,8 @@ export interface TransactionLike {
   id: string
   account_id: string
   transfer_account_id: string | null
+  /** Só em pagamento de fatura: a competência da fatura quitada. */
+  invoice_competence?: string | null
   category_id: string | null
   kind: TransactionKind
   amount_cents: number
@@ -89,9 +91,30 @@ export function openInvoiceTotal(
   competence: Competence,
   transactions: TransactionLike[],
 ): number {
-  return transactions
+  const emAberto = transactions
     .filter((tx) => tx.account_id === accountId && tx.competence === competence && !tx.paid)
     .reduce((sum, tx) => sum + (tx.kind === 'income' ? -tx.amount_cents : tx.amount_cents), 0)
+
+  return Math.max(emAberto - paidOnInvoice(accountId, competence, transactions), 0)
+}
+
+/**
+ * Quanto desta fatura já foi pago em dinheiro.
+ *
+ * Pagamento parcial não marca compra nenhuma como paga — ninguém paga "metade
+ * do mercado". O que existe é um pagamento feito à fatura, e é ele que abate o
+ * saldo dela; as compras só viram pagas quando a fatura fecha em zero.
+ */
+export function paidOnInvoice(
+  accountId: string,
+  competence: Competence,
+  transactions: TransactionLike[],
+): number {
+  return transactions
+    .filter(
+      (tx) => tx.transfer_account_id === accountId && tx.invoice_competence === competence,
+    )
+    .reduce((sum, tx) => sum + tx.amount_cents, 0)
 }
 
 /** Quanto ainda dá para gastar no cartão. */
@@ -344,7 +367,8 @@ export function openInvoices(
       porCompetencia.set(tx.competence, (porCompetencia.get(tx.competence) ?? 0) + valor)
     }
 
-    for (const [competence, totalCents] of porCompetencia) {
+    for (const [competence, bruto] of porCompetencia) {
+      const totalCents = bruto - paidOnInvoice(account.id, competence, transactions)
       if (totalCents <= 0) continue
       abertas.push({
         accountId: account.id,

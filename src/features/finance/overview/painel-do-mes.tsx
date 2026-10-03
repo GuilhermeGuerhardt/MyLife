@@ -64,6 +64,7 @@ export function PainelDoMes({
   emAberto,
   faturas,
   resumoAberto,
+  saldoAtual,
   pendentes,
   contas,
   categoriaPorId,
@@ -76,6 +77,8 @@ export function PainelDoMes({
   /** Faturas de cartão que vencem no mês — o que o cartão vai cobrar nele. */
   faturas: OpenInvoice[]
   resumoAberto: OpenMonthSummary
+  /** Saldo de hoje nas contas, para projetar o fim do mes. */
+  saldoAtual: number
   pendentes: PendingOccurrence[]
   contas: Account[]
   categoriaPorId: Map<string, Category>
@@ -140,6 +143,15 @@ export function PainelDoMes({
                   Math.abs(resumoAberto.balanceCents),
                 )}`}
                 tone={resumoAberto.balanceCents < 0 ? 'negative' : undefined}
+              />
+              {/* O numero que a pessoa quer de verdade: quanto sobra se tudo
+                  isto acontecer. Ate aqui ela tinha que fazer a conta de
+                  cabeca entre dois cartoes da tela. */}
+              <Stat
+                label="Saldo previsto"
+                value={formatCents(saldoAtual + resumoAberto.balanceCents)}
+                tone={saldoAtual + resumoAberto.balanceCents < 0 ? 'negative' : undefined}
+                hint="Se tudo for pago e recebido"
               />
               {resumoAberto.overdueCount > 0 && (
                 <div className="ml-auto">

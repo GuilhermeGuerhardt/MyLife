@@ -149,6 +149,7 @@ export function FinanceOverview() {
           emAberto={emAberto}
           faturas={faturasDoMes}
           resumoAberto={resumoAberto}
+          saldoAtual={finance.totalBalance}
           pendentes={pendentes}
           contas={finance.accounts}
           categoriaPorId={finance.categoryById}

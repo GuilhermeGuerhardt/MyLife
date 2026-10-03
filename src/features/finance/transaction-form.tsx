@@ -5,13 +5,13 @@ import { Field, Input, Select, Textarea } from '@/components/ui/field'
 import { Modal } from '@/components/ui/modal'
 import { Segmented, Toggle } from '@/components/ui/misc'
 import type { Account, Category, TransactionKind } from '@/data/types'
-import { guessCategory } from '@/data/seed-finance'
 import { competenceLabel, competenceFor, buildInstallments } from '@/lib/finance/billing'
 import { MAX_REPEAT_MONTHS, MIN_REPEAT_MONTHS, repeatEndDate, repeatTotal } from '@/lib/finance/recurring'
 import { centsToInput, formatCents, parseAmount } from '@/lib/finance/money'
 import { today } from '@/lib/utils'
 import { InputDeDinheiro } from './input-de-dinheiro'
 import { cardConfig, type TransactionDraft } from './actions'
+import { useSugestaoDeCategoria } from './sugerir-categoria'
 import { sortCategories } from './use-finance'
 
 /** Como o valor se distribui no tempo. */
@@ -80,11 +80,14 @@ export function TransactionForm({
   )
 
   // Palpite de categoria pela descrição, até a pessoa escolher uma na mão.
+  // Sai do seu histórico antes do catálogo: "padaria do zé" o catálogo não
+  // conhece, mas você já classificou quatro vezes.
+  const sugerirCategoria = useSugestaoDeCategoria()
   useEffect(() => {
     if (touchedCategory || kind === 'transfer' || !description.trim()) return
-    const guess = guessCategory(description, categories, kind === 'income' ? 'income' : 'expense')
-    if (guess) setCategoryId(guess.id)
-  }, [description, categories, kind, touchedCategory])
+    const palpite = sugerirCategoria(description, kind === 'income' ? 'income' : 'expense')
+    if (palpite) setCategoryId(palpite.id)
+  }, [description, kind, touchedCategory, sugerirCategoria])
 
   // Compra no cartão não é dinheiro que saiu ainda — quem paga é a fatura.
   // Só na criação: ao editar, a situação gravada é a que vale.

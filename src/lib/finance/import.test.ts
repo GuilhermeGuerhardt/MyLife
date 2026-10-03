@@ -244,7 +244,6 @@ describe('deduplicação', () => {
     installment: null,
     error: null,
     duplicate: false,
-    repeated: false,
   })
 
   it('reconhece o que já foi importado', () => {
@@ -263,7 +262,6 @@ describe('deduplicação', () => {
       [],
     )
     expect(marked.map((item) => item.duplicate)).toEqual([false, false])
-    expect(marked[1]!.repeated).toBe(true)
   })
 
   it('consome uma ocorrência existente por vez', () => {
@@ -435,5 +433,36 @@ describe('leitura do arquivo', () => {
     // "Alimentação" como o Excel em português exporta: ç = 0xE7, ã = 0xE3.
     const bytes = Uint8Array.from([65, 108, 105, 109, 101, 110, 116, 97, 0xe7, 0xe3, 111])
     expect(await readText(new Blob([bytes]))).toBe('Alimentação')
+  })
+})
+
+describe('fatura do cartao no extrato', () => {
+  const colunas = { date: 2, amount: 1, description: 3, detail: 4, account: 5, category: 6, status: 7, kind: 0, transferTo: undefined }
+
+  /**
+   * O extrato do Inter exporta a fatura como mais uma linha do cartao. Ela nao
+   * pode virar lancamento: a fatura do app ja e a soma das compras, e importar
+   * as duas coisas cobra o mes duas vezes.
+   */
+  it('recusa a linha da propria fatura, dizendo por que', () => {
+    const linhas = [
+      ['Despesa', 'R$ 50,00', '2026-10-15', 'Fatura - Inter ', 'credit_card_bill', 'Cartao - Inter', 'Cartoes', 'Falta pagar'],
+    ]
+    const [linha] = buildRows(linhas, colunas)
+    expect(linha!.error).toMatch(/fatura do cart/i)
+  })
+
+  it('reconhece tambem pelo nome, quando a conta e um cartao', () => {
+    const linhas = [
+      ['Despesa', 'R$ 50,00', '2026-10-15', 'Fatura outubro', '-', 'Cartao - Inter', 'Cartoes', 'Falta pagar'],
+    ]
+    expect(buildRows(linhas, colunas)[0]!.error).toMatch(/fatura do cart/i)
+  })
+
+  it('compra no cartao com fatura no meio do nome passa', () => {
+    const linhas = [
+      ['Despesa', 'R$ 50,00', '2026-10-15', 'Taxa da fatura', '-', 'Cartao - Inter', 'Cartoes', 'Falta pagar'],
+    ]
+    expect(buildRows(linhas, colunas)[0]!.error).toBeNull()
   })
 })
