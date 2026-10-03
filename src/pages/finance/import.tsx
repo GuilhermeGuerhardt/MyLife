@@ -8,6 +8,7 @@ import { PageHeader } from '@/components/ui/page-header'
 import { ExportCard } from '@/features/finance/export-card'
 import { ImportColumns } from '@/features/finance/import-columns'
 import { ImportDone } from '@/features/finance/import-done'
+import { RecorrentesSugeridas } from '@/features/finance/recorrentes-sugeridas'
 import { ImportFilePicker } from '@/features/finance/import-file-picker'
 import { ImportPreview } from '@/features/finance/import-preview'
 import { ImportAccounts, ImportCategories } from '@/features/finance/import-targets'
@@ -29,11 +30,18 @@ export function ImportPage() {
 
   if (wizard.result) {
     return (
-      <ImportDone
-        result={wizard.result}
-        onAgain={wizard.reset}
-        onSeeAll={() => navigate('/financeiro/transacoes')}
-      />
+      <div className="space-y-4">
+        <ImportDone
+          result={wizard.result}
+          onAgain={wizard.reset}
+          onSeeAll={() => navigate('/financeiro/transacoes')}
+        />
+
+        <RecorrentesSugeridas
+          sugestoes={wizard.recorrentesSugeridas}
+          contaPorRotulo={wizard.contaDoRotulo}
+        />
+      </div>
     )
   }
 

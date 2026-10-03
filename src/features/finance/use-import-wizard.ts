@@ -22,8 +22,16 @@ import {
   type RowFilter,
 } from '@/lib/finance/import'
 import { treinar } from '@/lib/finance/classificador'
+import { sugerirRecorrentes } from '@/lib/finance/recorrentes-do-extrato'
 import { useImportRun } from './import-run'
-import { chaveDaCategoria, labelKinds, suggestAccounts, suggestCategories } from './use-import'
+import {
+  chaveDaCategoria,
+  labelKinds,
+  suggestAccounts,
+  suggestCategories,
+  CREATE,
+  IGNORE,
+} from './use-import'
 
 export function useImportWizard() {
   const { data: accounts } = useAccounts()
@@ -192,9 +200,29 @@ export function useImportWizard() {
     )
   }
 
+  /**
+   * O que, no arquivo, parece conta de todo mês.
+   *
+   * Calculado sobre as linhas aproveitáveis, não sobre as marcadas: quem decide
+   * é a tela do fim, e lá a pessoa confirma uma a uma.
+   */
+  const recorrentesSugeridas = useMemo(
+    () => sugerirRecorrentes(rows.filter((row) => !row.error)),
+    [rows],
+  )
+
+  /** De que conta é o rótulo, pela escolha feita na importação. */
+  function contaDoRotulo(rotulo: string): string | null {
+    const escolhido = accountChoice[rotulo]
+    if (escolhido && escolhido !== CREATE && escolhido !== IGNORE) return escolhido
+    return fallbackAccount || null
+  }
+
   return {
     accounts,
     categories,
+    recorrentesSugeridas,
+    contaDoRotulo,
 
     fileName,
     header: cells[0] ?? [],

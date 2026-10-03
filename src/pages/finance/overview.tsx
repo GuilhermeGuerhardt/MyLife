@@ -11,14 +11,14 @@ import { Plus } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/ui/page-header'
-import { useCategories, useRecurring } from '@/data/queries'
+import { useAccountChecks, useCategories, useRecurring } from '@/data/queries'
 import { useCreateTransaction, useMaterializeRecurring, useSetTransactionPaid } from '@/features/finance/actions'
 import { useAvisoDeCompetencia } from '@/features/finance/aviso-de-competencia'
-import { CompromissoFuturo } from '@/features/finance/overview/compromisso-futuro'
 import { ContasEOrcamento } from '@/features/finance/overview/contas-e-orcamento'
 import { DespesasPorCategoria, FluxoDeCaixa } from '@/features/finance/overview/graficos-do-mes'
 import { AvisoDeAtrasos, NumerosDoMes } from '@/features/finance/overview/numeros-do-mes'
 import { PainelDoMes } from '@/features/finance/overview/painel-do-mes'
+import { Previsoes } from '@/features/finance/overview/previsoes'
 import { PrimeiraConta } from '@/features/finance/overview/primeira-conta'
 import { MonthNav } from '@/features/finance/month-nav'
 import { TransactionForm } from '@/features/finance/transaction-form'
@@ -29,7 +29,6 @@ import { isOpen, summarizeOpenMonth } from '@/lib/finance/open-month'
 import { resolveSliceColors } from '@/lib/finance/palette'
 import { pendingOccurrences } from '@/lib/finance/recurring'
 import {
-  commitmentProjection,
   invoicesDueIn,
   lateInvoices,
   monthlySeries,
@@ -42,6 +41,7 @@ export function FinanceOverview() {
   const finance = useFinance(competence)
   const { data: categories } = useCategories()
   const { data: rules } = useRecurring()
+  const { data: conferencias } = useAccountChecks()
   const createTransaction = useCreateTransaction()
   const setPaid = useSetTransactionPaid()
   const materialize = useMaterializeRecurring()
@@ -75,11 +75,6 @@ export function FinanceOverview() {
     finance.cardIds,
     faturasDoMes,
   )
-
-  // Um ano à frente: é o horizonte de um parcelamento comum, e o bastante
-  // para a parcela que ainda nem começou aparecer antes de chegar.
-  const MESES_A_FRENTE = 12
-  const comprometido = commitmentProjection(finance.transactions, competence, MESES_A_FRENTE)
 
   // Seis meses até a competência aberta.
   const months = Array.from({ length: 6 }, (_, i) => addMonths(competence, i - 5))
@@ -136,7 +131,12 @@ export function FinanceOverview() {
         fluxo={finance.flow}
       />
 
-      <CompromissoFuturo projecao={comprometido} meses={MESES_A_FRENTE} />
+      <Previsoes
+        finance={finance}
+        conferencias={conferencias}
+        saldoPrevisto={finance.totalBalance + resumoAberto.balanceCents}
+        competence={competence}
+      />
 
       <div className="grid gap-4 lg:grid-cols-3">
         <FluxoDeCaixa serie={serie} />

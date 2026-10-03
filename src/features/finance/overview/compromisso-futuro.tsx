@@ -1,4 +1,4 @@
-import { Card, CardContent } from '@/components/ui/card'
+import { CardContent } from '@/components/ui/card'
 import { competenceLabel } from '@/lib/finance/billing'
 import { formatCents } from '@/lib/finance/money'
 import type { Commitment } from '@/lib/finance/reports'
@@ -10,6 +10,8 @@ import { cn } from '@/lib/utils'
  * O resto da tela olha para o mês aberto, e quem parcela em dez vezes não tem
  * problema neste mês — tem nos próximos nove. O cartão existe para mostrar essa
  * fila antes de ela virar surpresa, e some quando não há nada marcado à frente.
+ *
+ * Entrega só o conteúdo: quem desenha a caixa é o carrossel que o abriga.
  */
 export function CompromissoFuturo({
   projecao,
@@ -25,7 +27,7 @@ export function CompromissoFuturo({
     projecao.lastCompetence && projecao.lastCompetence > (projecao.months.at(-1)?.competence ?? '')
 
   return (
-    <Card className="overflow-hidden">
+    <>
       <div className="border-border-base flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 border-b px-5 py-4">
         <div>
           <p className="text-fg-muted text-xs font-medium">
@@ -87,6 +89,6 @@ export function CompromissoFuturo({
           Recorrente que ainda não foi lançada não entra nesta conta.
         </p>
       </CardContent>
-    </Card>
+    </>
   )
 }
