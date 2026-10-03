@@ -85,7 +85,7 @@ export function InsightsPage() {
                     </Badge>
                   </div>
                   <p className="text-fg text-sm leading-relaxed">{insight.text}</p>
-                  <p className="text-fg-subtle text-[11px]">
+                  <p className="text-fg-subtle text-xs">
                     Baseado em {insight.sample} semanas. É um padrão observado, não uma relação de
                     causa.
                   </p>
@@ -126,7 +126,7 @@ function ReviewCell({ metric }: { metric: ReviewMetric }) {
       </p>
       <p
         className={cn(
-          'flex items-center gap-0.5 text-[11px]',
+          'flex items-center gap-0.5 text-xs',
           good === null ? 'text-fg-subtle' : good ? 'text-positive' : 'text-negative',
         )}
       >
@@ -180,7 +180,7 @@ function WeekBars({ weeks }: { weeks: WeekStats[] }) {
           </div>
         ))}
       </div>
-      <div className="text-fg-subtle flex items-center gap-4 text-[11px]">
+      <div className="text-fg-subtle flex items-center gap-4 text-xs">
         <span className="flex items-center gap-1.5">
           <span className="bg-series-workout size-2 rounded-sm" />
           Treinos

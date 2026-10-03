@@ -1,59 +1,12 @@
-import { AlertTriangle, Check, ChevronLeft, ChevronRight, Clock, Pencil, Repeat } from 'lucide-react'
+import { AlertTriangle, Check, Clock, Pencil, Repeat } from 'lucide-react'
 import { useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
-import { Button } from '@/components/ui/button'
 import { Badge, EmptyState } from '@/components/ui/misc'
 import type { Account, Category, Transaction } from '@/data/types'
-import { CategoryIcon } from './category-icons'
-import { addMonths, competenceLabel, type Competence } from '@/lib/finance/billing'
 import { formatCents } from '@/lib/finance/money'
 import { isOverdue } from '@/lib/finance/reports'
 import { shortDate } from '@/lib/format'
-import { cn } from '@/lib/utils'
-import { toCompetence } from '@/lib/finance/billing'
-import { today } from '@/lib/utils'
-
-export function MonthNav({
-  competence,
-  onChange,
-}: {
-  competence: Competence
-  onChange: (competence: Competence) => void
-}) {
-  const isCurrent = competence === toCompetence(today())
-
-  return (
-    <div className="flex items-center gap-1">
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => onChange(addMonths(competence, -1))}
-        aria-label="Mês anterior"
-      >
-        <ChevronLeft />
-      </Button>
-      <div className="min-w-36 text-center">
-        <p className="text-fg text-sm font-medium">{competenceLabel(competence)}</p>
-        {!isCurrent && (
-          <button
-            type="button"
-            onClick={() => onChange(toCompetence(today()))}
-            className="text-fg-subtle hover:text-fg text-[11px] transition-colors"
-          >
-            voltar para o mês atual
-          </button>
-        )}
-      </div>
-      <Button
-        variant="ghost"
-        size="icon"
-        onClick={() => onChange(addMonths(competence, 1))}
-        aria-label="Próximo mês"
-      >
-        <ChevronRight />
-      </Button>
-    </div>
-  )
-}
+import { cn, today } from '@/lib/utils'
+import { CategoryIcon } from './category-icons'
 
 /** Valor com sinal e cor conforme o tipo do lançamento. */
 export function Amount({
@@ -65,8 +18,9 @@ export function Amount({
   kind: Transaction['kind']
   className?: string
 }) {
-  const tone =
-    kind === 'income' ? 'text-positive' : kind === 'transfer' ? 'text-fg-muted' : 'text-fg'
+  // O sinal já diz o que é entrada e o que é saída; pintar de verde por cima
+  // é dizer duas vezes, e gasta o verde que deveria significar alguma coisa.
+  const tone = kind === 'transfer' ? 'text-fg-muted' : 'text-fg'
   const sign = kind === 'income' ? '+' : kind === 'expense' ? '−' : ''
   return (
     <span className={`${tone} ${className ?? ''} text-sm font-medium whitespace-nowrap`}>
@@ -224,7 +178,14 @@ function SwipeRow({
  * dia 5 e um do dia 30 deixam de ter a mesma cara, que é a diferença entre um
  * lembrete e uma conta esquecida.
  */
-function StatusBadge({ transaction }: { transaction: Transaction }) {
+function StatusBadge({
+  transaction,
+  naFatura,
+}: {
+  transaction: Transaction
+  /** Compra no cartão em aberto: ela espera a fatura, não um pagamento seu. */
+  naFatura: boolean
+}) {
   if (transaction.paid) {
     return (
       <Badge tone="positive">
@@ -233,6 +194,11 @@ function StatusBadge({ transaction }: { transaction: Transaction }) {
       </Badge>
     )
   }
+
+  // A compra no cartão não tem prazo próprio: o prazo é o da fatura em que ela
+  // caiu. Marcá-la de vencida enchia a lista de alarme vermelho no dia seguinte
+  // a cada compra, e ainda ensinava a ignorar a cor.
+  if (naFatura) return <Badge tone="neutral">na fatura</Badge>
 
   if (isOverdue(transaction, today())) {
     // Uma despesa vence; uma receita que não caiu está atrasada. A distinção
@@ -278,6 +244,7 @@ export function TransactionList({
           ? categoryById.get(transaction.category_id)
           : null
         const account = accountById.get(transaction.account_id)
+        const naFatura = account?.kind === 'credit' && !transaction.paid
         const target = transaction.transfer_account_id
           ? accountById.get(transaction.transfer_account_id)
           : null
@@ -303,12 +270,12 @@ export function TransactionList({
               <p className={cn('truncate text-sm', transaction.paid ? 'text-fg' : 'text-fg-muted')}>
                 {transaction.description || category?.name || 'Lançamento'}
                 {transaction.installment_total && transaction.installment_total > 1 && (
-                  <span className="text-fg-subtle ml-1.5 text-[11px]">
+                  <span className="text-fg-subtle ml-1.5 text-xs">
                     {transaction.installment_n}/{transaction.installment_total}
                   </span>
                 )}
               </p>
-              <p className="text-fg-subtle truncate text-[11px]">
+              <p className="text-fg-subtle truncate text-xs">
                 {[
                   shortDate(transaction.date),
                   transaction.kind === 'transfer'
@@ -333,10 +300,10 @@ export function TransactionList({
                 aria-label={transaction.paid ? 'Marcar como previsto' : 'Marcar como pago'}
                 className="shrink-0"
               >
-                <StatusBadge transaction={transaction} />
+                <StatusBadge transaction={transaction} naFatura={naFatura} />
               </button>
             ) : (
-              !transaction.paid && <StatusBadge transaction={transaction} />
+              !transaction.paid && <StatusBadge transaction={transaction} naFatura={naFatura} />
             )}
 
             <Amount cents={transaction.amount_cents} kind={transaction.kind} />

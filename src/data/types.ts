@@ -366,6 +366,23 @@ export interface Transaction extends BaseRow {
   notes: string | null
 }
 
+/**
+ * Uma conferência de extrato: até que data as contas bateram.
+ *
+ * Guarda o saldo que o banco mostrava e a diferença encontrada na hora, e não
+ * recalcula nada depois — é um registro do que foi visto naquele dia, como o
+ * carimbo no fim da página do caderno.
+ */
+export interface AccountCheck extends BaseRow {
+  account_id: string
+  /** Data até onde se conferiu, inclusive. */
+  date: string
+  /** Saldo que o banco mostrava nessa data. */
+  balance_cents: number
+  /** Saldo do app menos o do banco, no momento da conferência. */
+  difference_cents: number
+}
+
 export interface Budget extends BaseRow {
   category_id: string
   competence: string

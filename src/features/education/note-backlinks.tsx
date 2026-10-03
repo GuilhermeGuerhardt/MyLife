@@ -24,7 +24,7 @@ export function NoteBacklinks({
 
   return (
     <div className="border-border-base bg-surface-2 border-t px-5 py-3">
-      <p className="text-fg-subtle mb-2 flex items-center gap-1.5 text-[11px]">
+      <p className="text-fg-subtle mb-2 flex items-center gap-1.5 text-xs">
         <CornerUpLeft className="size-3.5" />
         Mencionada em {itens.length} {itens.length === 1 ? 'anotação' : 'anotações'}
       </p>
@@ -44,12 +44,12 @@ export function NoteBacklinks({
                 <span className="text-accent truncate text-[13px]">
                   {nota.title || 'Sem título'}
                 </span>
-                <span className="text-fg-subtle shrink-0 text-[11px]">
+                <span className="text-fg-subtle shrink-0 text-xs">
                   {TRACK_LABELS[nota.track]}
                   {curso && ` · ${curso}`}
                 </span>
               </span>
-              <span className="text-fg-subtle mt-0.5 block truncate pl-5 text-[11px] italic">
+              <span className="text-fg-subtle mt-0.5 block truncate pl-5 text-xs italic">
                 {trecho}
               </span>
             </button>

@@ -9,7 +9,8 @@ import { PageHeader } from '@/components/ui/page-header'
 import { useCategories } from '@/data/queries'
 import type { TransactionKind } from '@/data/types'
 import { useCreateTransaction, useSetTransactionPaid } from '@/features/finance/actions'
-import { MonthNav, TransactionList } from '@/features/finance/shared'
+import { TransactionList } from '@/features/finance/lista-de-lancamentos'
+import { MonthNav } from '@/features/finance/month-nav'
 import { useAvisoDeCompetencia } from '@/features/finance/aviso-de-competencia'
 import { TransactionForm } from '@/features/finance/transaction-form'
 import { useFinance } from '@/features/finance/use-finance'
@@ -87,7 +88,7 @@ export function TransactionsPage() {
               <Stat
                 label={`${filtered.length} lançamento${filtered.length === 1 ? '' : 's'}`}
                 value={formatCents(Math.abs(total))}
-                tone={total < 0 ? 'negative' : total > 0 ? 'positive' : undefined}
+                tone={total < 0 ? 'negative' : undefined}
               />
             </div>
           </div>

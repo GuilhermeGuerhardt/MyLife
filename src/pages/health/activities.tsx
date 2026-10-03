@@ -73,7 +73,7 @@ export function ActivitiesPage() {
                         <span className="text-xl">{activity.icon}</span>
                         <div>
                           <p className="text-fg text-sm font-medium">{activity.name}</p>
-                          <p className="text-fg-subtle text-[11px]">
+                          <p className="text-fg-subtle text-xs">
                             {activity.met} MET
                             {currentWeight
                               ? ` · ~${integer(sessionCalories(activity.met, currentWeight, 60))} kcal/h`
@@ -92,7 +92,7 @@ export function ActivitiesPage() {
 
                     {goal > 0 && (
                       <div className="space-y-1.5">
-                        <div className="text-fg-muted flex justify-between text-[11px]">
+                        <div className="text-fg-muted flex justify-between text-xs">
                           <span>Meta da semana</span>
                           <span className={done >= goal ? 'text-positive font-medium' : ''}>
                             {done}/{goal}
@@ -190,7 +190,7 @@ export function ActivitiesPage() {
                     <p className="text-fg truncate text-sm font-medium">
                       {nameOf(session.activity_type_id)}
                     </p>
-                    <p className="text-fg-subtle text-[11px]">
+                    <p className="text-fg-subtle text-xs">
                       {shortDate(session.date)} · {duration(session.duration_min)}
                       {session.distance_km ? ` · ${session.distance_km} km` : ''}
                       {session.rpe ? ` · RPE ${session.rpe}` : ''}

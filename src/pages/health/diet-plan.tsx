@@ -1,4 +1,4 @@
-import { AlertTriangle, Info, Lightbulb, Target, TrendingDown } from 'lucide-react'
+import { AlertTriangle, Info, Lightbulb, Target } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
@@ -190,7 +190,7 @@ export function DietPlanPage() {
             )}
 
             {plans.length > 0 && (
-              <p className="text-fg-subtle text-[11px]">
+              <p className="text-fg-subtle text-xs">
                 {plans.filter((p) => p.status === 'archived').length} plano(s) arquivado(s).
               </p>
             )}
@@ -238,7 +238,6 @@ export function DietPlanPage() {
                 <Card>
                   <CardContent>
                     <Stat
-                      icon={<TrendingDown className="size-3.5" />}
                       label="Ritmo"
                       value={decimal(plan.weeklyLossKg, 2)}
                       unit="kg/sem"
@@ -249,7 +248,6 @@ export function DietPlanPage() {
                 <Card>
                   <CardContent>
                     <Stat
-                      icon={<Target className="size-3.5" />}
                       label="Previsão"
                       value={plan.estimatedWeeks ? `${plan.estimatedWeeks} sem` : '—'}
                       hint={
@@ -441,7 +439,7 @@ function MacroBar({
         </span>
       </div>
       <Progress value={share} tone={tone} />
-      <p className="text-fg-subtle text-[11px]">{note}</p>
+      <p className="text-fg-subtle text-xs">{note}</p>
     </div>
   )
 }

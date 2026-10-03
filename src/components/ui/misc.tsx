@@ -1,5 +1,33 @@
 import type { ReactNode } from 'react'
+import { Card } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
+
+/**
+ * Os números do topo de uma tela, num painel só.
+ *
+ * Eram um cartão por número: quatro caixas flutuando lado a lado, com sombra e
+ * canto, para dizer quatro coisas do mesmo assunto. Aqui é uma superfície só,
+ * dividida por fio — o olho lê a linha inteira de uma vez, e a tela para de
+ * parecer um mural de blocos.
+ *
+ * No celular eles empilham e o fio vira horizontal.
+ */
+export function PainelDeNumeros({
+  children,
+  className,
+}: {
+  /** Um `Stat` por coluna. */
+  children: ReactNode
+  className?: string
+}) {
+  return (
+    <Card className={cn('overflow-hidden', className)}>
+      <div className="divide-border-base grid divide-y sm:auto-cols-fr sm:grid-flow-col sm:divide-x sm:divide-y-0 [&>*]:p-5">
+        {children}
+      </div>
+    </Card>
+  )
+}
 
 export function Badge({
   children,
@@ -20,7 +48,7 @@ export function Badge({
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-medium',
+        'inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium',
         tones[tone],
         className,
       )}
@@ -58,35 +86,39 @@ export function Progress({
   )
 }
 
+/**
+ * Um número com rótulo.
+ *
+ * O número é neutro. Cor aqui é aviso, não enfeite: verde em toda receita e
+ * vermelho em toda despesa pintam o óbvio e, de quebra, gastam a cor que
+ * deveria saltar quando o saldo fica negativo. Por isso só sobrou `negative`.
+ *
+ * Também não tem ícone: uma carteirinha ao lado de "Saldo em contas" não diz
+ * nada que o rótulo já não diga, e repetida em quatro cartões vira ruído.
+ */
 export function Stat({
   label,
   value,
   unit,
   hint,
   tone,
-  icon,
 }: {
   label: string
   value: ReactNode
   unit?: string
   hint?: ReactNode
-  tone?: 'positive' | 'negative' | 'muted'
-  icon?: ReactNode
+  tone?: 'negative' | 'muted'
 }) {
-  const toneClass =
-    tone === 'positive' ? 'text-positive' : tone === 'negative' ? 'text-negative' : 'text-fg'
+  const toneClass = tone === 'negative' ? 'text-negative' : 'text-fg'
   return (
     <div className="space-y-1.5">
-      <div className="text-fg-muted flex items-center gap-1.5 text-xs font-medium">
-        {icon}
-        {label}
-      </div>
+      <div className="text-fg-muted text-xs font-medium">{label}</div>
       {/* Entrelinha curta e tracking fechado: o número ganha presença sem
           crescer de corpo. Crescer não cabe — "R$ 3.382,60" já ocupa a largura
           inteira da coluna num monitor estreito. */}
       <div
         className={cn(
-          'flex items-baseline gap-1 text-2xl leading-none font-semibold tracking-[-0.02em]',
+          'font-serif flex items-baseline gap-1 text-[22px] leading-none font-semibold',
           toneClass,
         )}
       >
@@ -149,7 +181,7 @@ export function Segmented<T extends string>({
           className={cn(
             'rounded-[6px] px-3 py-1.5 text-xs font-medium transition-colors',
             value === option.value
-              ? 'bg-surface text-fg shadow-[var(--shadow-card)]'
+              ? 'bg-surface text-fg border-border-base border'
               : 'text-fg-muted hover:text-fg',
           )}
         >
@@ -231,7 +263,7 @@ export function Callout({
 export function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
   return (
     <div className="mb-4 flex items-baseline justify-between gap-4">
-      <h2 className="text-fg border-accent border-b-2 pb-1.5 text-base font-semibold tracking-[-0.01em]">
+      <h2 className="text-fg border-border-strong border-b pb-1.5 text-base font-semibold">
         {children}
       </h2>
       {action}

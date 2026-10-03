@@ -3,6 +3,7 @@ import type { Account, BaseRow, Transaction, TransactionKind } from '@/data/type
 import {
   buildInstallments,
   competenceFor,
+  competenceForRow,
   type CardConfig,
   type Competence,
 } from '@/lib/finance/billing'
@@ -177,6 +178,38 @@ export function useUpdateTransaction() {
         notes: draft.notes,
       },
     })
+  }
+}
+
+/**
+ * Recoloca as compras de um cartão na fatura certa.
+ *
+ * A competência é gravada junto com o lançamento, calculada pelo fechamento que
+ * o cartão tinha naquele dia. Corrigir o fechamento depois, portanto, não move
+ * nada sozinho: as compras antigas continuariam na fatura errada, e o mês
+ * continuaria sem bater com o extrato. Esta função refaz a conta a partir da
+ * data de cada linha — e da parcela, quando é parcelamento.
+ *
+ * Devolve quantas linhas mudaram de fatura; quem não mudou não é regravada.
+ */
+export function useRecalcularFaturas() {
+  const { data: transactions, update } = useTransactions()
+
+  return async function recalcular(card: Account): Promise<number> {
+    const config = cardConfig(card)
+    if (!config) return 0
+
+    const doCartao = transactions.filter((t) => t.account_id === card.id)
+    let mudaram = 0
+
+    for (const item of doCartao) {
+      const competence = competenceForRow(item.date, item.installment_n, config)
+      if (competence === item.competence) continue
+      await update.mutateAsync({ id: item.id, patch: { competence } })
+      mudaram++
+    }
+
+    return mudaram
   }
 }
 

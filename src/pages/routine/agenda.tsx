@@ -137,7 +137,7 @@ export function AgendaPage() {
           <CardContent>
             <div className="grid grid-cols-7 gap-1">
               {WEEKDAYS.map((day) => (
-                <div key={day} className="text-fg-subtle pb-1 text-center text-[10px] font-medium">
+                <div key={day} className="text-fg-subtle pb-1 text-center text-xs font-medium">
                   {day}
                 </div>
               ))}
@@ -153,7 +153,7 @@ export function AgendaPage() {
               ))}
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px]">
+            <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
               {AREAS.map((area) => (
                 <Legend
                   key={area.key}
@@ -255,7 +255,7 @@ function DayCell({
     >
       <span
         className={cn(
-          'text-[11px] font-medium',
+          'text-xs font-medium',
           isToday ? 'bg-accent text-accent-fg -mt-0.5 rounded-full px-1.5 py-0.5' : 'text-fg',
         )}
       >
@@ -292,7 +292,7 @@ function EventRow({
         <p className={cn('text-fg truncate text-sm font-medium', event.done && 'line-through opacity-60')}>
           {event.title}
         </p>
-        <p className="text-fg-subtle truncate text-[11px]">
+        <p className="text-fg-subtle truncate text-xs">
           {event.time ? `${event.time}${event.endTime ? `–${event.endTime}` : ''} · ` : ''}
           {event.detail ?? SOURCE_LABELS[event.source]}
           {event.amountCents ? ` · ${currency(event.amountCents / 100)}` : ''}

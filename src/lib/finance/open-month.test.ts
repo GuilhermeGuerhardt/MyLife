@@ -4,8 +4,17 @@ import type { PendingOccurrence, RecurringLike } from './recurring'
 
 const HOJE = '2026-08-21'
 
+const CARTOES = new Set(['card'])
+
 function tx(over: Partial<OpenLike> = {}): OpenLike {
-  return { kind: 'expense', amount_cents: 10000, date: '2026-08-10', paid: false, ...over }
+  return {
+    account_id: 'acc',
+    kind: 'expense',
+    amount_cents: 10000,
+    date: '2026-08-10',
+    paid: false,
+    ...over,
+  }
 }
 
 function pend(over: Partial<RecurringLike> & { date?: string } = {}): PendingOccurrence {
@@ -128,5 +137,49 @@ describe('resumo do mês em aberto', () => {
       HOJE,
     )
     expect(r.balanceCents).toBe(-200000)
+  })
+})
+
+describe('cartão no resumo do mês', () => {
+  /**
+   * A compra no cartão não é conta a pagar: ela é linha de uma fatura. Contar as
+   * duas somava a mesma dívida duas vezes — e no mês errado, porque a fatura de
+   * um mês costuma vencer no seguinte.
+   */
+  it('a compra no cartão não entra como conta a pagar', () => {
+    const resumo = summarizeOpenMonth(
+      [tx({ account_id: 'card', amount_cents: 32000 }), tx({ account_id: 'acc', amount_cents: 5000 })],
+      [],
+      HOJE,
+      CARTOES,
+    )
+    expect(resumo.count).toBe(1)
+    expect(resumo.toPayCents).toBe(5000)
+  })
+
+  it('a compra no cartão não conta como vencida', () => {
+    const resumo = summarizeOpenMonth(
+      [tx({ account_id: 'card', date: '2026-08-02' })],
+      [],
+      HOJE,
+      CARTOES,
+    )
+    expect(resumo.overdueCount).toBe(0)
+  })
+
+  it('a fatura do mês entra inteira, pelo vencimento dela', () => {
+    const resumo = summarizeOpenMonth([], [], HOJE, CARTOES, [
+      { dueDate: '2026-08-25', totalCents: 32000 },
+    ])
+    expect(resumo.count).toBe(1)
+    expect(resumo.toPayCents).toBe(32000)
+    expect(resumo.overdueCount).toBe(0)
+  })
+
+  it('fatura que já venceu conta como vencida', () => {
+    const resumo = summarizeOpenMonth([], [], HOJE, CARTOES, [
+      { dueDate: '2026-08-15', totalCents: 32000 },
+    ])
+    expect(resumo.overdueCount).toBe(1)
   })
 })

@@ -145,7 +145,7 @@ export function LinkSuggestions({
 
   return (
     <div className="border-border-base bg-surface absolute right-4 bottom-3 left-4 z-10 overflow-hidden rounded-lg border shadow-lg">
-      <p className="text-fg-subtle border-border-base border-b px-3 py-1.5 text-[10px]">
+      <p className="text-fg-subtle border-border-base border-b px-3 py-1.5 text-xs">
         ligar a uma anotação · ↑↓ para escolher, Enter confirma
       </p>
       {opcoes.map((opcao, i) => (

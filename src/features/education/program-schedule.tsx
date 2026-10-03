@@ -129,7 +129,7 @@ export function ProgramSchedule({
 
             <Link
               to="/rotina/agenda"
-              className="text-fg-subtle hover:text-fg inline-flex items-center gap-1.5 text-[11px] transition-colors"
+              className="text-fg-subtle hover:text-fg inline-flex items-center gap-1.5 text-xs transition-colors"
             >
               Ver no calendário
               <ExternalLink className="size-3" />
@@ -197,7 +197,7 @@ function DeadlineRow({
         >
           {deadline.title}
         </p>
-        <p className={cn('truncate text-[11px]', atrasado ? 'text-negative' : 'text-fg-subtle')}>
+        <p className={cn('truncate text-xs', atrasado ? 'text-negative' : 'text-fg-subtle')}>
           {[periodo, subject, deadline.done ? null : relativeDay(deadline.date)]
             .filter(Boolean)
             .join(' · ')}

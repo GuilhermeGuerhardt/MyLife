@@ -262,7 +262,7 @@ function SearchView({
                   {food.name}
                   {food.brand && <span className="text-fg-subtle"> · {food.brand}</span>}
                 </p>
-                <p className="text-fg-subtle text-[11px]">
+                <p className="text-fg-subtle text-xs">
                   {integer(food.kcal)} kcal/100 g · P {decimal(food.protein_g, 1)} g
                 </p>
               </button>
@@ -366,7 +366,7 @@ function AmountButton({ label, onClick }: { label: string; onClick: () => void }
 function Macro({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <p className="text-fg-subtle text-[10px] tracking-wide uppercase">{label}</p>
+      <p className="text-fg-subtle text-xs tracking-wide uppercase">{label}</p>
       <p className="text-fg text-sm font-medium">{value}</p>
     </div>
   )

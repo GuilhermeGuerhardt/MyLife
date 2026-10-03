@@ -10,7 +10,7 @@ import { useCategories, useRecurring, useTransactions } from '@/data/queries'
 import type { RecurringTransaction } from '@/data/types'
 import { CategoryIcon } from '@/features/finance/category-icons'
 import { RecurringForm, type RecurringDraft } from '@/features/finance/recurring-form'
-import { MonthNav } from '@/features/finance/shared'
+import { MonthNav } from '@/features/finance/month-nav'
 import { useFinance } from '@/features/finance/use-finance'
 import { useMaterializeRecurring } from '@/features/finance/actions'
 import { competenceLabel, toCompetence } from '@/lib/finance/billing'
@@ -99,7 +99,7 @@ export function RecurringPage() {
               <Stat
                 label="Saldo"
                 value={formatCents(Math.abs(pendingBalance(pending)))}
-                tone={pendingBalance(pending) < 0 ? 'negative' : 'positive'}
+                tone={pendingBalance(pending) < 0 ? 'negative' : undefined}
               />
               <Button onClick={() => void lancarPendentes()} disabled={lancando}>
                 {lancando ? 'Lançando…' : 'Lançar como previsto'}
@@ -161,7 +161,7 @@ export function RecurringPage() {
                     <p className={`truncate text-sm ${rule.active ? 'text-fg' : 'text-fg-subtle'}`}>
                       {rule.description}
                     </p>
-                    <p className="text-fg-subtle truncate text-[11px]">
+                    <p className="text-fg-subtle truncate text-xs">
                       {[
                         `todo dia ${rule.day_of_month}`,
                         account?.name,

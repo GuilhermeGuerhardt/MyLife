@@ -11,7 +11,14 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Badge, EmptyState, Progress, SectionTitle, Stat } from '@/components/ui/misc'
+import {
+  Badge,
+  EmptyState,
+  PainelDeNumeros,
+  Progress,
+  SectionTitle,
+  Stat,
+} from '@/components/ui/misc'
 import { PageHeader } from '@/components/ui/page-header'
 import { useInstitutions, useNotes, usePrograms } from '@/data/queries'
 import { DEGREE_LABELS, PROGRAM_STATUS_LABELS, type ProgramTrack } from '@/data/types'
@@ -70,42 +77,27 @@ function ProgramsPage({ track }: { track: ProgramTrack }) {
       />
 
       {active.length > 0 && (
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Card>
-            <CardContent>
-              <Stat
-                label="Em andamento"
-                value={active.length}
-                hint={active.length === 1 ? 'curso ativo' : 'cursos ativos'}
-              />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent>
-              <Stat
-                label="Progresso médio"
-                value={percent(
-                  active.reduce((sum, s) => sum + s.percent, 0) / active.length,
-                  0,
-                )}
-                hint={academic ? 'Por carga horária cumprida' : 'Por aulas concluídas'}
-              />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent>
-              <Stat
-                label={academic ? 'Horas cumpridas' : 'Aulas concluídas'}
-                value={
-                  academic
-                    ? integer(active.reduce((sum, s) => sum + s.progress.hoursDone, 0))
-                    : integer(active.reduce((sum, s) => sum + s.lessonsDone, 0))
-                }
-                unit={academic ? 'h' : undefined}
-              />
-            </CardContent>
-          </Card>
-        </div>
+        <PainelDeNumeros>
+          <Stat
+            label="Em andamento"
+            value={active.length}
+            hint={active.length === 1 ? 'curso ativo' : 'cursos ativos'}
+          />
+          <Stat
+            label="Progresso médio"
+            value={percent(active.reduce((sum, s) => sum + s.percent, 0) / active.length, 0)}
+            hint={academic ? 'Por carga horária cumprida' : 'Por aulas concluídas'}
+          />
+          <Stat
+            label={academic ? 'Horas cumpridas' : 'Aulas concluídas'}
+            value={
+              academic
+                ? integer(active.reduce((sum, s) => sum + s.progress.hoursDone, 0))
+                : integer(active.reduce((sum, s) => sum + s.lessonsDone, 0))
+            }
+            unit={academic ? 'h' : undefined}
+          />
+        </PainelDeNumeros>
       )}
 
       <div>
@@ -197,7 +189,7 @@ function ProgramsPage({ track }: { track: ProgramTrack }) {
                     </div>
                   )}
 
-                  <div className="text-fg-subtle flex flex-wrap gap-x-4 gap-y-1 text-[11px]">
+                  <div className="text-fg-subtle flex flex-wrap gap-x-4 gap-y-1 text-xs">
                     {academic && (
                       <>
                         <span>{summary.progress.counts.done} concluídas</span>

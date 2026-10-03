@@ -332,8 +332,8 @@ function NotebookView({ track }: { track: ProgramTrack | null }) {
                   onClick={() => setTagFilter(tagFilter === tag ? null : tag)}
                   className={
                     tagFilter === tag
-                      ? 'bg-accent-soft text-accent rounded-md px-2 py-0.5 text-[11px] font-medium'
-                      : 'bg-surface-2 border-border-base text-fg-muted hover:text-fg rounded-md border px-2 py-0.5 text-[11px]'
+                      ? 'bg-accent-soft text-accent rounded-md px-2 py-0.5 text-xs font-medium'
+                      : 'bg-surface-2 border-border-base text-fg-muted hover:text-fg rounded-md border px-2 py-0.5 text-xs'
                   }
                 >
                   #{tag}

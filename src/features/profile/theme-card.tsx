@@ -47,7 +47,7 @@ export function ThemeCard() {
           <Fragment key={grupo.scheme}>
             <p
               className={cn(
-                'text-fg-muted flex items-center gap-1.5 text-[11px] font-semibold tracking-wide uppercase',
+                'text-fg-muted flex items-center gap-1.5 text-xs font-semibold tracking-wide uppercase',
                 // Empilhado, o segundo grupo precisa respirar; lado a lado, não.
                 indice > 0 && 'mt-3 sm:mt-0',
               )}
@@ -77,7 +77,7 @@ export function ThemeCard() {
                       {option.label}
                       {active && <Check className="text-accent size-3.5" />}
                     </span>
-                    <span className="text-fg-subtle mt-0.5 line-clamp-2 text-[11px] leading-snug">
+                    <span className="text-fg-subtle mt-0.5 line-clamp-2 text-xs leading-snug">
                       {option.description}
                     </span>
                   </span>

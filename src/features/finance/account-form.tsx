@@ -5,6 +5,7 @@ import { Modal } from '@/components/ui/modal'
 import { ACCOUNT_KIND_LABELS, type Account, type AccountKind, type BaseRow } from '@/data/types'
 import { centsToInput, parseAmount } from '@/lib/finance/money'
 import { cn } from '@/lib/utils'
+import { InputDeDinheiro } from './input-de-dinheiro'
 
 export type AccountDraft = Omit<Account, keyof BaseRow>
 
@@ -58,14 +59,14 @@ export function AccountForm({
             Cancelar
           </Button>
           <Button
-            disabled={!form.name.trim()}
+            disabled={!form.name.trim() || (isCard && (!form.closing_day || !form.due_day))}
             onClick={() =>
               void onSave({
                 ...form,
                 initial_balance_cents: isCard ? 0 : parseAmount(balance),
                 credit_limit_cents: isCard && limit ? parseAmount(limit) : null,
-                closing_day: isCard ? (form.closing_day ?? 1) : null,
-                due_day: isCard ? (form.due_day ?? 10) : null,
+                closing_day: isCard ? form.closing_day : null,
+                due_day: isCard ? form.due_day : null,
               })
             }
           >
@@ -104,21 +105,26 @@ export function AccountForm({
         {isCard ? (
           <>
             <Field label="Limite" suffix="R$">
-              <Input
-                inputMode="decimal"
-                value={limit}
-                placeholder="0,00"
-                onChange={(e) => setLimit(e.target.value)}
-              />
+              <InputDeDinheiro value={limit} onChange={setLimit} />
             </Field>
 
             <div />
 
-            <Field label="Dia do fechamento" hint="Compras após esse dia entram na fatura seguinte.">
+            {/*
+              Os dois dias começam vazios de propósito. Um padrão calado — "dia
+              1" — manda para a fatura seguinte tudo o que for comprado do dia 2
+              em diante, e o erro só aparece semanas depois, quando a compra não
+              está na fatura que a pessoa foi pagar. Vem na fatura do cartão.
+            */}
+            <Field
+              label="Dia do fechamento"
+              hint="Está na sua fatura. Compras depois desse dia entram na fatura seguinte."
+            >
               <Select
-                value={form.closing_day ?? 1}
-                onChange={(e) => set('closing_day', Number(e.target.value))}
+                value={form.closing_day ?? ''}
+                onChange={(e) => set('closing_day', Number(e.target.value) || null)}
               >
+                <option value="">Escolha o dia</option>
                 {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
                   <option key={day} value={day}>
                     Dia {day}
@@ -129,9 +135,10 @@ export function AccountForm({
 
             <Field label="Dia do vencimento">
               <Select
-                value={form.due_day ?? 10}
-                onChange={(e) => set('due_day', Number(e.target.value))}
+                value={form.due_day ?? ''}
+                onChange={(e) => set('due_day', Number(e.target.value) || null)}
               >
+                <option value="">Escolha o dia</option>
                 {Array.from({ length: 31 }, (_, i) => i + 1).map((day) => (
                   <option key={day} value={day}>
                     Dia {day}
@@ -142,12 +149,7 @@ export function AccountForm({
           </>
         ) : (
           <Field label="Saldo inicial" suffix="R$">
-            <Input
-              inputMode="decimal"
-              value={balance}
-              placeholder="0,00"
-              onChange={(e) => setBalance(e.target.value)}
-            />
+            <InputDeDinheiro value={balance} onChange={setBalance} />
           </Field>
         )}
 

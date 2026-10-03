@@ -204,7 +204,7 @@ function RowTable({
   return (
     <div className="border-border-base overflow-x-auto rounded-lg border">
       <table className="w-full text-sm">
-        <thead className="bg-surface-2 text-fg-subtle text-[11px]">
+        <thead className="bg-surface-2 text-fg-subtle text-xs">
           <tr>
             <th className="w-10 p-2" />
             <th className="w-12 p-2 text-left font-medium">Linha</th>
@@ -234,19 +234,19 @@ function RowTable({
                   aria-label={`Importar linha ${row.line}`}
                 />
               </td>
-              <td className="text-fg-subtle p-2 text-[11px]">{row.line}</td>
+              <td className="text-fg-subtle p-2 text-xs">{row.line}</td>
               <td className="text-fg-muted p-2 whitespace-nowrap">
                 {row.error ? '—' : shortDate(row.date)}
               </td>
               <td className="p-2">
                 <span className="text-fg">{row.description || '—'}</span>
                 {row.installment && (
-                  <span className="text-fg-subtle ml-1.5 text-[11px]">
+                  <span className="text-fg-subtle ml-1.5 text-xs">
                     {row.installment.n}/{row.installment.total}
                   </span>
                 )}
                 {row.detail && (
-                  <span className="text-fg-subtle ml-1.5 text-[11px]">· {row.detail}</span>
+                  <span className="text-fg-subtle ml-1.5 text-xs">· {row.detail}</span>
                 )}
               </td>
               <td className="text-fg-muted p-2 text-xs">

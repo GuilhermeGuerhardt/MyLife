@@ -39,7 +39,7 @@ export function ModulosCard() {
 
               <div className="min-w-0 flex-1">
                 <p className="text-fg text-sm font-medium">{item.def.label}</p>
-                <p className="text-fg-subtle text-[11px]">
+                <p className="text-fg-subtle text-xs">
                   {item.podeEsconder
                     ? (item.def.children?.map((filho) => filho.label).join(' · ') ??
                       'Anotações e resumos')

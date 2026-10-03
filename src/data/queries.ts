@@ -8,6 +8,7 @@ import { ACTIVITY_CATALOG, FOOD_CATALOG } from './seed'
 import { CATEGORY_CATALOG } from './seed-finance'
 import type {
   Account,
+  AccountCheck,
   ActivityType,
   Assessment,
   BaseRow,
@@ -58,6 +59,7 @@ export const TABLES = {
   notes: 'notes',
   deadlines: 'deadlines',
   accounts: 'accounts',
+  accountChecks: 'account_checks',
   categories: 'categories',
   transactions: 'transactions',
   budgets: 'budgets',
@@ -89,6 +91,7 @@ const collections = {
   notes: collection<Note>(TABLES.notes),
   deadlines: collection<Deadline>(TABLES.deadlines),
   accounts: collection<Account>(TABLES.accounts),
+  accountChecks: collection<AccountCheck>(TABLES.accountChecks),
   categories: collection<Category>(TABLES.categories),
   transactions: collection<Transaction>(TABLES.transactions),
   budgets: collection<Budget>(TABLES.budgets),
@@ -239,6 +242,9 @@ export async function resetFinance(): Promise<FinanceCounts> {
   await collections.budgets.replaceAll([])
   await collections.goals.replaceAll([])
   await collections.recurring.replaceAll([])
+  // A conferência de extrato vai junto: ela só diz respeito a uma conta, e
+  // sobreviver à conta deixaria um carimbo apontando para o que não existe.
+  await collections.accountChecks.replaceAll([])
   await collections.accounts.replaceAll([])
   await collections.categories.replaceAll(withMeta(CATEGORY_CATALOG) as Category[])
 
@@ -414,6 +420,10 @@ export function useDeadlines() {
 
 export function useAccounts() {
   return useCollection<Account>('accounts')
+}
+
+export function useAccountChecks() {
+  return useCollection<AccountCheck>('accountChecks')
 }
 
 export function useCategories() {

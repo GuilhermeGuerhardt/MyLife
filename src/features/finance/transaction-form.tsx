@@ -8,8 +8,9 @@ import type { Account, Category, TransactionKind } from '@/data/types'
 import { guessCategory } from '@/data/seed-finance'
 import { competenceLabel, competenceFor, buildInstallments } from '@/lib/finance/billing'
 import { MAX_REPEAT_MONTHS, MIN_REPEAT_MONTHS, repeatEndDate, repeatTotal } from '@/lib/finance/recurring'
-import { formatCents, parseAmount } from '@/lib/finance/money'
+import { centsToInput, formatCents, parseAmount } from '@/lib/finance/money'
 import { today } from '@/lib/utils'
+import { InputDeDinheiro } from './input-de-dinheiro'
 import { cardConfig, type TransactionDraft } from './actions'
 import { sortCategories } from './use-finance'
 
@@ -49,7 +50,7 @@ export function TransactionForm({
   const editing = mode === 'edit'
   const [kind, setKind] = useState<TransactionKind>(initial?.kind ?? defaultKind)
   const [amount, setAmount] = useState(
-    initial?.amount_cents ? (initial.amount_cents / 100).toFixed(2).replace('.', ',') : '',
+    initial?.amount_cents ? centsToInput(initial.amount_cents) : '',
   )
   const [description, setDescription] = useState(initial?.description ?? '')
   const [date, setDate] = useState(initial?.date ?? today())
@@ -213,12 +214,10 @@ export function TransactionForm({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Valor" suffix="R$">
-            <Input
+            <InputDeDinheiro
               autoFocus
-              inputMode="decimal"
               value={amount}
-              placeholder="0,00"
-              onChange={(e) => setAmount(e.target.value)}
+              onChange={setAmount}
               className="text-lg font-semibold"
             />
           </Field>
@@ -332,7 +331,7 @@ export function TransactionForm({
               <div className="bg-surface-2 flex items-center justify-between gap-4 rounded-lg px-3 py-2.5 sm:col-span-2">
                 <div>
                   <p className="text-fg text-xs font-medium">Sem fim</p>
-                  <p className="text-fg-muted text-[11px]">
+                  <p className="text-fg-muted text-xs">
                     Aluguel e assinatura não têm data para acabar — ligue e o prazo some.
                   </p>
                 </div>

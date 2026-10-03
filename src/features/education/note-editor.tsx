@@ -1,9 +1,7 @@
-import { ArrowLeft, Download, ExternalLink, Eye, Pen, Pin, Trash2, Type } from 'lucide-react'
 import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
-import { Button, buttonStyles } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
-import { Field, Input, Select, Textarea } from '@/components/ui/field'
-import { Badge, Segmented } from '@/components/ui/misc'
+import { Textarea } from '@/components/ui/field'
+import { Badge } from '@/components/ui/misc'
 import type { Note, Program, Track } from '@/data/types'
 import { confirmar } from '@/lib/avisos'
 import type { Retrolink } from '@/lib/education/links'
@@ -12,18 +10,13 @@ import {
   formatoDaNota,
   markdownParaHtml,
   textoPuro,
-  type FormatoDaNota,
 } from '@/lib/education/formato'
 import { alternarTarefa } from '@/lib/education/tarefas'
 import { lazyRoute } from '@/lib/lazy-route'
-import { useMenuFlutuante } from '@/components/ui/use-menu-flutuante'
 import { cn } from '@/lib/utils'
-import {
-  exportarNota,
-  ROTULOS,
-  saidasPossiveis,
-  type FormatoDeSaida,
-} from './exportar-nota'
+import { exportarNota } from './exportar-nota'
+import { CabecalhoDaNota } from './note/cabecalho-da-nota'
+import { DestinoDaNota, SEM_CURSO } from './note/destino-da-nota'
 import { LinkSuggestions, useLinkAutocomplete } from './link-autocomplete'
 import { Markdown } from './markdown'
 import { NoteBacklinks } from './note-backlinks'
@@ -54,18 +47,6 @@ export const NOTE_TEMPLATE = `<h2>Resumo</h2><p></p><h2>Pontos principais</h2><u
 
 /** Pausa na digitação antes de gravar sozinho. */
 const AUTOSAVE_MS = 800
-
-/** O valor do select "Onde" quando a anotação não pertence a curso nenhum. */
-/**
- * Os dois destinos que não são curso.
- *
- * O prefixo esquisito é de propósito: o valor do select ou é um id de curso ou
- * é um destes, e um id nunca começa com underscore.
- */
-const SEM_CURSO: Array<{ valor: string; track: Track; rotulo: string }> = [
-  { valor: '__estudos__', track: 'free', rotulo: 'Estudo livre' },
-  { valor: '__anotacoes__', track: 'personal', rotulo: 'Anotações' },
-]
 
 export function NoteEditor({
   note,
@@ -243,150 +224,39 @@ export function NoteEditor({
         naJanela ? 'h-full min-h-0 rounded-none border-0' : 'min-h-[70vh] lg:h-full lg:min-h-0',
       )}
     >
-      <div className="border-border-base flex shrink-0 flex-wrap items-center gap-2 border-b px-4 py-3">
-        {!naJanela && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={onBack}
-            className="lg:hidden"
-            aria-label="Voltar"
-          >
-            <ArrowLeft />
-          </Button>
-        )}
-        <Input
-          value={form.title}
-          onChange={(e) => set({ title: e.target.value })}
-          placeholder="Título da anotação"
-          /* Largura mínima para o título não ser espremido a nada: numa janela
-             estreita a fila de botões quebra para a linha de baixo, em vez de
-             engolir o nome da anotação. */
-          className="h-9 min-w-40 flex-1 border-transparent bg-transparent px-0 text-base font-semibold"
-        />
-        <Segmented
-          value={mode}
-          onChange={onModeChange}
-          options={[
-            { value: 'edit', label: <Pen className="size-3.5" />, ariaLabel: 'Editar' },
-            { value: 'preview', label: <Eye className="size-3.5" />, ariaLabel: 'Visualizar' },
-          ]}
-        />
-        {aoAbrirEmJanela && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={aoAbrirEmJanela}
-            aria-label="Abrir em outra janela"
-            title="Abrir em outra janela"
-          >
-            <ExternalLink />
-          </Button>
-        )}
-        <MenuExportar
-          formato={formato}
-          onEscolher={(saida) => {
-            void exportarNota(form.title || 'Anotação', form.content, formato, saida)
-          }}
-        />
-        {/* Só nas anotações que ainda são Markdown: nas formatadas não há
-            para onde converter, e o botão viraria enfeite. */}
-        {formato === 'markdown' && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => void converterParaFormatado()}
-            aria-label="Converter para texto formatado"
-            title="Converter para texto formatado"
-          >
-            <Type />
-          </Button>
-        )}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onSave({ pinned: !note.pinned })}
-          aria-label={note.pinned ? 'Desafixar' : 'Fixar no topo'}
-          className={note.pinned ? 'text-accent' : undefined}
-        >
-          <Pin />
-        </Button>
-        {!naJanela && (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => {
-              void confirmar('Remover esta anotação?', { confirmar: 'Remover' }).then((ok) => {
-                if (ok) onRemove()
-              })
-            }}
-            aria-label="Remover anotação"
-          >
-            <Trash2 />
-          </Button>
-        )}
-      </div>
+      <CabecalhoDaNota
+        titulo={form.title}
+        onTitulo={(titulo) => set({ title: titulo })}
+        mode={mode}
+        onModeChange={onModeChange}
+        formato={formato}
+        fixada={note.pinned}
+        naJanela={naJanela}
+        onVoltar={onBack}
+        onAbrirEmJanela={aoAbrirEmJanela}
+        onExportar={(saida) => {
+          void exportarNota(form.title || 'Anotação', form.content, formato, saida)
+        }}
+        onConverter={() => void converterParaFormatado()}
+        onFixar={() => onSave({ pinned: !note.pinned })}
+        onRemover={onRemove}
+      />
 
       {/* Onde a anotação mora e as etiquetas: decisão que se toma ao lado da
           lista, não no meio de escrever. Na janela, some e vira texto. */}
       {!naJanela && (
-      <div className="border-border-base grid shrink-0 gap-3 border-b px-4 py-3 sm:grid-cols-3">
-        <Field label="Onde">
-          <Select value={ondeAtual} onChange={(e) => mudarOnde(e.target.value)}>
-            {SEM_CURSO.map((opcao) => (
-              <option key={opcao.valor} value={opcao.valor}>
-                {opcao.rotulo}
-              </option>
-            ))}
-            {/* A anotação antiga sem curso guarda o trilho dela: some da lista
-                se for editada, mas até lá continua onde estava. */}
-            {ondeAtual === '' && <option value="">Sem curso</option>}
-            {academicos.length > 0 && (
-              <optgroup label="Faculdade">
-                {academicos.map((program) => (
-                  <option key={program.id} value={program.id}>
-                    {program.name}
-                  </option>
-                ))}
-              </optgroup>
-            )}
-            {cursos.length > 0 && (
-              <optgroup label="Cursos">
-                {cursos.map((program) => (
-                  <option key={program.id} value={program.id}>
-                    {program.name}
-                  </option>
-                ))}
-              </optgroup>
-            )}
-          </Select>
-        </Field>
-
-        {/* Disciplina só existe na faculdade: no curso livre ela ocupava
-            espaço desabilitada, sem nunca ter o que oferecer. */}
-        {form.track === 'academic' && form.program_id ? (
-          <Field label="Disciplina">
-            <Select value={form.subject_id} onChange={(e) => set({ subject_id: e.target.value })}>
-              <option value="">Nenhuma</option>
-              {subjects.map((subject) => (
-                <option key={subject.id} value={subject.id}>
-                  {subject.name}
-                </option>
-              ))}
-            </Select>
-          </Field>
-        ) : (
-          <div className="hidden sm:block" />
-        )}
-
-        <Field label="Etiquetas" hint="Separadas por vírgula">
-          <Input
-            value={form.tags}
-            onChange={(e) => set({ tags: e.target.value })}
-            placeholder="prova, revisão"
-          />
-        </Field>
-      </div>
+        <DestinoDaNota
+          onde={ondeAtual}
+          onTrocarOnde={mudarOnde}
+          academicos={academicos}
+          cursos={cursos}
+          disciplinas={subjects}
+          comDisciplina={form.track === 'academic' && Boolean(form.program_id)}
+          disciplina={form.subject_id}
+          onDisciplina={(id) => set({ subject_id: id })}
+          etiquetas={form.tags}
+          onEtiquetas={(texto) => set({ tags: texto })}
+        />
       )}
 
       {/* O único pedaço que rola. A barra de formatação está dentro do editor,
@@ -464,57 +334,11 @@ export function NoteEditor({
         </div>
       )}
 
-      <div className="border-border-base text-fg-subtle flex shrink-0 items-center justify-between border-t px-4 py-2 text-[11px]">
+      <div className="border-border-base text-fg-subtle flex shrink-0 items-center justify-between border-t px-4 py-2 text-xs">
         <span>{words} palavras</span>
         <Badge tone={saved ? 'neutral' : 'accent'}>{saved ? 'Salvo' : 'Salvando...'}</Badge>
       </div>
     </Card>
-  )
-}
-
-/**
- * O menu de exportação, com o que aquele formato sabe entregar.
- *
- * `<details>` pelo mesmo motivo das paletas do editor: anda pelo teclado e não
- * pede estado no React. Fechar ao clicar fora vem de `useMenuFlutuante`.
- */
-function MenuExportar({
-  formato,
-  onEscolher,
-}: {
-  formato: FormatoDaNota
-  onEscolher: (saida: FormatoDeSaida) => void
-}) {
-  const menu = useMenuFlutuante()
-
-  return (
-    <details ref={menu} className="relative">
-      <summary
-        title="Exportar"
-        aria-label="Exportar"
-        className={cn(
-          buttonStyles({ variant: 'ghost', size: 'icon' }),
-          'cursor-pointer list-none [&::-webkit-details-marker]:hidden',
-        )}
-      >
-        <Download />
-      </summary>
-      <div className="border-border-base bg-surface absolute top-10 right-0 z-20 w-48 rounded-lg border p-1 shadow-lg">
-        {saidasPossiveis(formato).map((saida) => (
-          <button
-            key={saida}
-            type="button"
-            onClick={(e) => {
-              e.currentTarget.closest('details')?.removeAttribute('open')
-              onEscolher(saida)
-            }}
-            className="text-fg hover:bg-surface-2 block w-full rounded px-2 py-1.5 text-left text-xs"
-          >
-            {ROTULOS[saida]}
-          </button>
-        ))}
-      </div>
-    </details>
   )
 }
 

@@ -209,7 +209,7 @@ export function WorkspaceCard() {
             </div>
 
             {remembered && (
-              <p className="text-fg-subtle flex items-start gap-1.5 text-[11px]">
+              <p className="text-fg-subtle flex items-start gap-1.5 text-xs">
                 <Info className="mt-0.5 size-3 shrink-0" />
                 O navegador lembra da pasta, mas pede a permissão de novo a cada sessão — por
                 segurança, ela só pode ser concedida a partir de um clique seu.

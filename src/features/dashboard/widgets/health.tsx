@@ -1,6 +1,6 @@
 /** Widgets de saúde: peso, calorias, treinos e o plano de emagrecimento. */
 
-import { Activity, ArrowRight, Scale, Target, TrendingDown, Utensils } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -15,7 +15,6 @@ export function WeightWidget() {
     <Card className="accent-health h-full">
       <CardContent>
         <Stat
-          icon={<Scale className="size-3.5" />}
           label="Peso"
           value={summary.currentWeight ? decimal(summary.currentWeight, 1) : '—'}
           unit={summary.currentWeight ? 'kg' : undefined}
@@ -24,7 +23,6 @@ export function WeightWidget() {
               ? `${signed(summary.weightTrend.delta, 1)} kg em 30 dias`
               : 'média móvel de 7 dias'
           }
-          tone={summary.weightTrend.delta < 0 ? 'positive' : undefined}
         />
       </CardContent>
     </Card>
@@ -40,7 +38,6 @@ export function CaloriesWidget() {
     <Card className="accent-health h-full">
       <CardContent>
         <Stat
-          icon={<Utensils className="size-3.5" />}
           label="Calorias restantes"
           value={remaining !== null ? integer(Math.max(remaining, 0)) : '—'}
           unit={remaining !== null ? 'kcal' : undefined}
@@ -71,7 +68,6 @@ export function WorkoutsWidget() {
     <Card className="accent-health h-full">
       <CardContent>
         <Stat
-          icon={<Activity className="size-3.5" />}
           label="Treinos na semana"
           value={summary.weekSessions.length}
           hint={goal ? `Meta: ${goal} sessões` : 'Sem metas definidas'}
@@ -112,12 +108,10 @@ export function DietPlanWidget() {
                 label="Ritmo"
                 value={decimal(plan.weekly_loss_kg, 2)}
                 unit="kg/sem"
-                icon={<TrendingDown className="size-3.5" />}
               />
               <Stat
                 label="Previsão"
                 value={longDate(plan.estimated_date).replace(/ de \d{4}/, '')}
-                icon={<Target className="size-3.5" />}
               />
             </div>
             <div>
@@ -128,7 +122,7 @@ export function DietPlanWidget() {
                 <span className="text-fg font-medium">{integer(percent)}%</span>
               </div>
               <Progress value={percent} />
-              <p className="text-fg-subtle mt-2 text-[11px]">
+              <p className="text-fg-subtle mt-2 text-xs">
                 Faltam {decimal(Math.max(summary.currentWeight - plan.target_weight_kg, 0), 1)} kg ·
                 já foram {decimal(Math.max(plan.start_weight_kg - summary.currentWeight, 0), 1)} kg
               </p>

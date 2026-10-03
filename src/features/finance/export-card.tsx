@@ -54,6 +54,18 @@ export function ExportCard() {
   const recortado = periodo.de !== tudo.de || periodo.ate !== tudo.ate
   const aberto = !periodo.de || !periodo.ate
 
+  /**
+   * Mexer no período apaga o recibo do download anterior.
+   *
+   * Ele diz quantos lançamentos saíram, e trocando o mês aquele número passa a
+   * contradizer o do botão ao lado — "7 lançamentos exportados" embaixo de
+   * "Baixar 1".
+   */
+  function trocarPeriodo(novo: Periodo | null) {
+    setEscolhido(novo)
+    setAviso(null)
+  }
+
   async function exportar() {
     setBusy(true)
     setAviso(null)
@@ -81,7 +93,7 @@ export function ExportCard() {
     <Card>
       <CardHeader
         title="Exportar lançamentos"
-        description="Um CSV que abre no Excel — e que esta mesma tela sabe importar de volta."
+        description="Um CSV que abre no Excel — e que esta mesma tela sabe importar de volta. O recorte é por competência: a compra feita no cartão sai no mês da fatura, com a data original do dia da compra."
       />
       <CardContent className="space-y-4">
         {/*
@@ -94,7 +106,7 @@ export function ExportCard() {
             <Input
               type="month"
               value={periodo.de}
-              onChange={(e) => setEscolhido({ ...periodo, de: e.target.value })}
+              onChange={(e) => trocarPeriodo({ ...periodo, de: e.target.value })}
             />
           </Field>
 
@@ -102,13 +114,13 @@ export function ExportCard() {
             <Input
               type="month"
               value={periodo.ate}
-              onChange={(e) => setEscolhido({ ...periodo, ate: e.target.value })}
+              onChange={(e) => trocarPeriodo({ ...periodo, ate: e.target.value })}
             />
           </Field>
 
           <div className="flex items-center gap-2">
             {recortado && (
-              <Button variant="ghost" onClick={() => setEscolhido(null)}>
+              <Button variant="ghost" onClick={() => trocarPeriodo(null)}>
                 Tudo
               </Button>
             )}
@@ -123,7 +135,7 @@ export function ExportCard() {
         </div>
 
         {aberto && valido && (
-          <p className="text-fg-subtle text-[11px]">
+          <p className="text-fg-subtle text-xs">
             {periodo.de
               ? 'Sem o mês final, o arquivo vai até o último lançamento.'
               : 'Sem o mês inicial, o arquivo começa no primeiro lançamento.'}
@@ -135,11 +147,11 @@ export function ExportCard() {
         ) : selecionadas.length === 0 ? (
           <p className="text-fg-muted text-xs">Nenhum lançamento neste recorte.</p>
         ) : (
-          <p className="text-fg-subtle flex items-start gap-1.5 text-[11px] leading-relaxed">
+          <p className="text-fg-subtle flex items-start gap-1.5 text-xs leading-relaxed">
             <Info className="mt-0.5 size-3 shrink-0" />
             <span>
-              Colunas: data, valor, tipo, descrição, complemento, conta, categoria e situação.
-              Separado por ponto e vírgula, que é o que o Excel em português espera.
+              Colunas: data, valor, tipo, descrição, complemento, conta, destino, categoria e
+              situação. Separado por ponto e vírgula, que é o que o Excel em português espera.
               {transferencias > 0 && (
                 <>
                   {' '}
@@ -148,9 +160,8 @@ export function ExportCard() {
                     {transferencias === 1 ? 'transferência entra' : 'transferências entram'} no
                     arquivo
                   </strong>{' '}
-                  para o extrato fechar com o saldo. Reimportadas, porém, voltam como despesa — a
-                  planilha não tem onde guardar a conta de destino — e, por mudarem de tipo, não
-                  são reconhecidas como repetidas. Desmarque-as se reimportar este mesmo arquivo.
+                  para o extrato fechar com o saldo. A coluna destino guarda a conta que recebeu,
+                  então elas voltam inteiras se você reimportar este mesmo arquivo.
                 </>
               )}
             </span>

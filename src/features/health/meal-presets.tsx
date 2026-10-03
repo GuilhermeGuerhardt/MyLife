@@ -37,7 +37,7 @@ export function MealPresetStrip({
 
   return (
     <div className="border-border-base -mx-1 border-b pb-3">
-      <p className="text-fg-subtle mb-2 flex items-center gap-1.5 px-1 text-[11px]">
+      <p className="text-fg-subtle mb-2 flex items-center gap-1.5 px-1 text-xs">
         <Bookmark className="size-3.5" />
         Suas refeições
       </p>
@@ -56,7 +56,7 @@ export function MealPresetStrip({
                 className="px-3 py-2 pr-8 text-left"
               >
                 <p className="text-fg text-[13px] font-medium">{preset.name}</p>
-                <p className="text-fg-subtle text-[11px]">
+                <p className="text-fg-subtle text-xs">
                   {itens} {itens === 1 ? 'item' : 'itens'} · {integer(totais.kcal)} kcal
                 </p>
               </button>

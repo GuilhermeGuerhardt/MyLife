@@ -60,7 +60,7 @@ export function StudiesWidget() {
                 <span className="text-fg-muted shrink-0 text-xs">{integer(item.percent)}%</span>
               </div>
               <Progress value={item.percent} />
-              <p className="text-fg-subtle text-[11px]">
+              <p className="text-fg-subtle text-xs">
                 {item.program.track === 'academic'
                   ? `${integer(item.progress.hoursDone)} de ${integer(item.progress.hoursTotal)} h · faltam ${item.progress.remaining.length} disciplinas`
                   : `${item.lessonsDone} de ${item.lessons.length} aulas concluídas`}
@@ -98,7 +98,7 @@ export function NextLessonWidget() {
           <PlayCircle className="text-accent mt-0.5 size-4 shrink-0" />
           <div className="min-w-0">
             <p className="text-fg truncate text-sm font-medium">{next.lesson.title}</p>
-            <p className="text-fg-subtle text-[11px]">
+            <p className="text-fg-subtle text-xs">
               {next.lesson.module} · {next.lesson.duration_min} min
             </p>
           </div>

@@ -1,6 +1,6 @@
 /** Widgets de rotina: hábitos, sequência, agenda e insights. */
 
-import { ArrowRight, Flame, Lightbulb } from 'lucide-react'
+import { ArrowRight, Lightbulb } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -61,7 +61,7 @@ export function HabitsWidget() {
             >
               <span
                 className={cn(
-                  'flex size-5 shrink-0 items-center justify-center rounded-md border text-[10px]',
+                  'flex size-5 shrink-0 items-center justify-center rounded-md border text-xs',
                   item.status.doneToday
                     ? 'bg-accent text-accent-fg border-transparent'
                     : 'border-border-strong',
@@ -79,7 +79,7 @@ export function HabitsWidget() {
                 {item.habit.name}
               </span>
               {item.status.streak > 0 && (
-                <span className="text-fg-subtle shrink-0 text-[11px]">
+                <span className="text-fg-subtle shrink-0 text-xs">
                   {item.status.streak} {item.status.streakUnit}
                   {item.status.streak > 1 ? 's' : ''}
                 </span>
@@ -103,7 +103,6 @@ export function StreakWidget() {
     <Card className="accent-routine h-full">
       <CardContent>
         <Stat
-          icon={<Flame className="size-3.5" />}
           label="Sequência de treino"
           value={streak}
           unit={streak === 1 ? 'dia' : 'dias'}
@@ -160,7 +159,7 @@ export function AgendaWidget() {
                 <span className="bg-accent size-1.5 shrink-0 rounded-full" />
                 <span
                   className={cn(
-                    'w-16 shrink-0 text-[11px]',
+                    'w-16 shrink-0 text-xs',
                     hoje ? 'text-accent font-semibold' : 'text-fg-subtle',
                   )}
                 >

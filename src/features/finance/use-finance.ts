@@ -44,7 +44,7 @@ export function useFinance(competence: Competence = toCompetence(today())) {
 
   return useMemo(() => {
     const active = accounts.filter((a) => !a.archived)
-    const rows = transactions as unknown as TransactionLike[]
+    const rows: TransactionLike[] = transactions
 
     const summaries: AccountSummary[] = active.map((account) => ({
       account,
@@ -65,6 +65,10 @@ export function useFinance(competence: Competence = toCompetence(today())) {
     const openInvoices = summaries
       .filter((s) => s.account.kind === 'credit')
       .reduce((sum, s) => sum + (s.openInvoice ?? 0), 0)
+
+    // Cartão não vence compra a compra: quem vence é a fatura. Quase toda
+    // tela precisa saber quais contas são cartão para não gritar errado.
+    const cardIds = new Set(active.filter((a) => a.kind === 'credit').map((a) => a.id))
 
     const categoryById = new Map(categories.map((c) => [c.id, c]))
     const flow = monthlyFlow(rows, competence)
@@ -102,6 +106,7 @@ export function useFinance(competence: Competence = toCompetence(today())) {
       openInvoices,
       categories,
       categoryById,
+      cardIds,
       transactions,
       monthTransactions: transactions
         .filter((t) => t.competence === competence)

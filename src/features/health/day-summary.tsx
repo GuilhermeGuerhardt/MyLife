@@ -56,7 +56,7 @@ export function DaySummary({
         </div>
 
         {showTrainingNote && (
-          <p className="text-fg-subtle border-t pt-3 text-[11px] leading-relaxed">
+          <p className="text-fg-subtle border-t pt-3 text-xs leading-relaxed">
             A meta já considera os treinos da semana — não desconte as calorias do treino de novo,
             isso conta duas vezes.
           </p>

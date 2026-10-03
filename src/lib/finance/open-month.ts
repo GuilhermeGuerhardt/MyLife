@@ -9,7 +9,14 @@
 
 import type { PendingOccurrence } from './recurring'
 
+/** O que o resumo precisa saber de uma fatura: quanto e quando. */
+export interface InvoiceLike {
+  dueDate: string
+  totalCents: number
+}
+
 export interface OpenLike {
+  account_id: string
   kind: 'income' | 'expense' | 'transfer'
   amount_cents: number
   date: string
@@ -34,12 +41,24 @@ export function isOpen(item: OpenLike): boolean {
   return !item.paid && item.kind !== 'transfer'
 }
 
+/**
+ * O que ainda falta pagar e receber no mês.
+ *
+ * Compra no cartão não entra: ela não é conta a pagar, é linha de uma fatura —
+ * e a fatura entra inteira, pelo vencimento dela. Somar as duas coisas contava
+ * a mesma dívida duas vezes e no mês errado, já que a fatura de outubro costuma
+ * vencer em novembro.
+ */
 export function summarizeOpenMonth(
   transactions: OpenLike[],
   pending: PendingOccurrence[],
   today: string,
+  /** Contas de cartão, para separar compra de fatura. */
+  cards?: ReadonlySet<string>,
+  /** Faturas que vencem neste mês. */
+  invoices: InvoiceLike[] = [],
 ): OpenMonthSummary {
-  const abertos = transactions.filter(isOpen)
+  const abertos = transactions.filter((item) => isOpen(item) && !cards?.has(item.account_id))
 
   let toPay = 0
   let toReceive = 0
@@ -57,8 +76,13 @@ export function summarizeOpenMonth(
     if (date < today) overdue += 1
   }
 
+  for (const invoice of invoices) {
+    toPay += invoice.totalCents
+    if (invoice.dueDate < today) overdue += 1
+  }
+
   return {
-    count: abertos.length + pending.length,
+    count: abertos.length + pending.length + invoices.length,
     toPayCents: toPay,
     toReceiveCents: toReceive,
     balanceCents: toReceive - toPay,

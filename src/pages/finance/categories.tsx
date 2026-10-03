@@ -150,13 +150,13 @@ function Lista({
                 <div className="min-w-0 flex-1">
                   <p className="text-fg truncate text-sm">{category.name}</p>
                   {category.keywords.length > 0 && (
-                    <p className="text-fg-subtle truncate text-[11px]">
+                    <p className="text-fg-subtle truncate text-xs">
                       {category.keywords.slice(0, 4).join(', ')}
                     </p>
                   )}
                 </div>
                 {dados ? (
-                  <span className="text-fg-subtle shrink-0 text-right text-[11px]">
+                  <span className="text-fg-subtle shrink-0 text-right text-xs">
                     {integer(dados.count)}×<br />
                     <span className="text-fg-muted tabular-nums">{formatCents(dados.total)}</span>
                   </span>

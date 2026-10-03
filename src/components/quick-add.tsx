@@ -248,7 +248,7 @@ export function QuickAdd({ open, onClose }: { open: boolean; onClose: () => void
         )}
 
         <div>
-          <p className="text-fg-subtle mb-2 text-[11px] font-medium tracking-wide uppercase">
+          <p className="text-fg-subtle mb-2 text-xs font-medium tracking-wide uppercase">
             Exemplos
           </p>
           <div className="flex flex-wrap gap-1.5">

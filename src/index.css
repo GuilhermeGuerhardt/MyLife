@@ -43,9 +43,6 @@
   --series-workout: oklch(0.62 0.15 250);
   --pending: oklch(0.62 0.15 250);
 
-  --shadow-card:
-    0 1px 2px 0 oklch(0.2 0.02 250 / 0.06),
-    0 4px 12px -4px oklch(0.2 0.02 250 / 0.1);
   --ring: var(--accent);
 }
 
@@ -69,9 +66,6 @@
   --series-workout: oklch(0.7 0.14 250);
   --pending: oklch(0.7 0.14 250);
 
-  --shadow-card:
-    inset 0 1px 0 0 oklch(1 0 0 / 0.055),
-    0 1px 3px 0 oklch(0 0 0 / 0.40);
 }
 
 /* Escuro suave: o mesmo desenho do escuro, dois passos acima no cinza. Serve
@@ -96,9 +90,6 @@
   --series-workout: oklch(0.74 0.13 250);
   --pending: oklch(0.74 0.13 250);
 
-  --shadow-card:
-    inset 0 1px 0 0 oklch(1 0 0 / 0.060),
-    0 1px 3px 0 oklch(0 0 0 / 0.32);
 }
 
 /* Drácula, nas cores oficiais da paleta. */
@@ -122,9 +113,6 @@
   --series-workout: #8be9fd;
   --pending: #8be9fd;
 
-  --shadow-card:
-    inset 0 1px 0 0 oklch(1 0 0 / 0.060),
-    0 1px 3px 0 oklch(0 0 0 / 0.45);
 }
 
 /* Nord: azul-gelo nórdico, contraste baixo de propósito. */
@@ -148,9 +136,6 @@
   --series-workout: #81a1c1;
   --pending: #81a1c1;
 
-  --shadow-card:
-    inset 0 1px 0 0 oklch(1 0 0 / 0.060),
-    0 1px 3px 0 oklch(0 0 0 / 0.40);
 }
 
 /* Sépia, à base do Solarized claro: papel em vez de branco. */
@@ -174,9 +159,6 @@
   --series-workout: #268bd2;
   --pending: #268bd2;
 
-  --shadow-card:
-    0 1px 2px 0 oklch(0.4 0.05 80 / 0.06),
-    0 4px 12px -4px oklch(0.4 0.05 80 / 0.1);
 }
 
 /* Latte, do Catppuccin: cinza-lavanda frio, o oposto do Sépia entre os claros. */
@@ -200,9 +182,6 @@
   --series-workout: #7287fd;
   --pending: #7287fd;
 
-  --shadow-card:
-    0 1px 2px 0 oklch(0.35 0.03 265 / 0.06),
-    0 4px 12px -4px oklch(0.35 0.03 265 / 0.1);
 }
 
 /* Rosé, do Rosé Pine claro: base rosada e destaque ameixa — o único claro que
@@ -227,9 +206,6 @@
   --series-workout: #286983;
   --pending: #286983;
 
-  --shadow-card:
-    0 1px 2px 0 oklch(0.4 0.04 20 / 0.06),
-    0 4px 12px -4px oklch(0.4 0.04 20 / 0.1);
 }
 
 /* Cor de destaque por módulo: aplique .accent-health, .accent-finance, etc.
@@ -294,9 +270,15 @@
   --color-pending: var(--pending);
 
   --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /* A serifa é do título e do número — o contraponto que tira a tela do
+     desenho de painel genérico. Texto corrido, rótulo e botão continuam na
+     Inter: serifa em corpo pequeno cansa, e em botão parece convite. */
+  --font-serif: 'Source Serif 4', Georgia, 'Times New Roman', serif;
 
-  --radius-card: 1rem;
-  --radius-control: 0.625rem;
+  /* Canto quase reto, como papel cortado. Com a serifa, o canto arredondado
+     puxava de volta para a cara de aplicativo que a gente está evitando. */
+  --radius-card: 0.25rem;
+  --radius-control: 0.25rem;
 
   --animate-in: fade-in 0.18s ease-out;
 }
@@ -328,9 +310,10 @@
   h2,
   h3,
   h4 {
-    /* O Inter abre demais em peso semibold: fechar um fio deixa o título com
-       a densidade que ele tem no desenho original. */
-    letter-spacing: -0.012em;
+    /* A serifa já vem com a densidade pronta: o tracking fechado era correção
+       para o Inter, que abre demais em semibold, e aqui só apertaria o texto. */
+    font-family: var(--font-serif);
+    letter-spacing: 0;
   }
 
   body {

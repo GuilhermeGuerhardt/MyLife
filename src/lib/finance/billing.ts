@@ -127,6 +127,23 @@ export function buildInstallments(
 }
 
 /**
+ * Em que fatura uma linha já gravada deveria estar.
+ *
+ * Diferente de `competenceForPurchase` por causa da parcela: as parcelas de uma
+ * compra dividem a data da compra e avançam uma fatura por vez, então a enésima
+ * cai n-1 meses depois da primeira. É isso que permite recalcular as faturas de
+ * um cartão sem empilhar o parcelamento inteiro no mês da compra.
+ */
+export function competenceForRow(
+  isoDate: string,
+  installmentN: number | null,
+  card: CardConfig,
+): Competence {
+  const first = competenceForPurchase(isoDate, card)
+  return installmentN && installmentN > 1 ? addMonths(first, installmentN - 1) : first
+}
+
+/**
  * Competência de um lançamento comum (conta, dinheiro, débito): é o próprio
  * mês da data. Existe para o resto do app não precisar saber se a conta é
  * cartão ou não.

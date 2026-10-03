@@ -93,7 +93,7 @@ function monthLabel(week: HeatmapDay[], previous?: HeatmapDay[]): string {
 
 export function HeatmapLegend() {
   return (
-    <div className="text-fg-subtle flex items-center gap-1.5 text-[10px]">
+    <div className="text-fg-subtle flex items-center gap-1.5 text-xs">
       <span>Menos</span>
       {LEVELS.map((level) => (
         <span key={level} className={cn('size-2.5 rounded-[3px]', level)} />

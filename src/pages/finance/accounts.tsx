@@ -1,41 +1,58 @@
-import { CalendarClock, Pencil, Plus, Wallet } from 'lucide-react'
+/**
+ * Contas e cartões.
+ *
+ * Esta tela compõe: os blocos moram em `features/finance/accounts`, e o que ela
+ * faz aqui é escolher o mês, separar conta de cartão e abrir os formulários —
+ * cadastro, quitação de fatura e conferência de extrato.
+ */
+
+import { CalendarSync, Plus, Wallet } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Badge, EmptyState, Progress, SectionTitle, Stat } from '@/components/ui/misc'
+import { Card } from '@/components/ui/card'
+import { EmptyState } from '@/components/ui/misc'
+import { Toast, ToastArea } from '@/components/ui/toast'
 import { PageHeader } from '@/components/ui/page-header'
-import { useAccounts } from '@/data/queries'
-import { ACCOUNT_KIND_LABELS, type Account } from '@/data/types'
+import { useAccountChecks, useAccounts } from '@/data/queries'
+import type { Account } from '@/data/types'
 import { AccountForm } from '@/features/finance/account-form'
-import { usePayInvoice, useSetTransactionPaid } from '@/features/finance/actions'
+import { Cartoes } from '@/features/finance/accounts/cartoes'
+import { ListaDeContas } from '@/features/finance/accounts/lista-de-contas'
+import { NumerosDasContas } from '@/features/finance/accounts/numeros-das-contas'
+import {
+  usePayInvoice,
+  useRecalcularFaturas,
+  useSetTransactionPaid,
+} from '@/features/finance/actions'
+import { FormularioDeConferencia } from '@/features/finance/conferencia'
 import { PayInvoiceForm } from '@/features/finance/pay-invoice-form'
-import { MonthNav, TransactionList } from '@/features/finance/shared'
+import { MonthNav } from '@/features/finance/month-nav'
 import { useFinance } from '@/features/finance/use-finance'
 import { useTransactionEditor } from '@/features/finance/use-transaction-editor'
-import { competenceLabel, statementPeriod, toCompetence } from '@/lib/finance/billing'
-import { formatCents } from '@/lib/finance/money'
-import { longDate, percent, relativeDay, shortDate } from '@/lib/format'
+import { toCompetence } from '@/lib/finance/billing'
 import { today } from '@/lib/utils'
 
 export function AccountsPage() {
   const [competence, setCompetence] = useState(toCompetence(today()))
   const finance = useFinance(competence)
   const { create, update } = useAccounts()
+  const { data: conferencias, create: conferir } = useAccountChecks()
   const setPaid = useSetTransactionPaid()
   const payInvoice = usePayInvoice()
+  const recalcularFaturas = useRecalcularFaturas()
   const { open: openEditor, editor: transactionEditor } = useTransactionEditor()
   const [editing, setEditing] = useState<Account | null>(null)
   const [payingCard, setPayingCard] = useState<Account | null>(null)
+  const [conferindo, setConferindo] = useState<Account | null>(null)
   const [adding, setAdding] = useState(false)
+  const [remanejadas, setRemanejadas] = useState<number | null>(null)
 
-  /** Total ainda previsto na fatura da competência — o que o botão vai quitar. */
-  const faturaEmAberto = (accountId: string) =>
-    finance.monthTransactions
-      .filter((t) => t.account_id === accountId && !t.paid)
-      .reduce((total, t) => total + (t.kind === 'income' ? -t.amount_cents : t.amount_cents), 0)
+  /** O que ainda falta pagar da fatura — é o que o botão de quitar vai cobrir. */
+  const emAbertoDoCartao = (accountId: string) =>
+    finance.monthTransactions.filter((t) => t.account_id === accountId && !t.paid)
 
-  const cards = finance.summaries.filter((s) => s.account.kind === 'credit')
-  const others = finance.summaries.filter((s) => s.account.kind !== 'credit')
+  const cartoes = finance.summaries.filter((s) => s.account.kind === 'credit')
+  const contas = finance.summaries.filter((s) => s.account.kind !== 'credit')
 
   return (
     <div className="space-y-6">
@@ -67,215 +84,31 @@ export function AccountsPage() {
         </Card>
       ) : (
         <>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Card>
-              <CardContent>
-                <Stat
-                  label="Saldo total"
-                  value={formatCents(finance.totalBalance)}
-                  tone={finance.totalBalance < 0 ? 'negative' : undefined}
-                  hint="Soma das contas, sem cartões"
-                />
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent>
-                <Stat
-                  label="Faturas do mês"
-                  value={formatCents(finance.openInvoices)}
-                  hint={competenceLabel(competence)}
-                />
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent>
-                <Stat
-                  label="Saldo após faturas"
-                  value={formatCents(finance.totalBalance - finance.openInvoices)}
-                  tone={
-                    finance.totalBalance - finance.openInvoices < 0 ? 'negative' : 'positive'
-                  }
-                  hint="O que sobra depois de pagar os cartões"
-                />
-              </CardContent>
-            </Card>
-          </div>
+          <NumerosDasContas
+            saldo={finance.totalBalance}
+            faturas={finance.openInvoices}
+            competence={competence}
+          />
 
-          {others.length > 0 && (
-            <div>
-              <SectionTitle>Contas</SectionTitle>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {others.map((summary) => (
-                  <Card key={summary.account.id}>
-                    <CardContent className="space-y-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2.5">
-                          <span
-                            className="size-8 rounded-lg"
-                            style={{ background: summary.account.color }}
-                          />
-                          <div>
-                            <p className="text-fg text-sm font-medium">{summary.account.name}</p>
-                            <p className="text-fg-subtle text-[11px]">
-                              {summary.account.bank ??
-                                ACCOUNT_KIND_LABELS[summary.account.kind]}
-                            </p>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => setEditing(summary.account)}
-                          className="text-fg-subtle hover:text-fg transition-colors"
-                          aria-label={`Editar ${summary.account.name}`}
-                        >
-                          <Pencil className="size-3.5" />
-                        </button>
-                      </div>
-                      <p
-                        className={
-                          summary.balance < 0
-                            ? 'text-negative text-xl font-semibold'
-                            : 'text-fg text-xl font-semibold'
-                        }
-                      >
-                        {formatCents(summary.balance)}
-                      </p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          )}
+          <ListaDeContas
+            contas={contas}
+            conferencias={conferencias}
+            movimento={finance.transactions}
+            onEditar={setEditing}
+            onConferir={setConferindo}
+          />
 
-          {cards.length > 0 && (
-            <div>
-              <SectionTitle>Cartões</SectionTitle>
-              <div className="space-y-4">
-                {cards.map((summary) => {
-                  const period = statementPeriod(competence, {
-                    closingDay: summary.account.closing_day ?? 1,
-                    dueDay: summary.account.due_day ?? 10,
-                  })
-                  const items = finance.monthTransactions.filter(
-                    (t) => t.account_id === summary.account.id,
-                  )
-                  const emAberto = items.filter((t) => !t.paid)
-                  const limit = summary.account.credit_limit_cents
-                  const used = limit && summary.available !== null ? limit - summary.available : 0
-
-                  return (
-                    <Card key={summary.account.id}>
-                      <CardHeader
-                        title={
-                          <span className="flex items-center gap-2">
-                            <span
-                              className="size-3 rounded-full"
-                              style={{ background: summary.account.color }}
-                            />
-                            {summary.account.name}
-                          </span>
-                        }
-                        description={`Fatura de ${competenceLabel(competence)} · compras de ${shortDate(period.start)} a ${shortDate(period.end)}`}
-                        action={
-                          <button
-                            type="button"
-                            onClick={() => setEditing(summary.account)}
-                            className="text-fg-subtle hover:text-fg transition-colors"
-                            aria-label={`Editar ${summary.account.name}`}
-                          >
-                            <Pencil className="size-3.5" />
-                          </button>
-                        }
-                      />
-                      <CardContent className="space-y-4">
-                        <div className="flex flex-wrap items-end justify-between gap-4">
-                          <Stat
-                            label="Total da fatura"
-                            value={formatCents(summary.invoice ?? 0)}
-                            hint={
-                              (summary.invoice ?? 0) > 0 && (summary.openInvoice ?? 0) === 0 ? (
-                                <Badge tone="positive">fatura paga</Badge>
-                              ) : (summary.openInvoice ?? 0) > 0 &&
-                                summary.openInvoice !== summary.invoice ? (
-                                `${formatCents(summary.openInvoice ?? 0)} ainda em aberto`
-                              ) : undefined
-                            }
-                          />
-                          <div className="flex items-center gap-3">
-                            <div className="flex items-center gap-2">
-                              <CalendarClock className="text-fg-subtle size-3.5" />
-                              <div>
-                                <p className="text-fg text-sm font-medium">
-                                  Vence {longDate(period.dueDate)}
-                                </p>
-                                <p className="text-fg-subtle text-[11px] first-letter:uppercase">
-                                  {relativeDay(period.dueDate)}
-                                </p>
-                              </div>
-                            </div>
-                            {emAberto.length > 0 && (
-                              <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => setPayingCard(summary.account)}
-                              >
-                                Quitar fatura
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-
-                        {limit && summary.available !== null && (
-                          <div className="space-y-1.5">
-                            <div className="text-fg-muted flex justify-between text-xs">
-                              <span>
-                                {formatCents(summary.available)} disponíveis de{' '}
-                                {formatCents(limit)}
-                              </span>
-                              <Badge
-                                tone={
-                                  used / limit > 0.8
-                                    ? 'negative'
-                                    : used / limit > 0.5
-                                      ? 'warning'
-                                      : 'neutral'
-                                }
-                              >
-                                {percent((used / limit) * 100, 0)} usado
-                              </Badge>
-                            </div>
-                            <Progress
-                              value={used}
-                              max={limit}
-                              tone={
-                                used / limit > 0.8
-                                  ? 'negative'
-                                  : used / limit > 0.5
-                                    ? 'warning'
-                                    : 'accent'
-                              }
-                            />
-                          </div>
-                        )}
-
-                        <div className="border-border-base -mx-5 border-t">
-                          <TransactionList
-                            transactions={items}
-                            accounts={finance.accounts}
-                            categoryById={finance.categoryById}
-                            onEdit={openEditor}
-                            onSetPaid={(transaction, paid) => void setPaid(transaction, paid)}
-                            emptyTitle="Fatura sem lançamentos"
-                            emptyDescription="Compras feitas depois do fechamento aparecem na fatura seguinte."
-                          />
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )
-                })}
-              </div>
-            </div>
-          )}
+          <Cartoes
+            cartoes={cartoes}
+            competence={competence}
+            lancamentosDoMes={finance.monthTransactions}
+            contas={finance.accounts}
+            categoriaPorId={finance.categoryById}
+            onEditar={setEditing}
+            onQuitar={setPayingCard}
+            onEditarLancamento={openEditor}
+            onMarcarPago={(transaction, pago) => void setPaid(transaction, pago)}
+          />
         </>
       )}
 
@@ -287,8 +120,22 @@ export function AccountsPage() {
             setEditing(null)
           }}
           onSave={async (values) => {
-            if (editing) await update.mutateAsync({ id: editing.id, patch: values })
-            else await create.mutateAsync(values)
+            if (editing) {
+              // Mudar o ciclo do cartão não move sozinho o que já foi lançado:
+              // a competência de cada compra foi gravada com o fechamento
+              // antigo. Sem este passo, corrigir o dia certo deixaria o extrato
+              // igualmente errado, e a pessoa ainda acharia que corrigiu.
+              const mudouOCiclo =
+                editing.kind === 'credit' &&
+                values.kind === 'credit' &&
+                (editing.closing_day !== values.closing_day ||
+                  editing.due_day !== values.due_day)
+
+              await update.mutateAsync({ id: editing.id, patch: values })
+              if (mudouOCiclo) setRemanejadas(await recalcularFaturas({ ...editing, ...values }))
+            } else {
+              await create.mutateAsync(values)
+            }
             setAdding(false)
             setEditing(null)
           }}
@@ -299,12 +146,11 @@ export function AccountsPage() {
         <PayInvoiceForm
           card={payingCard}
           competence={competence}
-          amountCents={faturaEmAberto(payingCard.id)}
-          count={
-            finance.monthTransactions.filter(
-              (t) => t.account_id === payingCard.id && !t.paid,
-            ).length
-          }
+          amountCents={emAbertoDoCartao(payingCard.id).reduce(
+            (total, t) => total + (t.kind === 'income' ? -t.amount_cents : t.amount_cents),
+            0,
+          )}
+          count={emAbertoDoCartao(payingCard.id).length}
           accounts={finance.accounts.filter((a) => a.kind !== 'credit')}
           defaultDate={today()}
           onClose={() => setPayingCard(null)}
@@ -313,6 +159,38 @@ export function AccountsPage() {
             setPayingCard(null)
           }}
         />
+      )}
+
+      {conferindo && (
+        <FormularioDeConferencia
+          conta={conferindo}
+          transacoes={finance.transactions}
+          onClose={() => setConferindo(null)}
+          onSave={async (values) => {
+            await conferir.mutateAsync({ account_id: conferindo.id, ...values })
+            setConferindo(null)
+          }}
+        />
+      )}
+
+      {remanejadas !== null && (
+        <ToastArea>
+          <Toast
+            tone="accent"
+            icon={<CalendarSync className="size-4" />}
+            title={
+              remanejadas === 0
+                ? 'Nenhuma compra mudou de fatura'
+                : `${remanejadas} ${remanejadas === 1 ? 'compra foi' : 'compras foram'} para a fatura certa`
+            }
+            description={
+              remanejadas === 0
+                ? 'As compras deste cartão já estavam na fatura que o novo fechamento indica.'
+                : 'O novo fechamento vale para o que já estava lançado, não só para as próximas compras.'
+            }
+            onClose={() => setRemanejadas(null)}
+          />
+        </ToastArea>
       )}
 
       {transactionEditor}

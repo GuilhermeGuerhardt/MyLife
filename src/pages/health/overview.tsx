@@ -1,11 +1,11 @@
-import { Activity, Flame, Plus, Ruler, Scale, TrendingDown, TrendingUp } from 'lucide-react'
+import { Plus, Scale } from 'lucide-react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Field, Input, Textarea } from '@/components/ui/field'
 import { Modal } from '@/components/ui/modal'
-import { Badge, EmptyState, SectionTitle, Stat } from '@/components/ui/misc'
+import { Badge, EmptyState, PainelDeNumeros, SectionTitle, Stat } from '@/components/ui/misc'
 import { PageHeader } from '@/components/ui/page-header'
 import { useMeasurements } from '@/data/queries'
 import { useHealthSummary } from '@/features/health/use-health-summary'
@@ -51,71 +51,44 @@ export function HealthOverview() {
         </Card>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardContent>
-            <Stat
-              icon={<Scale className="size-3.5" />}
-              label="Peso (média 7 dias)"
-              value={summary.currentWeight ? decimal(summary.currentWeight, 1) : '—'}
-              unit={summary.currentWeight ? 'kg' : undefined}
-              hint={
-                summary.rawWeight
-                  ? `Última pesagem: ${decimal(summary.rawWeight, 1)} kg`
-                  : 'Nenhuma pesagem registrada'
-              }
-            />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent>
-            <Stat
-              icon={
-                goingDown ? <TrendingDown className="size-3.5" /> : <TrendingUp className="size-3.5" />
-              }
-              label="Tendência (30 dias)"
-              value={summary.weightTrend.delta ? signed(summary.weightTrend.delta, 1) : '—'}
-              unit={summary.weightTrend.delta ? 'kg' : undefined}
-              tone={
-                summary.weightTrend.delta === 0 ? undefined : goingDown ? 'positive' : 'negative'
-              }
-              hint="Sobre a média móvel, não sobre a pesagem do dia"
-            />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent>
-            <Stat
-              icon={<Ruler className="size-3.5" />}
-              label="IMC"
-              value={summary.bmi ? decimal(summary.bmi, 1) : '—'}
-              hint={
-                summary.bmiBand
-                  ? `${BMI_LABELS[summary.bmiBand]} · saudável: ${decimal(summary.healthyRange.min, 1)}–${decimal(summary.healthyRange.max, 1)} kg`
-                  : undefined
-              }
-            />
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardContent>
-            <Stat
-              icon={<Flame className="size-3.5" />}
-              label="Gasto diário (TDEE)"
-              value={summary.tdee ? integer(summary.tdee) : '—'}
-              unit={summary.tdee ? 'kcal' : undefined}
-              hint={
-                summary.bmr
-                  ? `TMB ${integer(summary.bmr)} kcal${summary.weekSessions.length ? ' · ajustado pelos treinos da semana' : ''}`
-                  : 'Precisa de peso e perfil'
-              }
-            />
-          </CardContent>
-        </Card>
-      </div>
+      <PainelDeNumeros>
+        <Stat
+          label="Peso (média 7 dias)"
+          value={summary.currentWeight ? decimal(summary.currentWeight, 1) : '—'}
+          unit={summary.currentWeight ? 'kg' : undefined}
+          hint={
+            summary.rawWeight
+              ? `Última pesagem: ${decimal(summary.rawWeight, 1)} kg`
+              : 'Nenhuma pesagem registrada'
+          }
+        />
+        <Stat
+          label="Tendência (30 dias)"
+          value={summary.weightTrend.delta ? signed(summary.weightTrend.delta, 1) : '—'}
+          unit={summary.weightTrend.delta ? 'kg' : undefined}
+          tone={!goingDown && summary.weightTrend.delta !== 0 ? 'negative' : undefined}
+          hint="Sobre a média móvel, não sobre a pesagem do dia"
+        />
+        <Stat
+          label="IMC"
+          value={summary.bmi ? decimal(summary.bmi, 1) : '—'}
+          hint={
+            summary.bmiBand
+              ? `${BMI_LABELS[summary.bmiBand]} · saudável: ${decimal(summary.healthyRange.min, 1)}–${decimal(summary.healthyRange.max, 1)} kg`
+              : undefined
+          }
+        />
+        <Stat
+          label="Gasto diário (TDEE)"
+          value={summary.tdee ? integer(summary.tdee) : '—'}
+          unit={summary.tdee ? 'kcal' : undefined}
+          hint={
+            summary.bmr
+              ? `TMB ${integer(summary.bmr)} kcal${summary.weekSessions.length ? ' · ajustado pelos treinos da semana' : ''}`
+              : 'Precisa de peso e perfil'
+          }
+        />
+      </PainelDeNumeros>
 
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
@@ -148,13 +121,11 @@ export function HealthOverview() {
           <CardHeader title="Semana" description="Últimos 7 dias" />
           <CardContent className="space-y-5">
             <Stat
-              icon={<Activity className="size-3.5" />}
               label="Treinos"
               value={summary.weekSessions.length}
               hint={summary.weekMinutes ? duration(summary.weekMinutes) + ' no total' : 'Nada ainda'}
             />
             <Stat
-              icon={<Flame className="size-3.5" />}
               label="Queimadas em treino"
               value={integer(summary.weekCalories)}
               unit="kcal"
@@ -194,7 +165,7 @@ export function HealthOverview() {
                 <div key={m.id} className="flex items-center gap-4 px-5 py-3">
                   <div className="w-24 shrink-0">
                     <p className="text-fg text-sm font-medium">{shortDate(m.date)}</p>
-                    <p className="text-fg-subtle text-[11px]">{longDate(m.date).split(' de ')[1]}</p>
+                    <p className="text-fg-subtle text-xs">{longDate(m.date).split(' de ')[1]}</p>
                   </div>
                   <div className="flex flex-1 flex-wrap gap-x-5 gap-y-1 text-xs">
                     <span className="text-fg font-medium">{decimal(m.weight_kg, 1)} kg</span>

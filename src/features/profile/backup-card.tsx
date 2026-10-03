@@ -172,7 +172,7 @@ export function BackupCard() {
           />
         </div>
 
-        <p className="text-fg-subtle text-[11px]">
+        <p className="text-fg-subtle text-xs">
           {lastBackup
             ? `Último backup em ${longDate(lastBackup)}.`
             : 'Nenhum backup gerado ainda neste navegador.'}{' '}

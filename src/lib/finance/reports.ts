@@ -3,7 +3,7 @@
  * Funções puras sobre listas já filtradas por usuário.
  */
 
-import type { Competence } from './billing'
+import { addMonths, statementPeriod, toCompetence, type Competence } from './billing'
 
 export type TransactionKind = 'income' | 'expense' | 'transfer'
 export type AccountKind = 'checking' | 'savings' | 'cash' | 'credit' | 'investment'
@@ -18,6 +18,8 @@ export interface TransactionLike {
   date: string
   competence: Competence
   paid: boolean
+  /** Agrupa as parcelas de uma mesma compra, quando houver. */
+  installment_group_id?: string | null
 }
 
 export interface AccountLike {
@@ -25,6 +27,9 @@ export interface AccountLike {
   kind: AccountKind
   initial_balance_cents: number
   credit_limit_cents: number | null
+  /** Só cartão: o ciclo da fatura. */
+  closing_day?: number | null
+  due_day?: number | null
 }
 
 /** Cartão de crédito não tem saldo — tem fatura aberta e limite. */
@@ -259,9 +264,20 @@ export function monthlySeries(
  * a mentir na virada da meia-noite, e passaria a exigir alguém para corrigi-la.
  *
  * Transferência fica de fora — dinheiro que anda entre contas suas não vence.
+ *
+ * Compra no cartão também fica: ela nasce em aberto de propósito e só é quitada
+ * quando a fatura é paga, então a data da compra não é prazo de nada. Tratá-la
+ * como vencida transformava todo cartão usado em uma fileira de alertas
+ * vermelhos no dia seguinte à compra. Quem vence é a fatura — `lateInvoices`.
  */
-export function isOverdue(transaction: TransactionLike, today: string): boolean {
+export function isOverdue(
+  transaction: TransactionLike,
+  today: string,
+  /** Contas de cartão. Sem elas, a compra no cartão vira falso alarme. */
+  cards?: ReadonlySet<string>,
+): boolean {
   if (transaction.paid || transaction.kind === 'transfer') return false
+  if (cards?.has(transaction.account_id)) return false
   return transaction.date < today
 }
 
@@ -277,8 +293,9 @@ export interface OverdueSummary {
 export function overdueSummary(
   transactions: TransactionLike[],
   today: string,
+  cards?: ReadonlySet<string>,
 ): OverdueSummary {
-  const late = transactions.filter((t) => isOverdue(t, today))
+  const late = transactions.filter((t) => isOverdue(t, today, cards))
 
   return {
     count: late.length,
@@ -287,5 +304,145 @@ export function overdueSummary(
       (oldest, t) => (oldest === null || t.date < oldest ? t.date : oldest),
       null,
     ),
+  }
+}
+
+export interface OpenInvoice {
+  accountId: string
+  competence: Competence
+  /** O dia em que ela vence. */
+  dueDate: string
+  /** Quanto ainda falta pagar dessa fatura. */
+  totalCents: number
+}
+
+/**
+ * Toda fatura de cartão que ainda tem compra em aberto, com a data em que vence.
+ *
+ * É a unidade que faltava no app: a compra no cartão não é uma conta a pagar —
+ * ela entra numa fatura, e é a fatura que tem valor, prazo e um botão de quitar.
+ * Enquanto cada compra era tratada como conta, o mês somava dívida que não
+ * vencia nele e acusava atraso no dia seguinte a cada compra.
+ *
+ * Quitar marca as compras como pagas, então a fatura some daqui sozinha.
+ */
+export function openInvoices(
+  accounts: AccountLike[],
+  transactions: TransactionLike[],
+): OpenInvoice[] {
+  const abertas: OpenInvoice[] = []
+
+  for (const account of accounts) {
+    if (!isCreditCard(account)) continue
+
+    const card = { closingDay: account.closing_day ?? 1, dueDay: account.due_day ?? 10 }
+    const porCompetencia = new Map<Competence, number>()
+
+    for (const tx of transactions) {
+      if (tx.account_id !== account.id || tx.paid) continue
+      const valor = tx.kind === 'income' ? -tx.amount_cents : tx.amount_cents
+      porCompetencia.set(tx.competence, (porCompetencia.get(tx.competence) ?? 0) + valor)
+    }
+
+    for (const [competence, totalCents] of porCompetencia) {
+      if (totalCents <= 0) continue
+      abertas.push({
+        accountId: account.id,
+        competence,
+        dueDate: statementPeriod(competence, card).dueDate,
+        totalCents,
+      })
+    }
+  }
+
+  return abertas.sort((a, b) => a.dueDate.localeCompare(b.dueDate))
+}
+
+/** As faturas que vencem no mês olhado — o que o cartão vai cobrar nele. */
+export function invoicesDueIn(
+  accounts: AccountLike[],
+  transactions: TransactionLike[],
+  competence: Competence,
+): OpenInvoice[] {
+  return openInvoices(accounts, transactions).filter(
+    (fatura) => toCompetence(fatura.dueDate) === competence,
+  )
+}
+
+/**
+ * Faturas que passaram do vencimento e ainda têm compra em aberto.
+ *
+ * É o aviso que estava faltando: o app gritava no dia seguinte a cada compra e
+ * ficava calado no dia em que a fatura de fato venceu — o contrário do que
+ * interessa.
+ */
+export function lateInvoices(
+  accounts: AccountLike[],
+  transactions: TransactionLike[],
+  today: string,
+): OpenInvoice[] {
+  return openInvoices(accounts, transactions).filter((fatura) => fatura.dueDate < today)
+}
+
+export interface CommitmentMonth {
+  competence: Competence
+  total: number
+}
+
+export interface Commitment {
+  /** Um item por mês do período, do mais próximo ao mais distante. */
+  months: CommitmentMonth[]
+  /** Soma do período. */
+  total: number
+  /** O mês mais pesado — é o que costuma apertar. */
+  heaviest: CommitmentMonth | null
+  /** Quantas compras parceladas entram na conta. */
+  purchases: number
+  /** Último mês com algo comprometido, mesmo depois do período. */
+  lastCompetence: Competence | null
+}
+
+/**
+ * O que os meses à frente já têm de despesa marcada.
+ *
+ * Conta só o que existe como lançamento — parcela de cartão, conta agendada —
+ * e deixa de fora a recorrente que ainda não foi lançada: a regra é uma
+ * intenção, e somá-la aqui faria a projeção cobrar duas vezes o mesmo aluguel
+ * assim que a pessoa o lançasse.
+ *
+ * O mês atual fica de fora porque ele já está na tela inteira acima; esta é a
+ * pergunta do que vem depois.
+ */
+export function commitmentProjection(
+  transactions: TransactionLike[],
+  from: Competence,
+  months: number,
+): Commitment {
+  const janela = Array.from({ length: months }, (_, i) => addMonths(from, i + 1))
+  const fim = janela.at(-1) ?? from
+
+  const porMes = new Map<Competence, number>(janela.map((competence) => [competence, 0]))
+  const compras = new Set<string>()
+  let lastCompetence: Competence | null = null
+
+  for (const tx of transactions) {
+    if (tx.paid || tx.kind !== 'expense' || tx.competence <= from) continue
+
+    if (lastCompetence === null || tx.competence > lastCompetence) lastCompetence = tx.competence
+    if (tx.competence > fim) continue
+
+    porMes.set(tx.competence, (porMes.get(tx.competence) ?? 0) + tx.amount_cents)
+    if (tx.installment_group_id) compras.add(tx.installment_group_id)
+  }
+
+  const lista = janela.map((competence) => ({ competence, total: porMes.get(competence) ?? 0 }))
+  const total = lista.reduce((soma, mes) => soma + mes.total, 0)
+
+  return {
+    months: lista,
+    total,
+    heaviest: total > 0 ? lista.reduce((maior, mes) => (mes.total > maior.total ? mes : maior)) : null,
+    purchases: compras.size,
+    lastCompetence,
   }
 }

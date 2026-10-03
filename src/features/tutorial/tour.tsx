@@ -125,7 +125,7 @@ export function TourGuiado({
         style={{ top: posicao.top, left: posicao.left, width: largura }}
       >
         <div className="mb-2 flex items-start justify-between gap-3">
-          <p className="text-fg-subtle text-[11px] font-medium">
+          <p className="text-fg-subtle text-xs font-medium">
             {tutorial.titulo} · {passo + 1} de {total}
           </p>
           <button

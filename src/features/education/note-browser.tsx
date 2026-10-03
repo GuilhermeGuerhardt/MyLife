@@ -97,7 +97,7 @@ function FolderNode({
           <Folder className="text-accent size-3.5 shrink-0" />
         )}
         <span className="text-fg truncate text-[13px] font-medium">{folder.label}</span>
-        <span className="text-fg-subtle ml-auto shrink-0 text-[11px] tabular-nums">
+        <span className="text-fg-subtle ml-auto shrink-0 text-xs tabular-nums">
           {folder.count}
         </span>
       </button>
@@ -172,13 +172,13 @@ export function NoteList({
               {note.title || 'Sem título'}
             </span>
           </div>
-          <p className="text-fg-subtle mt-0.5 truncate text-[11px]">{subtitleOf(note)}</p>
+          <p className="text-fg-subtle mt-0.5 truncate text-xs">{subtitleOf(note)}</p>
           {note.tags.length > 0 && (
             <div className="mt-1.5 flex flex-wrap gap-1">
               {note.tags.slice(0, 3).map((tag) => (
                 <span
                   key={tag}
-                  className="text-fg-subtle bg-surface-2 rounded px-1.5 py-0.5 text-[10px]"
+                  className="text-fg-subtle bg-surface-2 rounded px-1.5 py-0.5 text-xs"
                 >
                   #{tag}
                 </span>

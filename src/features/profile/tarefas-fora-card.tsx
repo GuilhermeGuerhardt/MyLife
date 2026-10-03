@@ -77,7 +77,7 @@ export function TarefasForaCard() {
               <span className="text-fg-muted min-w-0 flex-1 truncate text-sm">{item.titulo}</span>
               {item.origem.tipo === 'nota' && (
                 <>
-                  <span className="text-fg-subtle hidden shrink-0 text-[11px] sm:block">
+                  <span className="text-fg-subtle hidden shrink-0 text-xs sm:block">
                     {item.origem.titulo || 'Sem título'}
                   </span>
                   <Button

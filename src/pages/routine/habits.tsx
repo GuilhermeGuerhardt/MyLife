@@ -2,7 +2,7 @@ import { Flame, Pencil, Plus, Sparkles, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { Badge, EmptyState, Progress, Stat } from '@/components/ui/misc'
+import { Badge, EmptyState, PainelDeNumeros, Progress, Stat } from '@/components/ui/misc'
 import { PageHeader } from '@/components/ui/page-header'
 import { LIFE_AREA_LABELS, type Habit } from '@/data/types'
 import { HabitForm, type HabitDraft } from '@/features/routine/habit-form'
@@ -66,43 +66,32 @@ export function HabitsPage() {
       />
 
       {board.items.length > 0 && (
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Card>
-            <CardContent>
-              <Stat
-                icon={<Sparkles className="size-3.5" />}
-                label="Hoje"
-                value={`${board.doneToday}/${board.items.length}`}
-                hint={
-                  board.doneToday === board.items.length
-                    ? 'Dia completo'
-                    : `Faltam ${board.items.length - board.doneToday}`
-                }
-                tone={board.doneToday === board.items.length ? 'positive' : undefined}
-              />
-              <Progress className="mt-3" value={board.todayPercent} />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent>
-              <Stat
-                icon={<Flame className="size-3.5" />}
-                label="Maior sequência ativa"
-                value={board.bestStreak}
-                hint="Entre todos os hábitos"
-              />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent>
-              <Stat
-                label="Hábitos ativos"
-                value={board.items.length}
-                hint={board.archived.length ? `${board.archived.length} arquivados` : 'Nenhum arquivado'}
-              />
-            </CardContent>
-          </Card>
-        </div>
+        <PainelDeNumeros>
+          <div>
+            <Stat
+              label="Hoje"
+              value={`${board.doneToday}/${board.items.length}`}
+              hint={
+                board.doneToday === board.items.length
+                  ? 'Dia completo'
+                  : `Faltam ${board.items.length - board.doneToday}`
+              }
+            />
+            <Progress className="mt-3" value={board.todayPercent} />
+          </div>
+          <Stat
+            label="Maior sequência ativa"
+            value={board.bestStreak}
+            hint="Entre todos os hábitos"
+          />
+          <Stat
+            label="Hábitos ativos"
+            value={board.items.length}
+            hint={
+              board.archived.length ? `${board.archived.length} arquivados` : 'Nenhum arquivado'
+            }
+          />
+        </PainelDeNumeros>
       )}
 
       {board.items.length === 0 ? (
@@ -265,7 +254,7 @@ function HabitCard({
                   aria-label={`${habit.name} em ${date}`}
                   onClick={() => onToggle(habit.id, date)}
                   className={cn(
-                    'flex size-9 flex-col items-center justify-center rounded-lg border text-[10px] leading-tight font-medium transition-colors',
+                    'flex size-9 flex-col items-center justify-center rounded-lg border text-xs leading-tight font-medium transition-colors',
                     done
                       ? 'bg-accent text-accent-fg border-transparent'
                       : 'border-border-base text-fg-muted hover:border-border-strong',
@@ -273,7 +262,7 @@ function HabitCard({
                   )}
                 >
                   <span>{WEEKDAY_INITIALS[weekdayOf(date)]}</span>
-                  <span className="text-[11px]">{Number(date.slice(8, 10))}</span>
+                  <span className="text-xs">{Number(date.slice(8, 10))}</span>
                 </button>
               )
             })}
@@ -282,7 +271,7 @@ function HabitCard({
 
         <div>
           <Heatmap weeks={item.weeks} onSelect={(date) => onToggle(habit.id, date)} />
-          <p className="text-fg-subtle mt-1 text-[11px]">
+          <p className="text-fg-subtle mt-1 text-xs">
             {status.total} registro{status.total === 1 ? '' : 's'} no total · recorde de{' '}
             {status.best} {status.streakUnit}
             {status.best === 1 ? '' : 's'} · clique numa célula para corrigir o passado

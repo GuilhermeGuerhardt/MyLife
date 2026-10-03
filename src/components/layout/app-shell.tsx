@@ -149,7 +149,7 @@ export function AppShell({ onOpenPalette }: { onOpenPalette: () => void }) {
             url={profile?.avatar_url}
             name={nome}
             className="size-6"
-            textClassName="text-[10px]"
+            textClassName="text-xs"
           />
           {!collapsed && (
             <span className="text-fg truncate text-sm font-semibold tracking-tight">
@@ -334,7 +334,7 @@ export function AppShell({ onOpenPalette }: { onOpenPalette: () => void }) {
             >
               <Command className="size-3.5" />
               <span className="hidden sm:inline">Registrar rápido</span>
-              <kbd className="bg-surface-2 hidden rounded px-1.5 py-0.5 text-[10px] sm:inline">
+              <kbd className="bg-surface-2 hidden rounded px-1.5 py-0.5 text-xs sm:inline">
                 Ctrl K
               </kbd>
             </button>
@@ -389,7 +389,7 @@ export function AppShell({ onOpenPalette }: { onOpenPalette: () => void }) {
             end={item.to === '/'}
             className={({ isActive }) =>
               cn(
-                'flex flex-1 flex-col items-center gap-1 py-2.5 text-[10px] font-medium transition-colors',
+                'flex flex-1 flex-col items-center gap-1 py-2.5 text-xs font-medium transition-colors',
                 isActive || (item.to !== '/' && pathname.startsWith(item.to))
                   ? cn(item.accent, 'text-accent')
                   : 'text-fg-subtle',

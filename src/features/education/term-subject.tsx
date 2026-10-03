@@ -69,7 +69,7 @@ export function TermSubject({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-fg text-sm font-semibold">{subject.name}</p>
-            <p className="text-fg-subtle text-[11px]">
+            <p className="text-fg-subtle text-xs">
               {[
                 subject.code,
                 subject.weekday !== null ? WEEKDAYS[subject.weekday] : null,
@@ -151,7 +151,7 @@ export function TermSubject({
           </div>
 
           {freq.status === 'failed' && (
-            <p className="text-negative flex items-center gap-1.5 text-[11px]">
+            <p className="text-negative flex items-center gap-1.5 text-xs">
               <AlertTriangle className="size-3" />
               Frequência abaixo de 75% — reprovação por falta.
             </p>
@@ -169,7 +169,7 @@ export function TermSubject({
           </div>
 
           {assessments.length === 0 && !adding && (
-            <p className="text-fg-subtle text-[11px]">
+            <p className="text-fg-subtle text-xs">
               Cadastre as provas e trabalhos com seus pesos para simular a nota que falta.
             </p>
           )}
@@ -226,7 +226,7 @@ export function TermSubject({
           </div>
 
           {subjectDeadlines.length === 0 ? (
-            <p className="text-fg-subtle text-[11px]">
+            <p className="text-fg-subtle text-xs">
               O que você marcar aqui entra no calendário e no resumo do curso.
             </p>
           ) : (
@@ -249,7 +249,7 @@ export function TermSubject({
                 >
                   {deadline.title}
                 </span>
-                <span className="text-fg-subtle shrink-0 text-[11px]">
+                <span className="text-fg-subtle shrink-0 text-xs">
                   {deadline.start_date && deadline.start_date !== deadline.date
                     ? `${shortDate(deadline.start_date)} → ${shortDate(deadline.date)}`
                     : shortDate(deadline.date)}
@@ -317,7 +317,7 @@ function AssessmentRow({
   return (
     <div className="flex items-center gap-2">
       <span className="text-fg flex-1 truncate text-xs">{assessment.name}</span>
-      <span className="text-fg-subtle w-16 text-right text-[11px]">
+      <span className="text-fg-subtle w-16 text-right text-xs">
         peso {decimal(assessment.weight, 0)}
       </span>
       <Input

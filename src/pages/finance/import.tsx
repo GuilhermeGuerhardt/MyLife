@@ -159,7 +159,7 @@ function WritingCard({ progress }: { progress: ImportProgress }) {
           )}
         </div>
         <Progress value={progress.done} max={progress.total} />
-        <p className="text-fg-subtle text-[11px]">
+        <p className="text-fg-subtle text-xs">
           Pode sair desta tela: a gravação continua e o andamento passa para o canto da janela.
           Fechar o Life é que interrompe — o que já entrou permanece, o resto não.
         </p>

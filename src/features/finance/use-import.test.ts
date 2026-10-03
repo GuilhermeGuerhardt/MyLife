@@ -8,6 +8,7 @@ import {
   labelKinds,
   lerChaveDaCategoria,
   montarLancamentos,
+  suggestAccounts,
   suggestCategories,
   type AlvosDaImportacao,
 } from './use-import'
@@ -222,5 +223,55 @@ describe('linhas viram lançamentos', () => {
   it('na conta corrente, a competência é a do mês da data', () => {
     const [lancamento] = montarLancamentos([gasto({ date: '2026-09-25' })], alvos())
     expect(lancamento!.competence).toBe('2026-09')
+  })
+})
+
+/**
+ * O palpite de conta nasceu de um extrato real: o banco escreve
+ * `Conta - Banco Inter` e `Cartão - Inter`, e a segunda caía na conta corrente
+ * porque "inter" está dentro de "banco inter". Toda compra do cartão ia parar
+ * no lugar errado, e a fatura nunca se formava.
+ */
+describe('palpite de conta', () => {
+  const conta = (id: string, name: string, kind: Account['kind'] = 'checking'): Account => ({
+    id,
+    created_at: '2026-09-01T00:00:00.000Z',
+    updated_at: '2026-09-01T00:00:00.000Z',
+    name,
+    kind,
+    bank: null,
+    initial_balance_cents: 0,
+    credit_limit_cents: null,
+    closing_day: null,
+    due_day: null,
+    color: '#000000',
+    archived: false,
+  })
+
+  const contas = [
+    conta('corrente', 'Banco Inter'),
+    conta('cartao', 'Cartão Inter', 'credit'),
+  ]
+
+  it('o nome igual casa', () => {
+    expect(suggestAccounts(['Banco Inter'], contas)['Banco Inter']).toBe('corrente')
+  })
+
+  it('o cartão não cai na conta corrente', () => {
+    expect(suggestAccounts(['Cartão Inter'], contas)['Cartão Inter']).toBe('cartao')
+  })
+
+  it('rótulo que casa com duas contas não é adivinhado', () => {
+    // "Inter" está em "Banco Inter" e em "Cartão Inter". Escolher a primeira é
+    // acertar por sorte; sugerir criar deixa a decisão com quem sabe.
+    expect(suggestAccounts(['Inter'], contas)['Inter']).toBe(CREATE)
+  })
+
+  it('casa por conter quando só uma conta serve', () => {
+    expect(suggestAccounts(['Nubank Roxinho'], [conta('nu', 'Nubank')])['Nubank Roxinho']).toBe('nu')
+  })
+
+  it('sem nenhuma parecida, sugere criar', () => {
+    expect(suggestAccounts(['Caixa'], contas)['Caixa']).toBe(CREATE)
   })
 })

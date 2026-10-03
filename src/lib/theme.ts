@@ -93,7 +93,7 @@ export const THEMES: ThemeInfo[] = [
   },
 ]
 
-export const DEFAULT_THEME: ThemeId = 'dark'
+export const DEFAULT_THEME: ThemeId = 'rose'
 
 export const THEME_KEY = 'life:theme'
 
