@@ -4,6 +4,7 @@ import {
   buildInstallments,
   competenceFor,
   competenceForPurchase,
+  invoiceDueIn,
   statementPeriod,
   toCompetence,
 } from './billing'
@@ -23,6 +24,7 @@ import {
   goalProjection,
   invoiceTotal,
   invoicesDueIn,
+  invoicesOfMonth,
   lateInvoices,
   monthlyFlow,
   isOverdue,
@@ -658,5 +660,77 @@ describe('pagamento parcial da fatura', () => {
       paid: true,
     })
     expect(openInvoiceTotal(cartao, '2026-09', [...compras, transferenciaSolta])).toBe(50000)
+  })
+})
+
+describe('qual fatura pertence ao mês', () => {
+  /**
+   * Fatura tem dois meses: o em que fecha e o em que vence. Quem abre outubro
+   * quer a conta que paga em outubro — a que fechou em setembro —, não a que
+   * ainda está acumulando e só vence em novembro.
+   */
+  it('vencimento antes do fechamento: o mês mostra a fatura do mês anterior', () => {
+    const inter = { closingDay: 20, dueDay: 15 }
+    expect(invoiceDueIn('2026-10', inter)).toBe('2026-09')
+    expect(statementPeriod('2026-09', inter).dueDate).toBe('2026-10-15')
+  })
+
+  it('vencimento depois do fechamento: fecha e vence no mesmo mês', () => {
+    const cedo = { closingDay: 5, dueDay: 15 }
+    expect(invoiceDueIn('2026-10', cedo)).toBe('2026-10')
+    expect(statementPeriod('2026-10', cedo).dueDate).toBe('2026-10-15')
+  })
+
+  it('vira o ano para trás sem tropeçar', () => {
+    expect(invoiceDueIn('2026-01', { closingDay: 20, dueDay: 15 })).toBe('2025-12')
+  })
+})
+
+describe('a fatura na lista de lançamentos', () => {
+  const cartao: AccountLike = {
+    id: 'card',
+    kind: 'credit',
+    initial_balance_cents: 0,
+    credit_limit_cents: 500000,
+    closing_day: 20,
+    due_day: 15,
+  }
+
+  // Fatura que vence em 15/10: compras de 21/08 a 20/09.
+  const compras: TransactionLike[] = [
+    tx({ id: 'c1', account_id: 'card', date: '2026-08-28', amount_cents: 20000, paid: false }),
+    tx({ id: 'c2', account_id: 'card', date: '2026-09-15', amount_cents: 15000, paid: false }),
+    // Ja e da fatura seguinte.
+    tx({ id: 'c3', account_id: 'card', date: '2026-09-24', amount_cents: 5000, paid: false }),
+  ]
+
+  it('mostra no mês a fatura que vence nele, com o que ela somou', () => {
+    const [fatura] = invoicesOfMonth([cartao], compras, '2026-10')
+    expect(fatura).toMatchObject({
+      competence: '2026-09',
+      dueDate: '2026-10-15',
+      totalCents: 35000,
+      openCents: 35000,
+    })
+  })
+
+  /** O valor é derivado: compra nova entra na conta sem ninguém editar nada. */
+  it('o valor acompanha a compra nova', () => {
+    const maisUma = [
+      ...compras,
+      tx({ id: 'c4', account_id: 'card', date: '2026-09-18', amount_cents: 7000, paid: false }),
+    ]
+    expect(invoicesOfMonth([cartao], maisUma, '2026-10')[0]!.totalCents).toBe(42000)
+  })
+
+  it('a fatura paga continua na lista, com o que falta zerado', () => {
+    const quitada = compras.map((t) => (t.date <= '2026-09-20' ? { ...t, paid: true } : t))
+    const [fatura] = invoicesOfMonth([cartao], quitada, '2026-10')
+    expect(fatura!.totalCents).toBe(35000)
+    expect(fatura!.openCents).toBe(0)
+  })
+
+  it('mês sem fatura nenhuma não inventa linha', () => {
+    expect(invoicesOfMonth([cartao], compras, '2026-08')).toEqual([])
   })
 })

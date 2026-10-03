@@ -7,10 +7,11 @@ import {
   useTransactions,
 } from '@/data/queries'
 import type { Account, Category } from '@/data/types'
-import { toCompetence, type Competence } from '@/lib/finance/billing'
+import { invoiceDueIn, toCompetence, type Competence } from '@/lib/finance/billing'
 import {
   accountBalance,
   availableLimit,
+  cycleOf,
   budgetProgress,
   byCategory,
   goalProjection,
@@ -24,9 +25,11 @@ import { today } from '@/lib/utils'
 export interface AccountSummary {
   account: Account
   balance: number
-  /** Só para cartão: total da fatura da competência e limite disponível. */
+  /** Só para cartão: a fatura que vence no mês olhado. */
+  invoiceCompetence: Competence | null
+  /** Total dessa fatura. */
   invoice: number | null
-  /** Quanto dessa fatura ainda não foi pago. */
+  /** Quanto dela ainda não foi pago. */
   openInvoice: number | null
   available: number | null
 }
@@ -46,14 +49,19 @@ export function useFinance(competence: Competence = toCompetence(today())) {
     const active = accounts.filter((a) => !a.archived)
     const rows: TransactionLike[] = transactions
 
-    const summaries: AccountSummary[] = active.map((account) => ({
-      account,
-      balance: accountBalance(account, rows),
-      invoice: account.kind === 'credit' ? invoiceTotal(account, competence, rows) : null,
-      openInvoice:
-        account.kind === 'credit' ? openInvoiceTotal(account, competence, rows) : null,
-      available: availableLimit(account, rows),
-    }))
+    const summaries: AccountSummary[] = active.map((account) => {
+      // A fatura do mês é a que vence nele: é a conta que a pessoa paga ali.
+      const fatura = account.kind === 'credit' ? invoiceDueIn(competence, cycleOf(account)) : null
+
+      return {
+        account,
+        balance: accountBalance(account, rows),
+        invoiceCompetence: fatura,
+        invoice: fatura ? invoiceTotal(account, fatura, rows) : null,
+        openInvoice: fatura ? openInvoiceTotal(account, fatura, rows) : null,
+        available: availableLimit(account, rows),
+      }
+    })
 
     // Cartão não entra no patrimônio: a fatura é dívida, não saldo.
     const totalBalance = summaries

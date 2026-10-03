@@ -3,8 +3,9 @@ import { Button } from '@/components/ui/button'
 import { Field, Input, Select } from '@/components/ui/field'
 import { Modal } from '@/components/ui/modal'
 import type { Account } from '@/data/types'
-import { competenceLabel, type Competence } from '@/lib/finance/billing'
+import { statementPeriod, type Competence } from '@/lib/finance/billing'
 import { centsToInput, formatCents, parseAmount } from '@/lib/finance/money'
+import { longDate } from '@/lib/format'
 import { InputDeDinheiro } from './input-de-dinheiro'
 
 /**
@@ -74,7 +75,7 @@ export function PayInvoiceForm({
       open
       onClose={onClose}
       title={`Quitar fatura ${card.name}`}
-      description={competenceLabel(competence)}
+      description={`Vence ${longDate(statementPeriod(competence, { closingDay: card.closing_day ?? 1, dueDay: card.due_day ?? 10 }).dueDate)}`}
       footer={
         <>
           <Button variant="ghost" onClick={onClose} disabled={pagando}>

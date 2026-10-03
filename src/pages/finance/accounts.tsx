@@ -24,7 +24,7 @@ import { PayInvoiceForm } from '@/features/finance/pay-invoice-form'
 import { MonthNav } from '@/features/finance/month-nav'
 import { useFinance } from '@/features/finance/use-finance'
 import { useTransactionEditor } from '@/features/finance/use-transaction-editor'
-import { toCompetence } from '@/lib/finance/billing'
+import { toCompetence, type Competence } from '@/lib/finance/billing'
 import { invoiceItems } from '@/lib/finance/reports'
 import { today } from '@/lib/utils'
 
@@ -37,13 +37,17 @@ export function AccountsPage() {
   const payInvoice = usePayInvoice()
   const { open: openEditor, editor: transactionEditor } = useTransactionEditor()
   const [editing, setEditing] = useState<Account | null>(null)
-  const [payingCard, setPayingCard] = useState<Account | null>(null)
+  // A quitação guarda qual fatura está sendo paga: é a que vence no mês, que
+  // quase nunca é a do mês da tela.
+  const [payingCard, setPayingCard] = useState<{ conta: Account; fatura: Competence } | null>(
+    null,
+  )
   const [conferindo, setConferindo] = useState<Account | null>(null)
   const [adding, setAdding] = useState(false)
 
   /** O que ainda falta pagar da fatura — é o que o botão de quitar vai cobrir. */
-  const emAbertoDoCartao = (cartao: Account) =>
-    invoiceItems(cartao, competence, finance.transactions).filter((t) => !t.paid)
+  const emAbertoDoCartao = (cartao: Account, fatura: Competence) =>
+    invoiceItems(cartao, fatura, finance.transactions).filter((t) => !t.paid)
 
   const cartoes = finance.summaries.filter((s) => s.account.kind === 'credit')
   const contas = finance.summaries.filter((s) => s.account.kind !== 'credit')
@@ -99,7 +103,7 @@ export function AccountsPage() {
             contas={finance.accounts}
             categoriaPorId={finance.categoryById}
             onEditar={setEditing}
-            onQuitar={setPayingCard}
+            onQuitar={(conta, fatura) => setPayingCard({ conta, fatura })}
             onEditarLancamento={openEditor}
             onMarcarPago={(transaction, pago) => void setPaid(transaction, pago)}
           />
@@ -126,18 +130,18 @@ export function AccountsPage() {
 
       {payingCard && (
         <PayInvoiceForm
-          card={payingCard}
-          competence={competence}
-          amountCents={emAbertoDoCartao(payingCard).reduce(
+          card={payingCard.conta}
+          competence={payingCard.fatura}
+          amountCents={emAbertoDoCartao(payingCard.conta, payingCard.fatura).reduce(
             (total, t) => total + (t.kind === 'income' ? -t.amount_cents : t.amount_cents),
             0,
           )}
-          count={emAbertoDoCartao(payingCard).length}
+          count={emAbertoDoCartao(payingCard.conta, payingCard.fatura).length}
           accounts={finance.accounts.filter((a) => a.kind !== 'credit')}
           defaultDate={today()}
           onClose={() => setPayingCard(null)}
           onConfirm={async (fromAccountId, date, valorCents) => {
-            await payInvoice(payingCard, competence, fromAccountId, date, valorCents)
+            await payInvoice(payingCard.conta, payingCard.fatura, fromAccountId, date, valorCents)
             setPayingCard(null)
           }}
         />

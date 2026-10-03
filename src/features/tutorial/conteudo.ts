@@ -156,9 +156,9 @@ export const TUTORIAIS: Tutorial[] = [
     resumo: 'Onde o dinheiro entra, sai e some sem você ver.',
     passos: [
       {
-        titulo: 'Cartão cai na fatura certa',
+        titulo: 'A compra fica no mês dela',
         texto:
-          'Depois do fechamento, a compra vai para a fatura do mês seguinte, e o app avisa em qual ela caiu.',
+          'A compra no cartão aparece no mês em que você comprou. A fatura é a soma delas e aparece à parte, no mês em que vence.',
         alvo: '[data-tour="acao"]',
       },
       {

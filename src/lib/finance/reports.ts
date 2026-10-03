@@ -6,6 +6,7 @@
 import {
   addMonths,
   competenceForPurchase,
+  invoiceDueIn,
   statementPeriod,
   toCompetence,
   type CardConfig,
@@ -415,6 +416,55 @@ export function openInvoices(
   }
 
   return abertas.sort((a, b) => a.dueDate.localeCompare(b.dueDate))
+}
+
+export interface MonthInvoice {
+  accountId: string
+  /** A fatura, pelo mês em que ela fecha. */
+  competence: Competence
+  dueDate: string
+  /** Quanto ela somou até agora. */
+  totalCents: number
+  /** Quanto dela ainda falta pagar. */
+  openCents: number
+}
+
+/**
+ * A fatura de cada cartão no mês olhado, paga ou não.
+ *
+ * É a linha que falta na lista de lançamentos: a fatura não é um lançamento
+ * gravado — ela é a soma das compras da janela dela —, e por isso o valor sobe
+ * sozinho a cada compra nova, sem ninguém editar nada.
+ *
+ * Diferente de `invoicesDueIn`, que só devolve o que ainda está em aberto: aqui
+ * a fatura quitada continua na lista, porque sumir com ela no dia em que foi
+ * paga esconderia justamente a prova de que ela foi paga.
+ */
+export function invoicesOfMonth(
+  accounts: AccountLike[],
+  transactions: TransactionLike[],
+  competence: Competence,
+): MonthInvoice[] {
+  const faturas: MonthInvoice[] = []
+
+  for (const account of accounts) {
+    if (!isCreditCard(account)) continue
+
+    const card = cycleOf(account)
+    const fatura = invoiceDueIn(competence, card)
+    const totalCents = invoiceTotal(account, fatura, transactions)
+    if (totalCents === 0) continue
+
+    faturas.push({
+      accountId: account.id,
+      competence: fatura,
+      dueDate: statementPeriod(fatura, card).dueDate,
+      totalCents,
+      openCents: openInvoiceTotal(account, fatura, transactions),
+    })
+  }
+
+  return faturas.sort((a, b) => a.dueDate.localeCompare(b.dueDate))
 }
 
 /** As faturas que vencem no mês olhado — o que o cartão vai cobrar nele. */

@@ -5,8 +5,8 @@ import { Badge, Progress, SectionTitle, Stat } from '@/components/ui/misc'
 import type { Account, Category, Transaction } from '@/data/types'
 import { TransactionList } from '@/features/finance/lista-de-lancamentos'
 import type { AccountSummary } from '@/features/finance/use-finance'
-import { competenceLabel, statementPeriod, type Competence } from '@/lib/finance/billing'
-import { invoiceItems } from '@/lib/finance/reports'
+import { statementPeriod, type Competence } from '@/lib/finance/billing'
+import { cycleOf, invoiceItems } from '@/lib/finance/reports'
 import { formatCents } from '@/lib/finance/money'
 import { longDate, percent, relativeDay, shortDate } from '@/lib/format'
 
@@ -64,7 +64,8 @@ export function Cartoes({
   contas: Account[]
   categoriaPorId: Map<string, Category>
   onEditar: (conta: Account) => void
-  onQuitar: (conta: Account) => void
+  /** Recebe também a fatura que está sendo quitada, que é a que vence no mês. */
+  onQuitar: (conta: Account, fatura: Competence) => void
   onEditarLancamento: (transaction: Transaction) => void
   onMarcarPago: (transaction: Transaction, pago: boolean) => void
 }) {
@@ -74,12 +75,10 @@ export function Cartoes({
     <div>
       <SectionTitle>Cartões</SectionTitle>
       <div className="space-y-4">
-        {cartoes.map(({ account, invoice, openInvoice, available }) => {
-          const period = statementPeriod(competence, {
-            closingDay: account.closing_day ?? 1,
-            dueDay: account.due_day ?? 10,
-          })
-          const items = invoiceItems(account, competence, movimento)
+        {cartoes.map(({ account, invoiceCompetence, invoice, openInvoice, available }) => {
+          const fatura = invoiceCompetence ?? competence
+          const period = statementPeriod(fatura, cycleOf(account))
+          const items = invoiceItems(account, fatura, movimento)
           const emAberto = items.filter((t) => !t.paid)
           const limit = account.credit_limit_cents
           const used = limit && available !== null ? limit - available : 0
@@ -94,7 +93,7 @@ export function Cartoes({
                     {account.name}
                   </span>
                 }
-                description={`Fatura de ${competenceLabel(competence)} · compras de ${shortDate(period.start)} a ${shortDate(period.end)}`}
+                description={`Compras de ${shortDate(period.start)} a ${shortDate(period.end)}`}
                 action={
                   <button
                     type="button"
@@ -122,7 +121,7 @@ export function Cartoes({
                       </div>
                     </div>
                     {emAberto.length > 0 && (
-                      <Button variant="secondary" size="sm" onClick={() => onQuitar(account)}>
+                      <Button variant="secondary" size="sm" onClick={() => onQuitar(account, fatura)}>
                         Quitar fatura
                       </Button>
                     )}

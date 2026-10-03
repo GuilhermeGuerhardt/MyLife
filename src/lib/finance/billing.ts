@@ -93,6 +93,20 @@ export function statementPeriod(competence: Competence, card: CardConfig): State
   }
 }
 
+/**
+ * A fatura que vence no mês olhado.
+ *
+ * Fatura tem dois meses: o em que ela fecha e o em que ela vence, e quase nunca
+ * são o mesmo. Quem abre outubro quer ver a conta que paga em outubro — a que
+ * fechou em setembro —, não a que ainda está acumulando e só vence em novembro.
+ *
+ * Quando o vencimento vem depois do fechamento (fecha dia 5, vence dia 15), os
+ * dois caem no mesmo mês e a resposta é o próprio mês.
+ */
+export function invoiceDueIn(competence: Competence, card: CardConfig): Competence {
+  return card.dueDay > card.closingDay ? competence : addMonths(competence, -1)
+}
+
 export interface InstallmentPlan {
   number: number
   total: number

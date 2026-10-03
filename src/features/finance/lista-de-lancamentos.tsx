@@ -23,7 +23,15 @@ export function Amount({
   const tone = kind === 'transfer' ? 'text-fg-muted' : 'text-fg'
   const sign = kind === 'income' ? '+' : kind === 'expense' ? '−' : ''
   return (
-    <span className={`${tone} ${className ?? ''} text-sm font-medium whitespace-nowrap`}>
+    <span
+      className={cn(
+        tone,
+        className,
+        // Coluna de largura mínima: o valor alinha pela direita e o selo ao lado
+        // para de andar conforme o número cresce.
+        'min-w-[6.5rem] text-right text-sm font-medium whitespace-nowrap',
+      )}
+    >
       {sign}
       {formatCents(cents)}
     </span>
@@ -244,7 +252,10 @@ export function TransactionList({
           ? categoryById.get(transaction.category_id)
           : null
         const account = accountById.get(transaction.account_id)
+        // Compra no cartão não se marca como paga: quem paga é a fatura, e deixar
+        // o selo clicável permitia quitar meia fatura sem nenhum dinheiro sair.
         const naFatura = account?.kind === 'credit' && !transaction.paid
+        const podeMarcar = onSetPaid && !naFatura
         const target = transaction.transfer_account_id
           ? accountById.get(transaction.transfer_account_id)
           : null
@@ -252,7 +263,7 @@ export function TransactionList({
         return (
           <SwipeRow
             key={transaction.id}
-            onSetPaid={onSetPaid && ((paid) => onSetPaid(transaction, paid))}
+            onSetPaid={podeMarcar ? (paid) => onSetPaid!(transaction, paid) : undefined}
             onOpen={onEdit && (() => onEdit(transaction))}
           >
             <span
@@ -288,23 +299,26 @@ export function TransactionList({
               </p>
             </div>
 
-            {onSetPaid ? (
-              // O gesto é a via rápida; o clique é a que funciona com teclado e
-              // leitor de tela, e a que mostra que o estado tem volta.
-              <button
-                type="button"
-                onClick={(event) => {
-                  event.stopPropagation()
-                  onSetPaid(transaction, !transaction.paid)
-                }}
-                aria-label={transaction.paid ? 'Marcar como previsto' : 'Marcar como pago'}
-                className="shrink-0"
-              >
-                <StatusBadge transaction={transaction} naFatura={naFatura} />
-              </button>
-            ) : (
-              !transaction.paid && <StatusBadge transaction={transaction} naFatura={naFatura} />
-            )}
+            {/* Coluna de largura fixa: sem ela o selo flutuava com a largura do
+                valor ao lado, e a lista virava uma escada de selos. */}
+            <span className="flex w-[5.5rem] shrink-0 justify-end">
+              {podeMarcar ? (
+                // O gesto é a via rápida; o clique é a que funciona com teclado e
+                // leitor de tela, e a que mostra que o estado tem volta.
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation()
+                    onSetPaid(transaction, !transaction.paid)
+                  }}
+                  aria-label={transaction.paid ? 'Marcar como previsto' : 'Marcar como pago'}
+                >
+                  <StatusBadge transaction={transaction} naFatura={naFatura} />
+                </button>
+              ) : (
+                !transaction.paid && <StatusBadge transaction={transaction} naFatura={naFatura} />
+              )}
+            </span>
 
             <Amount cents={transaction.amount_cents} kind={transaction.kind} />
 

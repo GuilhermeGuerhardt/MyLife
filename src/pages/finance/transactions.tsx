@@ -10,12 +10,14 @@ import { useCategories } from '@/data/queries'
 import type { TransactionKind } from '@/data/types'
 import { useCreateTransaction, useSetTransactionPaid } from '@/features/finance/actions'
 import { TransactionList } from '@/features/finance/lista-de-lancamentos'
+import { FaturaNaLista } from '@/features/finance/fatura-na-lista'
 import { MonthNav } from '@/features/finance/month-nav'
 import { useAvisoDeCompetencia } from '@/features/finance/aviso-de-competencia'
 import { TransactionForm } from '@/features/finance/transaction-form'
 import { useFinance } from '@/features/finance/use-finance'
 import { useTransactionEditor } from '@/features/finance/use-transaction-editor'
 import { toCompetence } from '@/lib/finance/billing'
+import { invoicesOfMonth } from '@/lib/finance/reports'
 import { formatCents } from '@/lib/finance/money'
 import { normalize } from '@/lib/quick-add/parser'
 import { today } from '@/lib/utils'
@@ -51,11 +53,15 @@ export function TransactionsPage() {
     0,
   )
 
+  // A fatura do mes nao e um lancamento gravado: ela e derivada das compras, e
+  // por isso o valor acompanha sozinho cada compra nova.
+  const faturas = invoicesOfMonth(finance.accounts, finance.transactions, competence)
+
   return (
     <div className="space-y-5">
       <PageHeader
         title="Lançamentos"
-        description="Cada lançamento no mês em que aconteceu — a compra no cartão inclusive. A fatura dele aparece em Contas e cartões, no mês em que vence."
+        description="Cada lançamento no mês em que aconteceu — a compra no cartão inclusive. A fatura aparece à parte, no mês em que vence, somando as compras que caíram nela."
         action={
           <div className="flex items-center gap-2">
             <MonthNav competence={competence} onChange={setCompetence} />
@@ -134,6 +140,8 @@ export function TransactionsPage() {
           </div>
         </CardContent>
       </Card>
+
+      <FaturaNaLista faturas={faturas} contas={finance.accounts} />
 
       <Card>
         <TransactionList
