@@ -3,11 +3,10 @@ import type { Account, BaseRow, Transaction, TransactionKind } from '@/data/type
 import {
   buildInstallments,
   competenceFor,
-  competenceForRow,
   type CardConfig,
   type Competence,
 } from '@/lib/finance/billing'
-import { openInvoiceTotal } from '@/lib/finance/reports'
+import { invoiceItems, openInvoiceTotal } from '@/lib/finance/reports'
 import type { PendingOccurrence } from '@/lib/finance/recurring'
 import { uid } from '@/lib/utils'
 
@@ -87,7 +86,7 @@ export function useCreateTransaction() {
       kind: draft.kind,
       amount_cents: draft.amount_cents,
       date: draft.date,
-      competence: competenceFor(draft.date, card),
+      competence: competenceFor(draft.date),
       description: draft.description,
       tags: draft.tags,
       paid: draft.paid,
@@ -111,6 +110,7 @@ export function useCreateTransaction() {
       await create.mutateAsync({
         ...base,
         amount_cents: installment.amountCents,
+        date: installment.date,
         competence: installment.competence,
         installment_group_id: groupId,
         installment_n: installment.number,
@@ -147,23 +147,19 @@ export function useRemoveTransaction() {
  * Edita um lançamento existente.
  *
  * A competência é recalculada em vez de preservada: mudar a data — ou trocar a
- * conta por um cartão — muda a fatura em que o gasto cai, e deixar a
- * competência velha faria o mês parar de bater com o extrato.
+ * conta por um cartão — muda o mês do lançamento, e deixar a competência
+ * velha faria o mês parar de bater com o extrato.
  *
  * O parcelamento fica de fora. Alterar o número de parcelas significa refazer o
  * grupo inteiro, o que é outra operação, não uma edição.
  */
 export function useUpdateTransaction() {
-  const { data: accounts } = useAccounts()
   const { update } = useTransactions()
 
   return async function updateTransaction(
     transaction: Transaction,
     draft: TransactionDraft,
   ): Promise<void> {
-    const account = accounts.find((a) => a.id === draft.account_id)
-    const card = cardConfig(account)
-
     await update.mutateAsync({
       id: transaction.id,
       patch: {
@@ -173,45 +169,13 @@ export function useUpdateTransaction() {
         kind: draft.kind,
         amount_cents: draft.amount_cents,
         date: draft.date,
-        competence: competenceFor(draft.date, card),
+        competence: competenceFor(draft.date),
         description: draft.description,
         tags: draft.tags,
         paid: draft.paid,
         notes: draft.notes,
       },
     })
-  }
-}
-
-/**
- * Recoloca as compras de um cartão na fatura certa.
- *
- * A competência é gravada junto com o lançamento, calculada pelo fechamento que
- * o cartão tinha naquele dia. Corrigir o fechamento depois, portanto, não move
- * nada sozinho: as compras antigas continuariam na fatura errada, e o mês
- * continuaria sem bater com o extrato. Esta função refaz a conta a partir da
- * data de cada linha — e da parcela, quando é parcelamento.
- *
- * Devolve quantas linhas mudaram de fatura; quem não mudou não é regravada.
- */
-export function useRecalcularFaturas() {
-  const { data: transactions, update } = useTransactions()
-
-  return async function recalcular(card: Account): Promise<number> {
-    const config = cardConfig(card)
-    if (!config) return 0
-
-    const doCartao = transactions.filter((t) => t.account_id === card.id)
-    let mudaram = 0
-
-    for (const item of doCartao) {
-      const competence = competenceForRow(item.date, item.installment_n, config)
-      if (competence === item.competence) continue
-      await update.mutateAsync({ id: item.id, patch: { competence } })
-      mudaram++
-    }
-
-    return mudaram
   }
 }
 
@@ -258,12 +222,10 @@ export function toDraft(transaction: Transaction): TransactionDraft {
  * no cartão precisa cair na fatura certa, não no mês do calendário.
  */
 export function useMaterializeRecurring() {
-  const { data: accounts } = useAccounts()
   const { create } = useTransactions()
 
   return async function materialize(pending: PendingOccurrence[]): Promise<number> {
     for (const { rule, date } of pending) {
-      const card = cardConfig(accounts.find((a) => a.id === rule.account_id))
       await create.mutateAsync({
         account_id: rule.account_id,
         transfer_account_id: null,
@@ -271,7 +233,7 @@ export function useMaterializeRecurring() {
         kind: rule.kind,
         amount_cents: rule.amount_cents,
         date,
-        competence: competenceFor(date, card),
+        competence: competenceFor(date),
         description: rule.description,
         tags: [],
         paid: false,
@@ -306,11 +268,9 @@ export function usePayInvoice() {
     /** Quanto está sendo pago. Vazio = a fatura inteira. */
     valorCents?: number,
   ): Promise<{ paid: number; amountCents: number }> {
-    const items = transactions.filter(
-      (t) => t.account_id === card.id && t.competence === competence && !t.paid,
-    )
+    const items = invoiceItems(card, competence, transactions).filter((t) => !t.paid)
 
-    const aberto = openInvoiceTotal(card.id, competence, transactions)
+    const aberto = openInvoiceTotal(card, competence, transactions)
     // Pagar mais do que se deve não existe: o excedente viraria crédito que o
     // app não sabe representar.
     const amountCents = Math.min(valorCents ?? aberto, aberto)
@@ -333,7 +293,7 @@ export function usePayInvoice() {
         kind: 'transfer',
         amount_cents: amountCents,
         date,
-        competence: competenceFor(date, null),
+        competence: competenceFor(date),
         description: `Pagamento da fatura ${card.name}`,
         tags: [],
         paid: true,

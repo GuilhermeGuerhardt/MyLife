@@ -209,14 +209,20 @@ describe('linhas viram lançamentos', () => {
     expect(lancamentos[0]!.installment_total).toBe(12)
   })
 
-  it('no cartão, a competência é a da fatura, não a do calendário', () => {
-    // Compra depois do fechamento entra na fatura do mês seguinte.
+  /**
+   * A compra no cartão fica no mês em que foi feita, como qualquer lançamento.
+   * Guardá-la no mês da fatura era defensável no papel e confuso na tela: a
+   * compra de 24 de setembro sumia de setembro e aparecia em outubro, onde a
+   * pessoa esperava ver a fatura, não a compra. Em que fatura ela cai continua
+   * sendo calculado pelo fechamento, na hora de montar a fatura.
+   */
+  it('no cartão, a competência é a do mês da compra', () => {
     const cartao = conta('conta-1', { kind: 'credit', closing_day: 20, due_day: 1 })
     const [lancamento] = montarLancamentos(
       [gasto({ date: '2026-09-25' })],
       alvos({ contasPorId: new Map([['conta-1', cartao]]) }),
     )
-    expect(lancamento!.competence).toBe('2026-10')
+    expect(lancamento!.competence).toBe('2026-09')
   })
 
   it('na conta corrente, a competência é a do mês da data', () => {

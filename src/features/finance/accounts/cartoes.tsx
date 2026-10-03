@@ -6,6 +6,7 @@ import type { Account, Category, Transaction } from '@/data/types'
 import { TransactionList } from '@/features/finance/lista-de-lancamentos'
 import type { AccountSummary } from '@/features/finance/use-finance'
 import { competenceLabel, statementPeriod, type Competence } from '@/lib/finance/billing'
+import { invoiceItems } from '@/lib/finance/reports'
 import { formatCents } from '@/lib/finance/money'
 import { longDate, percent, relativeDay, shortDate } from '@/lib/format'
 
@@ -48,7 +49,7 @@ function tomDoLimite(usado: number, limite: number): 'negative' | 'warning' | 'a
 export function Cartoes({
   cartoes,
   competence,
-  lancamentosDoMes,
+  movimento,
   contas,
   categoriaPorId,
   onEditar,
@@ -58,8 +59,8 @@ export function Cartoes({
 }: {
   cartoes: AccountSummary[]
   competence: Competence
-  /** Lançamentos da competência, de todas as contas. */
-  lancamentosDoMes: Transaction[]
+  /** O extrato inteiro: a fatura escolhe por data, não pelo mês da tela. */
+  movimento: Transaction[]
   contas: Account[]
   categoriaPorId: Map<string, Category>
   onEditar: (conta: Account) => void
@@ -78,7 +79,7 @@ export function Cartoes({
             closingDay: account.closing_day ?? 1,
             dueDay: account.due_day ?? 10,
           })
-          const items = lancamentosDoMes.filter((t) => t.account_id === account.id)
+          const items = invoiceItems(account, competence, movimento)
           const emAberto = items.filter((t) => !t.paid)
           const limit = account.credit_limit_cents
           const used = limit && available !== null ? limit - available : 0

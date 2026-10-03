@@ -10,7 +10,6 @@
 import { useAccounts, useCategories, useTransactions } from '@/data/queries'
 import { guessCategory } from '@/data/seed-finance'
 import type { Account, BaseRow, Category, Transaction } from '@/data/types'
-import { cardConfig } from '@/features/finance/actions'
 import { DEFAULT_ICON } from '@/features/finance/category-icons'
 import { competenceFor } from '@/lib/finance/billing'
 import { normalizeText, type ImportRow } from '@/lib/finance/import'
@@ -333,11 +332,6 @@ export function montarLancamentos(
     const destinoId = row.kind === 'transfer' ? (alvos.contas.get(row.transferToLabel) ?? null) : null
     if (row.kind === 'transfer' && (!destinoId || destinoId === contaId)) continue
 
-    // Conta recém-criada não está em `contasPorId` (a lista é a do render), mas
-    // também não é cartão — só cartão muda a competência, então o `undefined`
-    // aqui leva à competência pela data, que é o certo.
-    const cartao = cardConfig(alvos.contasPorId.get(contaId))
-
     lancamentos.push({
       account_id: contaId,
       transfer_account_id: destinoId,
@@ -345,7 +339,7 @@ export function montarLancamentos(
       kind: row.kind,
       amount_cents: row.amountCents,
       date: row.date,
-      competence: competenceFor(row.date, cartao),
+      competence: competenceFor(row.date),
       description: row.description,
       tags: ['importado'],
       paid: row.paid,

@@ -93,7 +93,7 @@ export function ExportCard() {
     <Card>
       <CardHeader
         title="Exportar lançamentos"
-        description="Um CSV que abre no Excel — e que esta mesma tela sabe importar de volta. O recorte é por competência: a compra feita no cartão sai no mês da fatura, com a data original do dia da compra."
+        description="Um CSV que abre no Excel — e que esta mesma tela sabe importar de volta. O recorte é pelo mês do lançamento, data por data — a compra no cartão sai no mês em que foi feita."
       />
       <CardContent className="space-y-4">
         {/*

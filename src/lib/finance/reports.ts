@@ -3,7 +3,14 @@
  * Funções puras sobre listas já filtradas por usuário.
  */
 
-import { addMonths, statementPeriod, toCompetence, type Competence } from './billing'
+import {
+  addMonths,
+  competenceForPurchase,
+  statementPeriod,
+  toCompetence,
+  type CardConfig,
+  type Competence,
+} from './billing'
 
 export type TransactionKind = 'income' | 'expense' | 'transfer'
 export type AccountKind = 'checking' | 'savings' | 'cash' | 'credit' | 'investment'
@@ -62,21 +69,47 @@ export function accountBalance(account: AccountLike, transactions: TransactionLi
   return balance
 }
 
+/** O ciclo do cartão, com os padrões de quem não preencheu. */
+export function cycleOf(account: AccountLike): CardConfig {
+  return { closingDay: account.closing_day ?? 1, dueDay: account.due_day ?? 10 }
+}
+
 /**
- * Quanto a fatura da competência somou — pago ou não.
+ * As compras que caem numa fatura: as do intervalo que ela cobre.
  *
- * É o valor histórico do mês, o que a fatura cobrou. Para saber o que ainda
- * falta pagar use `openInvoiceTotal`: depois de quitada, esta continua valendo
- * o mesmo, e é isso que se quer num extrato.
+ * A fatura deixou de ser algo gravado em cada compra. O lançamento guarda o mês
+ * em que aconteceu, como qualquer outro, e a fatura é a janela entre dois
+ * fechamentos — de 21/08 a 20/09, por exemplo. Isso é o que faz a compra de 24
+ * de setembro aparecer em setembro, onde ela aconteceu, e ainda assim ser
+ * cobrada na fatura que fecha em outubro.
+ */
+export function invoiceItems<T extends TransactionLike>(
+  account: AccountLike,
+  competence: Competence,
+  transactions: T[],
+): T[] {
+  const { start, end } = statementPeriod(competence, cycleOf(account))
+  return transactions.filter(
+    (tx) => tx.account_id === account.id && tx.date >= start && tx.date <= end,
+  )
+}
+
+/**
+ * Quanto a fatura somou — pago ou não.
+ *
+ * É o valor histórico: o que a fatura cobrou. Para saber o que ainda falta
+ * pagar use `openInvoiceTotal`; depois de quitada, esta continua valendo o
+ * mesmo, e é isso que se quer num extrato.
  */
 export function invoiceTotal(
-  accountId: string,
+  account: AccountLike,
   competence: Competence,
   transactions: TransactionLike[],
 ): number {
-  return transactions
-    .filter((tx) => tx.account_id === accountId && tx.competence === competence)
-    .reduce((sum, tx) => sum + (tx.kind === 'income' ? -tx.amount_cents : tx.amount_cents), 0)
+  return invoiceItems(account, competence, transactions).reduce(
+    (sum, tx) => sum + (tx.kind === 'income' ? -tx.amount_cents : tx.amount_cents),
+    0,
+  )
 }
 
 /**
@@ -87,15 +120,15 @@ export function invoiceTotal(
  * uma no saldo da conta, que já caiu, e outra na projeção.
  */
 export function openInvoiceTotal(
-  accountId: string,
+  account: AccountLike,
   competence: Competence,
   transactions: TransactionLike[],
 ): number {
-  const emAberto = transactions
-    .filter((tx) => tx.account_id === accountId && tx.competence === competence && !tx.paid)
+  const emAberto = invoiceItems(account, competence, transactions)
+    .filter((tx) => !tx.paid)
     .reduce((sum, tx) => sum + (tx.kind === 'income' ? -tx.amount_cents : tx.amount_cents), 0)
 
-  return Math.max(emAberto - paidOnInvoice(accountId, competence, transactions), 0)
+  return Math.max(emAberto - paidOnInvoice(account.id, competence, transactions), 0)
 }
 
 /**
@@ -138,7 +171,7 @@ export interface MonthlyFlow {
 }
 
 /**
- * Fluxo do mês por competência — não pela data.
+ * Fluxo do mês pela competência, que hoje é sempre o mês da data.
  *
  * Transferências ficam de fora: dinheiro que sai de uma conta e entra em outra
  * não é receita nem despesa, e contá-lo infla os dois lados.
@@ -358,13 +391,15 @@ export function openInvoices(
   for (const account of accounts) {
     if (!isCreditCard(account)) continue
 
-    const card = { closingDay: account.closing_day ?? 1, dueDay: account.due_day ?? 10 }
+    const card = cycleOf(account)
     const porCompetencia = new Map<Competence, number>()
 
     for (const tx of transactions) {
       if (tx.account_id !== account.id || tx.paid) continue
+      // A fatura sai da data: é o fechamento que diz em qual delas a compra cai.
+      const fatura = competenceForPurchase(tx.date, card)
       const valor = tx.kind === 'income' ? -tx.amount_cents : tx.amount_cents
-      porCompetencia.set(tx.competence, (porCompetencia.get(tx.competence) ?? 0) + valor)
+      porCompetencia.set(fatura, (porCompetencia.get(fatura) ?? 0) + valor)
     }
 
     for (const [competence, bruto] of porCompetencia) {

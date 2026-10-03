@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest'
 import {
   addMonths,
   buildInstallments,
+  competenceFor,
   competenceForPurchase,
-  competenceForRow,
   statementPeriod,
   toCompetence,
 } from './billing'
@@ -124,21 +124,13 @@ describe('fatura do cartão', () => {
   })
 
   /**
-   * Recalcular a fatura de uma linha já gravada não pode esquecer a parcela: as
-   * doze parcelas de uma compra têm a mesma data, e tratá-las como compras
-   * avulsas empilharia o carnê inteiro na primeira fatura.
+   * Cada parcela carrega a própria data, então a fatura dela sai da mesma conta
+   * que a de qualquer compra — não existe mais regra especial para parcelamento.
    */
-  it('a parcela cai n-1 faturas depois da compra', () => {
-    expect(competenceForRow('2026-03-10', null, card)).toBe('2026-03')
-    expect(competenceForRow('2026-03-10', 1, card)).toBe('2026-03')
-    expect(competenceForRow('2026-03-10', 3, card)).toBe('2026-05')
-    expect(competenceForRow('2026-03-29', 2, card)).toBe('2026-05')
-  })
-
-  it('recalcular devolve a mesma fatura que a compra gerou', () => {
+  it('a fatura de cada parcela sai da data da parcela', () => {
     const plano = buildInstallments(120000, 12, '2026-03-29', card)
     for (const parcela of plano) {
-      expect(competenceForRow('2026-03-29', parcela.number, card)).toBe(parcela.competence)
+      expect(competenceForPurchase(parcela.date, card)).toBe(parcela.invoice)
     }
   })
 
@@ -165,11 +157,28 @@ describe('fatura do cartão', () => {
     expect(addMonths('2026-01', -1)).toBe('2025-12')
   })
 
-  it('distribui parcelas nas faturas seguintes', () => {
+  /**
+   * Cada parcela acontece no seu mês: a de março em março, a de abril em abril.
+   * Era o contrário — as três nasciam com a data da compra e eram empurradas
+   * para a fatura certa pela competência —, e aí o mês da compra mostrava um
+   * gasto que não era dele.
+   */
+  it('cada parcela cai no seu mês, com a data do mês dela', () => {
     const plan = buildInstallments(30000, 3, '2026-03-29', card)
-    expect(plan.map((p) => p.competence)).toEqual(['2026-04', '2026-05', '2026-06'])
-    expect(plan.map((p) => p.dueDate)).toEqual(['2026-05-05', '2026-06-05', '2026-07-05'])
+    expect(plan.map((p) => p.date)).toEqual(['2026-03-29', '2026-04-29', '2026-05-29'])
+    expect(plan.map((p) => p.competence)).toEqual(['2026-03', '2026-04', '2026-05'])
+    // Fecha dia 28: cada parcela entra na fatura do mês seguinte ao dela.
+    expect(plan.map((p) => p.invoice)).toEqual(['2026-04', '2026-05', '2026-06'])
     expect(plan.reduce((sum, p) => sum + p.amountCents, 0)).toBe(30000)
+  })
+
+  it('a parcela encolhe o dia em mês curto', () => {
+    const plan = buildInstallments(30000, 3, '2025-12-31', { closingDay: 28, dueDay: 5 })
+    expect(plan.map((p) => p.date)).toEqual(['2025-12-31', '2026-01-31', '2026-02-28'])
+  })
+
+  it('competência é sempre o mês do fato, cartão ou não', () => {
+    expect(competenceFor('2026-09-24')).toBe('2026-09')
   })
 
   it('extrai competência da data', () => {
@@ -234,12 +243,28 @@ describe('saldo', () => {
     expect(limit).toBe(380000)
   })
 
-  it('soma a fatura por competência, não por data', () => {
-    const total = invoiceTotal('card', '2026-04', [
-      tx({ id: '1', account_id: 'card', competence: '2026-04', amount_cents: 5000 }),
-      tx({ id: '2', account_id: 'card', competence: '2026-03', amount_cents: 9900 }),
+  /**
+   * A fatura é a janela entre dois fechamentos, não um campo gravado: fechando
+   * dia 28, a de abril cobre de 29/03 a 28/04.
+   */
+  it('soma a fatura pela janela de datas que ela cobre', () => {
+    const cartao: AccountLike = {
+      id: 'card',
+      kind: 'credit',
+      initial_balance_cents: 0,
+      credit_limit_cents: 500000,
+      closing_day: 28,
+      due_day: 5,
+    }
+    const total = invoiceTotal(cartao, '2026-04', [
+      tx({ id: '1', account_id: 'card', date: '2026-04-10', amount_cents: 5000 }),
+      tx({ id: '2', account_id: 'card', date: '2026-03-29', amount_cents: 1500 }),
+      // Antes do fechamento anterior: e da fatura passada.
+      tx({ id: '3', account_id: 'card', date: '2026-03-20', amount_cents: 9900 }),
+      // Depois do fechamento: e da proxima.
+      tx({ id: '4', account_id: 'card', date: '2026-04-29', amount_cents: 7700 }),
     ])
-    expect(total).toBe(5000)
+    expect(total).toBe(6500)
   })
 })
 
@@ -348,36 +373,40 @@ describe('atraso', () => {
 })
 
 describe('fatura paga', () => {
+  const cartao: AccountLike = {
+    id: 'card',
+    kind: 'credit',
+    initial_balance_cents: 0,
+    credit_limit_cents: 500000,
+    closing_day: 28,
+    due_day: 5,
+  }
+
+  // Fatura de março: compras de 01/03 a 28/03. A de abril começa em 29/03.
   const compras: TransactionLike[] = [
-    tx({ id: 'a', account_id: 'card', competence: '2026-03', amount_cents: 12700, paid: false }),
-    tx({ id: 'b', account_id: 'card', competence: '2026-03', amount_cents: 8900, paid: false }),
-    tx({ id: 'c', account_id: 'card', competence: '2026-04', amount_cents: 5590, paid: false }),
+    tx({ id: 'a', account_id: 'card', date: '2026-03-05', amount_cents: 12700, paid: false }),
+    tx({ id: 'b', account_id: 'card', date: '2026-03-20', amount_cents: 8900, paid: false }),
+    tx({ id: 'c', account_id: 'card', date: '2026-04-02', amount_cents: 5590, paid: false }),
   ]
 
-  it('o total da fatura conta tudo da competência', () => {
-    expect(invoiceTotal('card', '2026-03', compras)).toBe(21600)
+  const quitarMarco = (lista: TransactionLike[]) =>
+    lista.map((t) => (t.date <= '2026-03-28' ? { ...t, paid: true } : t))
+
+  it('o total da fatura conta tudo da janela dela', () => {
+    expect(invoiceTotal(cartao, '2026-03', compras)).toBe(21600)
   })
 
   it('o total da fatura não muda depois de paga', () => {
-    const quitada = compras.map((t) =>
-      t.competence === '2026-03' ? { ...t, paid: true } : t,
-    )
-    expect(invoiceTotal('card', '2026-03', quitada)).toBe(21600)
+    expect(invoiceTotal(cartao, '2026-03', quitarMarco(compras))).toBe(21600)
   })
 
   it('o que falta pagar zera depois de quitada', () => {
-    expect(openInvoiceTotal('card', '2026-03', compras)).toBe(21600)
-    const quitada = compras.map((t) =>
-      t.competence === '2026-03' ? { ...t, paid: true } : t,
-    )
-    expect(openInvoiceTotal('card', '2026-03', quitada)).toBe(0)
+    expect(openInvoiceTotal(cartao, '2026-03', compras)).toBe(21600)
+    expect(openInvoiceTotal(cartao, '2026-03', quitarMarco(compras))).toBe(0)
   })
 
-  it('quitar uma competência não mexe na fatura seguinte', () => {
-    const quitada = compras.map((t) =>
-      t.competence === '2026-03' ? { ...t, paid: true } : t,
-    )
-    expect(openInvoiceTotal('card', '2026-04', quitada)).toBe(5590)
+  it('quitar uma fatura não mexe na seguinte', () => {
+    expect(openInvoiceTotal(cartao, '2026-04', quitarMarco(compras))).toBe(5590)
   })
 })
 
@@ -486,8 +515,8 @@ describe('quem vence é a fatura', () => {
 
   it('a fatura vencida aparece com o que falta pagar', () => {
     const compras = [
-      tx({ id: 'c1', account_id: 'card', competence: '2026-09', amount_cents: 25000, paid: false }),
-      tx({ id: 'c2', account_id: 'card', competence: '2026-09', amount_cents: 10000, paid: false }),
+      tx({ id: 'c1', account_id: 'card', date: '2026-09-02', amount_cents: 25000, paid: false }),
+      tx({ id: 'c2', account_id: 'card', date: '2026-09-10', amount_cents: 10000, paid: false }),
     ]
     const atrasadas = lateInvoices([cartao], compras, hoje)
     expect(atrasadas).toHaveLength(1)
@@ -499,14 +528,14 @@ describe('quem vence é a fatura', () => {
 
   it('quitar a fatura tira ela do aviso, sem estado novo para manter', () => {
     const compras = [
-      tx({ id: 'c1', account_id: 'card', competence: '2026-09', amount_cents: 25000, paid: true }),
+      tx({ id: 'c1', account_id: 'card', date: '2026-09-02', amount_cents: 25000, paid: true }),
     ]
     expect(lateInvoices([cartao], compras, hoje)).toEqual([])
   })
 
   it('fatura que ainda não venceu fica de fora', () => {
     const compras = [
-      tx({ id: 'c1', account_id: 'card', competence: '2026-10', amount_cents: 25000, paid: false }),
+      tx({ id: 'c1', account_id: 'card', date: '2026-10-02', amount_cents: 25000, paid: false }),
     ]
     expect(lateInvoices([cartao], compras, hoje)).toEqual([])
   })
@@ -518,7 +547,7 @@ describe('quem vence é a fatura', () => {
    */
   it('a fatura entra no mês em que vence, não no da competência', () => {
     const compras = [
-      tx({ id: 'c1', account_id: 'card', competence: '2026-09', amount_cents: 32000, paid: false }),
+      tx({ id: 'c1', account_id: 'card', date: '2026-09-02', amount_cents: 32000, paid: false }),
     ]
     expect(invoicesDueIn([cartao], compras, '2026-09')).toEqual([])
     const emOutubro = invoicesDueIn([cartao], compras, '2026-10')
@@ -529,11 +558,11 @@ describe('quem vence é a fatura', () => {
 
   it('estorno abate a fatura, e a fatura zerada não aparece', () => {
     const compras = [
-      tx({ id: 'c1', account_id: 'card', competence: '2026-09', amount_cents: 32000, paid: false }),
+      tx({ id: 'c1', account_id: 'card', date: '2026-09-02', amount_cents: 32000, paid: false }),
       tx({
         id: 'e1',
         account_id: 'card',
-        competence: '2026-09',
+        date: '2026-09-10',
         kind: 'income',
         amount_cents: 32000,
         paid: false,
@@ -549,7 +578,7 @@ describe('quem vence é a fatura', () => {
       initial_balance_cents: 0,
       credit_limit_cents: null,
     }
-    const abertos = [tx({ id: 'b', competence: '2026-09', paid: false })]
+    const abertos = [tx({ id: 'b', date: '2026-09-02', paid: false })]
     expect(lateInvoices([corrente], abertos, hoje)).toEqual([])
   })
 })
@@ -564,9 +593,10 @@ describe('pagamento parcial da fatura', () => {
     due_day: 5,
   }
 
+  // Fecha dia 25: a fatura de setembro cobre de 26/08 a 25/09.
   const compras: TransactionLike[] = [
-    tx({ id: 'c1', account_id: 'card', competence: '2026-09', amount_cents: 30000, paid: false }),
-    tx({ id: 'c2', account_id: 'card', competence: '2026-09', amount_cents: 20000, paid: false }),
+    tx({ id: 'c1', account_id: 'card', date: '2026-09-02', amount_cents: 30000, paid: false }),
+    tx({ id: 'c2', account_id: 'card', date: '2026-09-10', amount_cents: 20000, paid: false }),
   ]
 
   /** O pagamento mora na conta de onde o dinheiro saiu, apontando para a fatura. */
@@ -583,24 +613,24 @@ describe('pagamento parcial da fatura', () => {
     })
 
   it('o que falta pagar desconta o que ja foi pago', () => {
-    expect(openInvoiceTotal('card', '2026-09', compras)).toBe(50000)
-    expect(openInvoiceTotal('card', '2026-09', [...compras, pagamento(20000)])).toBe(30000)
+    expect(openInvoiceTotal(cartao, '2026-09', compras)).toBe(50000)
+    expect(openInvoiceTotal(cartao, '2026-09', [...compras, pagamento(20000)])).toBe(30000)
   })
 
   it('dois pagamentos parciais somam', () => {
     const comPagamentos = [...compras, pagamento(20000), pagamento(15000)]
     expect(paidOnInvoice('card', '2026-09', comPagamentos)).toBe(35000)
-    expect(openInvoiceTotal('card', '2026-09', comPagamentos)).toBe(15000)
+    expect(openInvoiceTotal(cartao, '2026-09', comPagamentos)).toBe(15000)
   })
 
   it('pagamento nao vaza para a fatura do mes seguinte', () => {
     const outroMes = [
       ...compras,
-      tx({ id: 'c3', account_id: 'card', competence: '2026-10', amount_cents: 12000, paid: false }),
+      tx({ id: 'c3', account_id: 'card', date: '2026-10-02', amount_cents: 12000, paid: false }),
       pagamento(50000),
     ]
-    expect(openInvoiceTotal('card', '2026-09', outroMes)).toBe(0)
-    expect(openInvoiceTotal('card', '2026-10', outroMes)).toBe(12000)
+    expect(openInvoiceTotal(cartao, '2026-09', outroMes)).toBe(0)
+    expect(openInvoiceTotal(cartao, '2026-10', outroMes)).toBe(12000)
   })
 
   /**
@@ -627,6 +657,6 @@ describe('pagamento parcial da fatura', () => {
       competence: '2026-10',
       paid: true,
     })
-    expect(openInvoiceTotal('card', '2026-09', [...compras, transferenciaSolta])).toBe(50000)
+    expect(openInvoiceTotal(cartao, '2026-09', [...compras, transferenciaSolta])).toBe(50000)
   })
 })

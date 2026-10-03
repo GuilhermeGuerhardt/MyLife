@@ -49,9 +49,9 @@ export function useFinance(competence: Competence = toCompetence(today())) {
     const summaries: AccountSummary[] = active.map((account) => ({
       account,
       balance: accountBalance(account, rows),
-      invoice: account.kind === 'credit' ? invoiceTotal(account.id, competence, rows) : null,
+      invoice: account.kind === 'credit' ? invoiceTotal(account, competence, rows) : null,
       openInvoice:
-        account.kind === 'credit' ? openInvoiceTotal(account.id, competence, rows) : null,
+        account.kind === 'credit' ? openInvoiceTotal(account, competence, rows) : null,
       available: availableLimit(account, rows),
     }))
 

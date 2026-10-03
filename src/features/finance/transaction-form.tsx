@@ -127,7 +127,7 @@ export function TransactionForm({
 
   // Mesma regra que `useCreateTransaction` aplica ao salvar — a prévia não
   // pode divergir do que é gravado.
-  const competence = competenceFor(date, card)
+  const competence = competenceFor(date)
   const plan = parcelando ? buildInstallments(amountCents, installments, date, card!) : null
   const repeatEnd = repeating && repeatValido ? repeatEndDate(date, repeatMonths) : null
   const repeatSum = repeating && repeatValido ? repeatTotal(amountCents, repeatMonths) : null
@@ -372,8 +372,8 @@ export function TransactionForm({
             </p>
             {repeatSum !== null && repeatEnd && (
               <p>
-                De {competenceLabel(competenceFor(date, null))} até{' '}
-                {competenceLabel(competenceFor(repeatEnd, null))} — {formatCents(repeatSum)} no
+                De {competenceLabel(competenceFor(date))} até{' '}
+                {competenceLabel(competenceFor(repeatEnd))} — {formatCents(repeatSum)} no
                 total.
               </p>
             )}

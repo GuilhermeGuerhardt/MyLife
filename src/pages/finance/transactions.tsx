@@ -55,7 +55,7 @@ export function TransactionsPage() {
     <div className="space-y-5">
       <PageHeader
         title="Lançamentos"
-        description="Agrupados por competência. No cartão, pela fatura que inclui a compra."
+        description="Cada lançamento no mês em que aconteceu — a compra no cartão inclusive. A fatura dele aparece em Contas e cartões, no mês em que vence."
         action={
           <div className="flex items-center gap-2">
             <MonthNav competence={competence} onChange={setCompetence} />

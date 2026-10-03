@@ -97,13 +97,23 @@ export interface InstallmentPlan {
   number: number
   total: number
   amountCents: number
+  /** O dia em que a parcela acontece: a compra, depois o mesmo dia a cada mês. */
+  date: string
+  /** O mês da parcela — é o mês da data dela, como em qualquer lançamento. */
   competence: Competence
-  dueDate: string
+  /** A fatura em que ela vai cair, para a tela poder dizer. */
+  invoice: Competence
 }
 
 /**
  * Gera o plano de parcelas de uma compra no cartão.
- * A primeira cai na fatura da data da compra; as demais avançam um mês cada.
+ *
+ * Cada parcela acontece no seu mês: a primeira no dia da compra, as seguintes
+ * no mesmo dia dos meses seguintes. É isso que faz "parcela 3 de 10" aparecer
+ * em novembro em vez de empilhar as dez no mês da compra — e é também o que
+ * mantém honesto o cálculo do que já está comprometido.
+ *
+ * O dia encolhe em mês curto: comprou dia 31, a parcela de fevereiro cai no 28.
  */
 export function buildInstallments(
   totalCents: number,
@@ -112,44 +122,32 @@ export function buildInstallments(
   card: CardConfig,
 ): InstallmentPlan[] {
   const amounts = splitInstallments(totalCents, count)
-  const first = competenceForPurchase(purchaseDate, card)
+  const dia = Number(purchaseDate.slice(8, 10))
 
   return amounts.map((amountCents, index) => {
-    const competence = addMonths(first, index)
+    const date = dateInCompetence(addMonths(toCompetence(purchaseDate), index), dia)
     return {
       number: index + 1,
       total: count,
       amountCents,
-      competence,
-      dueDate: statementPeriod(competence, card).dueDate,
+      date,
+      competence: toCompetence(date),
+      invoice: competenceForPurchase(date, card),
     }
   })
 }
 
 /**
- * Em que fatura uma linha já gravada deveria estar.
+ * Competência de qualquer lançamento: o mês em que ele aconteceu.
  *
- * Diferente de `competenceForPurchase` por causa da parcela: as parcelas de uma
- * compra dividem a data da compra e avançam uma fatura por vez, então a enésima
- * cai n-1 meses depois da primeira. É isso que permite recalcular as faturas de
- * um cartão sem empilhar o parcelamento inteiro no mês da compra.
+ * Já foi diferente no cartão — a compra era guardada no mês da fatura. Era
+ * defensável no papel e confuso na prática: a compra de 24 de setembro sumia de
+ * setembro e aparecia em outubro, onde a pessoa esperava ver a fatura, não a
+ * compra. Hoje a regra é uma só, para toda conta, e a fatura é calculada pela
+ * janela de datas que ela cobre — ninguém precisa gravar nada para isso.
  */
-export function competenceForRow(
-  isoDate: string,
-  installmentN: number | null,
-  card: CardConfig,
-): Competence {
-  const first = competenceForPurchase(isoDate, card)
-  return installmentN && installmentN > 1 ? addMonths(first, installmentN - 1) : first
-}
-
-/**
- * Competência de um lançamento comum (conta, dinheiro, débito): é o próprio
- * mês da data. Existe para o resto do app não precisar saber se a conta é
- * cartão ou não.
- */
-export function competenceFor(isoDate: string, card: CardConfig | null): Competence {
-  return card ? competenceForPurchase(isoDate, card) : toCompetence(isoDate)
+export function competenceFor(isoDate: string): Competence {
+  return toCompetence(isoDate)
 }
 
 function nextDay(isoDate: string): string {

@@ -107,7 +107,7 @@ export function FinanceOverview() {
     <div className="space-y-6">
       <PageHeader
         title="Financeiro"
-        description="A fatura de cartão vai pela competência: a compra feita depois do fechamento cai no mês seguinte."
+        description="A compra no cartão fica no mês em que foi feita; a fatura aparece no mês em que vence."
         action={
           <div className="flex items-center gap-2">
             <MonthNav competence={competence} onChange={setCompetence} />

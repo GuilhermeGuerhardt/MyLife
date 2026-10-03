@@ -5,6 +5,7 @@ import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { AppShell } from './components/layout/app-shell'
 import { QuickAdd } from './components/quick-add'
 import { setFolderStore } from './data/adapters'
+import { migrarCartaoParaOMesDaCompra } from './data/migracao-cartao'
 import { migrarDoLocalStorage } from './data/sqlite-store'
 import { restoreFolder } from './data/folder-store'
 import { ensureSeed } from './data/queries'
@@ -119,6 +120,11 @@ function Boot() {
       if (isTauri()) await migrarDoLocalStorage().catch(() => 0)
 
       await ensureSeed()
+
+      // Compra de cartao que nasceu no mes da fatura volta para o mes em que
+      // aconteceu. Roda uma vez por instalacao, e e idempotente de qualquer jeito.
+      await migrarCartaoParaOMesDaCompra().catch(() => 0)
+
       setReady(true)
     })()
   }, [])
