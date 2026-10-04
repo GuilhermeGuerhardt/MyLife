@@ -28,6 +28,7 @@ import { addMonths, competenceLabel, toCompetence } from '@/lib/finance/billing'
 import { isOpen, summarizeOpenMonth } from '@/lib/finance/open-month'
 import { resolveSliceColors } from '@/lib/finance/palette'
 import { pendingOccurrences } from '@/lib/finance/recurring'
+import { abertoDoMes, saldoPorMes } from '@/lib/finance/saldo-por-mes'
 import {
   invoicesDueIn,
   lateInvoices,
@@ -78,10 +79,14 @@ export function FinanceOverview() {
 
   // Seis meses até a competência aberta.
   const months = Array.from({ length: 6 }, (_, i) => addMonths(competence, i - 5))
+  const rotulo = (mes: string) => competenceLabel(mes).slice(0, 3)
   const serie = monthlySeries(finance.transactions, months).map((point) => ({
     ...point,
-    label: competenceLabel(point.competence).slice(0, 3),
+    label: rotulo(point.competence),
   }))
+  const saldos = saldoPorMes(finance.accounts, finance.transactions, months, today(), (mes) =>
+    abertoDoMes(finance.accounts, finance.transactions, rules, mes, today()),
+  ).map((ponto) => ({ ...ponto, label: rotulo(ponto.competence) }))
 
   /**
    * Fatias do gráfico e da legenda, resolvidas de uma vez só.
@@ -141,7 +146,7 @@ export function FinanceOverview() {
       />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <FluxoDeCaixa serie={serie} />
+        <FluxoDeCaixa serie={serie} saldos={saldos} />
         <DespesasPorCategoria fatias={fatias} competence={competence} />
       </div>
 

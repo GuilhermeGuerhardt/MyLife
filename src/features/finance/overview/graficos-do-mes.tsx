@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import { CashFlowChart, CategoryDonut } from '@/features/finance/charts'
+import { CashFlowChart, CategoryDonut, SaldoChart } from '@/features/finance/charts'
 import { competenceLabel, type Competence } from '@/lib/finance/billing'
 import { formatCents } from '@/lib/finance/money'
 import { percent } from '@/lib/format'
@@ -13,17 +13,28 @@ interface Fatia {
   color: string
 }
 
-/** Receitas e despesas dos últimos seis meses. */
+/** Receitas e despesas dos últimos seis meses, e o saldo em que cada um terminou. */
 export function FluxoDeCaixa({
   serie,
+  saldos,
 }: {
   serie: Array<{ competence: Competence; income: number; expense: number; label: string }>
+  saldos: Array<{ label: string; saldoCents: number; previsto: boolean }>
 }) {
+  const temPrevisto = saldos.some((ponto) => ponto.previsto)
+
   return (
     <Card className="lg:col-span-2">
       <CardHeader title="Fluxo de caixa" description="Receitas e despesas dos últimos 6 meses" />
       <CardContent>
         <CashFlowChart data={serie} />
+        <div className="border-border-base mt-4 border-t pt-3">
+          <p className="text-fg-muted text-xs">
+            Saldo no fim do mês
+            {temPrevisto && <span className="text-fg-subtle"> · tracejado é previsto</span>}
+          </p>
+          <SaldoChart data={saldos} />
+        </div>
       </CardContent>
     </Card>
   )
