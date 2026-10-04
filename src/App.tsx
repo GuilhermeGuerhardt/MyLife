@@ -184,7 +184,7 @@ function Boot() {
               <Route path="financeiro/categorias" element={<CategoriesPage />} />
               <Route path="financeiro/importar" element={<ImportPage />} />
               <Route path="rotina" element={<HabitsPage />} />
-            <Route path="rotina/tarefas" element={<TarefasPage />} />
+              <Route path="rotina/tarefas" element={<TarefasPage />} />
               <Route path="rotina/agenda" element={<AgendaPage />} />
               <Route path="rotina/insights" element={<InsightsPage />} />
               <Route path="perfil" element={<ProfilePage />} />

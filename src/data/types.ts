@@ -353,7 +353,11 @@ export interface Transaction extends BaseRow {
   amount_cents: number
   /** Data em que aconteceu. */
   date: string
-  /** Fatura/mês a que pertence (AAAA-MM). Difere de `date` em compras no cartão. */
+  /**
+   * Mês em que aconteceu (AAAA-MM), sempre o mês de `date`, inclusive no
+   * cartão. A fatura em que a compra cai não fica gravada: sai da janela de
+   * datas do cartão, para que mudar o fechamento valha também para o passado.
+   */
   competence: string
   description: string
   tags: string[]
