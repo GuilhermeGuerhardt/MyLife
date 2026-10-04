@@ -88,6 +88,28 @@ describe('recorrentes do histórico', () => {
     )
   })
 
+  it('a busca acha o parcelamento e diz que já está lançado, sem oferecer regra', async () => {
+    semear(
+      'transactions',
+      meses.map((mes, i) => ({
+        ...lancamento(`p${i}`, mes, 0),
+        description: 'CG 160 Fan',
+        paid: false,
+        installment_group_id: 'moto',
+        installment_n: 5 + i,
+        installment_total: 48,
+      })),
+    )
+    montarTela(<RecorrentesDoHistorico contas={[conta]} categorias={[]} />)
+
+    fireEvent.change(await screen.findByPlaceholderText(/moto, construtora/), {
+      target: { value: 'cg' },
+    })
+    expect(await screen.findByText('já lançado em parcelas')).toBeTruthy()
+    expect(screen.getByText(/parcela 5 de 48/)).toBeTruthy()
+    expect(screen.queryByRole('button', { name: 'Revisar e criar' })).toBeNull()
+  })
+
   it('a busca acha o que a detecção não pegou e abre o formulário preenchido', async () => {
     semear('transactions', [lancamento('t0', meses[0]!, 18)])
     montarTela(<RecorrentesDoHistorico contas={[conta]} categorias={[]} />)

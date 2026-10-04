@@ -7,7 +7,6 @@ import { Field, Input } from '@/components/ui/field'
 import { Badge } from '@/components/ui/misc'
 import { useRecurring, useTransactions } from '@/data/queries'
 import type { Account, Category, Transaction } from '@/data/types'
-import { competenceLabel, toCompetence } from '@/lib/finance/billing'
 import { formatCents } from '@/lib/finance/money'
 import {
   propostaDaBusca,
@@ -15,7 +14,9 @@ import {
   type LancamentoDoHistorico,
   type RecorrenteDoHistorico,
 } from '@/lib/finance/recorrentes-do-extrato'
+import { parcelamentosDaBusca, parcelamentosEmAndamento } from '@/lib/finance/parcelamentos'
 import { today } from '@/lib/utils'
+import { mesEAno, resumoDoParcelamento } from './parcelamentos'
 import { RecurringForm, type RecurringDraft } from './recurring-form'
 
 function paraHistorico(lancamento: Transaction): LancamentoDoHistorico {
@@ -46,7 +47,6 @@ function paraRegra(achado: RecorrenteDoHistorico): RecurringDraft {
   }
 }
 
-const mesEAno = (data: string) => competenceLabel(toCompetence(data)).toLowerCase()
 
 /**
  * O que se repete nos lançamentos já gravados e ainda não tem regra.
@@ -79,6 +79,16 @@ export function RecorrentesDoHistorico({
     [historico, regras],
   )
   const proposta = useMemo(() => propostaDaBusca(historico, termo), [historico, termo])
+  const parcelamentos = useMemo(() => parcelamentosEmAndamento(lancamentos), [lancamentos])
+
+  // A busca acha também o que já está lançado em parcelas, e diz isso em vez de
+  // oferecer uma regra: a moto em 48 vezes não precisa de regra, e uma regra por
+  // cima lançaria cada mês duas vezes.
+  const parcelamentosAchados = parcelamentosDaBusca(parcelamentos, termo)
+  // Com parcelamento de mesmo nome, as linhas soltas costumam ser avulsas (uma
+  // entrada, as chaves). Só viram proposta se se repetirem por conta própria.
+  const mostrarProposta =
+    proposta !== null && (parcelamentosAchados.length === 0 || proposta.meses >= 3)
 
   /**
    * Cria a regra e liga a ela os lançamentos que a originaram.
@@ -183,8 +193,21 @@ export function RecorrentesDoHistorico({
             <Search className="text-fg-subtle pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2" />
           </Field>
 
+          {parcelamentosAchados.map((item) => (
+            <div
+              key={item.grupo}
+              className="bg-surface-2 flex flex-wrap items-center justify-between gap-3 rounded-lg px-4 py-3"
+            >
+              <div className="min-w-0">
+                <p className="text-fg truncate text-sm">{item.description}</p>
+                <p className="text-fg-subtle text-xs">{resumoDoParcelamento(item)}</p>
+              </div>
+              <Badge tone="neutral">já lançado em parcelas</Badge>
+            </div>
+          ))}
+
           {termo.trim().length >= 2 &&
-            (proposta ? (
+            (mostrarProposta && proposta ? (
               <div className="bg-surface-2 flex flex-wrap items-center justify-between gap-3 rounded-lg px-4 py-3">
                 <div className="min-w-0">
                   <p className="text-fg truncate text-sm">{proposta.description}</p>
@@ -206,7 +229,9 @@ export function RecorrentesDoHistorico({
                 </Button>
               </div>
             ) : (
-              <p className="text-fg-muted text-xs">Nenhum lançamento com “{termo.trim()}”.</p>
+              parcelamentosAchados.length === 0 && (
+                <p className="text-fg-muted text-xs">Nenhum lançamento com “{termo.trim()}”.</p>
+              )
             ))}
         </div>
       </CardContent>

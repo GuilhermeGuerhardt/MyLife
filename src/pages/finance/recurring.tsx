@@ -9,13 +9,16 @@ import { PageHeader } from '@/components/ui/page-header'
 import { useCategories, useRecurring, useTransactions } from '@/data/queries'
 import type { RecurringTransaction } from '@/data/types'
 import { CategoryIcon } from '@/features/finance/category-icons'
+import { Parcelamentos } from '@/features/finance/parcelamentos'
 import { RecorrentesDoHistorico } from '@/features/finance/recorrentes-do-historico'
+import { RegrasRepetidas, apoioDaRepetida } from '@/features/finance/regras-repetidas'
 import { RecurringForm, type RecurringDraft } from '@/features/finance/recurring-form'
 import { MonthNav } from '@/features/finance/month-nav'
 import { useFinance } from '@/features/finance/use-finance'
 import { useMaterializeRecurring } from '@/features/finance/actions'
 import { competenceLabel, toCompetence } from '@/lib/finance/billing'
 import { formatCents } from '@/lib/finance/money'
+import { regrasQueRepetemParcelamento } from '@/lib/finance/parcelamentos'
 import { pendingBalance, pendingOccurrences } from '@/lib/finance/recurring'
 import { shortDate } from '@/lib/format'
 import { today } from '@/lib/utils'
@@ -47,6 +50,12 @@ export function RecurringPage() {
     () => pendingOccurrences(rules, competence, transactions),
     [rules, competence, transactions],
   )
+
+  const repetidas = useMemo(
+    () => regrasQueRepetemParcelamento(rules, transactions),
+    [rules, transactions],
+  )
+  const repeteDe = new Map(repetidas.map((item) => [item.regraId, item]))
 
   const monthly = rules
     .filter((r) => r.active)
@@ -128,6 +137,8 @@ export function RecurringPage() {
         Regras
       </SectionTitle>
 
+      <RegrasRepetidas repetidas={repetidas} />
+
       <Card>
         {ordered.length === 0 ? (
           <EmptyState
@@ -141,6 +152,7 @@ export function RecurringPage() {
               const category = rule.category_id ? finance.categoryById.get(rule.category_id) : null
               const account = accountById.get(rule.account_id)
               const jaLancada = !pending.some((p) => p.rule.id === rule.id)
+              const repetida = repeteDe.get(rule.id)
 
               return (
                 <button
@@ -170,13 +182,16 @@ export function RecurringPage() {
                         account?.name,
                         category?.name,
                         rule.end_date ? `até ${shortDate(rule.end_date)}` : null,
+                        repetida ? apoioDaRepetida(repetida) : null,
                       ]
                         .filter(Boolean)
                         .join(' · ')}
                     </p>
                   </div>
 
-                  {!rule.active ? (
+                  {repetida ? (
+                    <Badge tone="warning">repete parcela</Badge>
+                  ) : !rule.active ? (
                     <Badge>pausada</Badge>
                   ) : jaLancada ? (
                     <Badge tone="positive">lançada</Badge>
@@ -198,6 +213,8 @@ export function RecurringPage() {
           </div>
         )}
       </Card>
+
+      <Parcelamentos contas={finance.allAccounts} />
 
       {finance.hasAccounts && (
         <RecorrentesDoHistorico contas={finance.accounts} categorias={categories} />

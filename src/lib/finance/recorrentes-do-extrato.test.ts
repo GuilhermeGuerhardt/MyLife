@@ -132,6 +132,16 @@ describe('recorrentes no extrato', () => {
     expect(sugestoes[0]!.amountCents).toBe(120962)
   })
 
+  it('parcela que a importação já separou do nome não vira regra', () => {
+    expect(
+      sugerirRecorrentes([
+        linha({ date: '2026-10-09', description: 'Cama', amountCents: 14000, installment: { n: 1, total: 12 } }),
+        linha({ date: '2026-11-09', description: 'Cama', amountCents: 14000, installment: { n: 2, total: 12 } }),
+        linha({ date: '2026-12-09', description: 'Cama', amountCents: 14000, installment: { n: 3, total: 12 } }),
+      ]),
+    ).toEqual([])
+  })
+
   it('transferência entre contas suas nunca vira regra', () => {
     expect(
       sugerirRecorrentes([

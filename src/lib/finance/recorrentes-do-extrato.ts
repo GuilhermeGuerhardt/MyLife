@@ -262,6 +262,8 @@ function agrupar<T>(linhas: T[], chave: (linha: T) => string | null): T[][] {
 
 export interface LinhaDoExtrato extends Ocorrencia {
   accountLabel: string
+  /** A parcela que a importação separou do nome: "Cama (3/12)" chega como "Cama" + 3 de 12. */
+  installment?: { n: number; total: number } | null
 }
 
 export interface RecorrenteSugerida {
@@ -277,8 +279,14 @@ export interface RecorrenteSugerida {
   parcela: Parcela | null
 }
 
+/**
+ * Linha que já é parcela fica de fora: a importação grava cada uma como
+ * parcelamento, mês a mês, até a última. A sugestão as via como doze linhas
+ * iguais e oferecia uma regra mensal sem fim, que começava depois da última
+ * parcela e lançaria a cama quitada para sempre.
+ */
 export function sugerirRecorrentes(linhas: LinhaDoExtrato[]): RecorrenteSugerida[] {
-  return encontrarPadroes(linhas).map(({ ocorrencias, ...padrao }) => ({
+  return encontrarPadroes(linhas.filter((linha) => !linha.installment)).map(({ ocorrencias, ...padrao }) => ({
     ...padrao,
     accountLabel: ocorrencias.at(-1)!.accountLabel,
   }))
