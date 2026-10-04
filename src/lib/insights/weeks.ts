@@ -34,6 +34,8 @@ export interface WeekInput {
   deadlines: Array<{ date: string; kind: string }>
   lessons: Array<{ date: string }>
   habitLogs: Array<{ date: string }>
+  /** Tempo de estudo, do cronômetro ou lançado à mão. */
+  study?: Array<{ date: string; minutes: number }>
 }
 
 export interface WeekStats {
@@ -56,6 +58,12 @@ export interface WeekStats {
   deadlines: number
   lessons: number
   habitLogs: number
+  /**
+   * Minutos de estudo. `null` nas semanas anteriores ao primeiro registro: antes
+   * dele a pessoa não usava o cronômetro, e contar zero diria que ela não
+   * estudava.
+   */
+  studyMinutes: number | null
 }
 
 function average(values: number[]): number | null {
@@ -67,6 +75,11 @@ function average(values: number[]): number | null {
 export function buildWeeks(input: WeekInput, from: string, to: string): WeekStats[] {
   const weeks: WeekStats[] = []
   let previousWeight: number | null = null
+  const study = input.study ?? []
+  const firstStudy = study.reduce<string | null>(
+    (first, entry) => (first === null || entry.date < first ? entry.date : first),
+    null,
+  )
 
   for (let start = weekStart(from); start <= to; start = addDays(start, 7)) {
     const end = addDays(start, 6)
@@ -112,6 +125,10 @@ export function buildWeeks(input: WeekInput, from: string, to: string): WeekStat
       deadlines: input.deadlines.filter((d) => within(d.date) && d.kind !== 'aula').length,
       lessons: input.lessons.filter((l) => within(l.date)).length,
       habitLogs: input.habitLogs.filter((h) => within(h.date)).length,
+      studyMinutes:
+        firstStudy !== null && end >= firstStudy
+          ? study.filter((s) => within(s.date)).reduce((sum, s) => sum + s.minutes, 0)
+          : null,
     })
 
     if (weightAvg !== null) previousWeight = weightAvg

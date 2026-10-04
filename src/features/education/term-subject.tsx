@@ -10,6 +10,7 @@ import { attendance, gradeSummary, neededGrade } from '@/lib/education/academics
 import { DeadlineForm } from '@/features/routine/deadline-form'
 import { decimal, shortDate } from '@/lib/format'
 import { today } from '@/lib/utils'
+import { BotaoEstudar } from './cronometro/botao-estudar'
 import { WEEKDAYS } from './subject-form'
 
 /**
@@ -83,11 +84,17 @@ export function TermSubject({
                 .join(' · ')}
             </p>
           </div>
-          {summary.partialAverage !== null && (
-            <Badge tone={summary.partialAverage >= passingGrade ? 'positive' : 'warning'}>
-              Média parcial {decimal(summary.partialAverage, 2)}
-            </Badge>
-          )}
+          <div className="flex items-center gap-2">
+            {summary.partialAverage !== null && (
+              <Badge tone={summary.partialAverage >= passingGrade ? 'positive' : 'warning'}>
+                Média parcial {decimal(summary.partialAverage, 2)}
+              </Badge>
+            )}
+            <BotaoEstudar
+              alvo={{ program_id: subject.program_id, subject_id: subject.id, rotulo: subject.name }}
+              variant="ghost"
+            />
+          </div>
         </div>
 
         {/* Faltas */}

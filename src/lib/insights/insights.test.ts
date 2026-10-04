@@ -25,6 +25,7 @@ function week(index: number, overrides: Partial<WeekStats> = {}): WeekStats {
     deadlines: 0,
     lessons: 0,
     habitLogs: 0,
+    studyMinutes: null,
     ...overrides,
   }
 }
@@ -318,5 +319,52 @@ describe('revisão semanal', () => {
 
   it('sem semana nenhuma não quebra', () => {
     expect(weeklyReview([])).toEqual({ week: null, previous: null, metrics: [] })
+  })
+})
+
+describe('tempo de estudo nas semanas', () => {
+  const vazio = {
+    sessions: [],
+    metrics: [],
+    measurements: [],
+    mealLogs: [],
+    transactions: [],
+    deadlines: [],
+    lessons: [],
+    habitLogs: [],
+  }
+
+  it('antes do primeiro registro é null, e não zero', () => {
+    const weeks = buildWeeks(
+      {
+        ...vazio,
+        study: [
+          { date: '2026-03-10', minutes: 50 },
+          { date: '2026-03-12', minutes: 40 },
+        ],
+      },
+      '2026-03-01',
+      '2026-03-21',
+    )
+    expect(weeks.map((w) => w.studyMinutes)).toEqual([null, 90, 0])
+  })
+
+  it('sem nenhum registro, todas as semanas ficam null', () => {
+    const weeks = buildWeeks(vazio, '2026-03-01', '2026-03-14')
+    expect(weeks.map((w) => w.studyMinutes)).toEqual([null, null])
+  })
+
+  it('compara o estudo das semanas de prova com o das outras', () => {
+    const weeks = split(8, { deadlines: 1, studyMinutes: 360 }, { deadlines: 0, studyMinutes: 180 })
+    const insight = generateInsights(weeks).find((item) => item.id === 'study-by-deadline')
+    expect(insight?.text).toBe(
+      'Nas semanas com prova ou entrega, você estuda mais: 6,0 h contra 3,0 h nas outras.',
+    )
+  })
+
+  it('a revisão da semana mostra as horas e a diferença', () => {
+    const review = weeklyReview([week(0, { studyMinutes: 120 }), week(1, { studyMinutes: 210 })])
+    const estudo = review.metrics.find((metric) => metric.label === 'Estudo')
+    expect(estudo).toMatchObject({ value: '3,5', delta: 1.5, unit: 'h' })
   })
 })

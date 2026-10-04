@@ -273,6 +273,21 @@ const lessonsByDeadline: Rule = (weeks) => {
   }
 }
 
+/** Tempo de estudo nas semanas de prova: mostra se a preparação acontece ou se fica para a véspera. */
+const studyByDeadline: Rule = (weeks) => {
+  const result = compare(weeks, (week) => week.deadlines > 0, (week) => week.studyMinutes)
+  if (!result || Math.abs(result.deltaPct) < MIN_EFFECT_PCT) return null
+
+  const direction = result.deltaPct > 0 ? 'estuda mais' : 'estuda menos'
+  return {
+    id: 'study-by-deadline',
+    area: 'education',
+    text: `Nas semanas com prova ou entrega, você ${direction}: ${decimal(result.withAvg / 60)} h contra ${decimal(result.withoutAvg / 60)} h nas outras.`,
+    sample: result.withCount + result.withoutCount,
+    strength: strengthOf(result),
+  }
+}
+
 const RULES: Rule[] = [
   moodByTraining,
   energyBySleep,
@@ -280,6 +295,7 @@ const RULES: Rule[] = [
   intakeByTraining,
   spendingByDeadline,
   lessonsByDeadline,
+  studyByDeadline,
   habitsAndMood,
 ]
 
@@ -372,6 +388,16 @@ export function weeklyReview(weeks: WeekStats[]): {
         value: String(week.habitLogs),
         delta: delta(week.habitLogs, previous?.habitLogs ?? null),
         higherIsBetter: true,
+      },
+      {
+        label: 'Estudo',
+        value: week.studyMinutes !== null ? decimal(week.studyMinutes / 60) : '—',
+        delta:
+          week.studyMinutes !== null && previous?.studyMinutes != null
+            ? (week.studyMinutes - previous.studyMinutes) / 60
+            : null,
+        higherIsBetter: true,
+        unit: 'h',
       },
     ],
   }

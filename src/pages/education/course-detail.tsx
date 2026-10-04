@@ -15,6 +15,8 @@ import { PageHeader } from '@/components/ui/page-header'
 import { useCourseLessons, useInstitutions, useNotes, usePrograms } from '@/data/queries'
 import { PROGRAM_STATUS_LABELS } from '@/data/types'
 import { CertificateThumb } from '@/features/education/certificate'
+import { BotaoEstudar } from '@/features/education/cronometro/botao-estudar'
+import { TempoDeEstudo } from '@/features/education/cronometro/tempo-de-estudo'
 import { AdicionarAulas } from '@/features/education/course/adicionar-aulas'
 import { ListaDeAulas } from '@/features/education/course/lista-de-aulas'
 import { NumerosDoCursoLivre } from '@/features/education/course/numeros-do-curso-livre'
@@ -86,6 +88,10 @@ export function CourseDetail() {
           />
         </div>
         <div className="flex items-center gap-2">
+          <BotaoEstudar
+            alvo={{ program_id: program.id, subject_id: null, rotulo: program.name }}
+            size="md"
+          />
           {ehImagem(program.certificate_url) && (
             <CertificateThumb
               imagem={program.certificate_url}
@@ -154,6 +160,8 @@ export function CourseDetail() {
       )}
 
       <ProgramSchedule programId={program.id} />
+
+      <TempoDeEstudo programId={program.id} />
 
       <ListaDeAulas
         lessons={lessons}

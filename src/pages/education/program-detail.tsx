@@ -17,6 +17,8 @@ import { PageHeader } from '@/components/ui/page-header'
 import { useInstitutions, useNotes, usePrograms, useSubjects } from '@/data/queries'
 import { DEGREE_LABELS, type Subject } from '@/data/types'
 import { CertificateThumb } from '@/features/education/certificate'
+import { BotaoEstudar } from '@/features/education/cronometro/botao-estudar'
+import { TempoDeEstudo } from '@/features/education/cronometro/tempo-de-estudo'
 import { GradeCurricular } from '@/features/education/program/grade-curricular'
 import { NumerosDoCurso } from '@/features/education/program/numeros-do-curso'
 import { SemestreAtual } from '@/features/education/program/semestre-atual'
@@ -33,7 +35,7 @@ import {
 } from '@/lib/education/academics'
 import { ehImagem } from '@/lib/education/certificate'
 
-type Tab = 'overview' | 'curriculum' | 'term'
+type Tab = 'overview' | 'curriculum' | 'term' | 'study'
 
 export function ProgramDetail() {
   const { programId } = useParams<{ programId: string }>()
@@ -105,6 +107,10 @@ export function ProgramDetail() {
           />
         </div>
         <div className="flex items-center gap-2">
+          <BotaoEstudar
+            alvo={{ program_id: program.id, subject_id: null, rotulo: program.name }}
+            size="md"
+          />
           {ehImagem(program.certificate_url) && (
             <CertificateThumb
               imagem={program.certificate_url}
@@ -159,6 +165,7 @@ export function ProgramDetail() {
           { value: 'overview', label: 'Visão geral' },
           { value: 'curriculum', label: `Grade (${subjects.length})` },
           { value: 'term', label: `Semestre atual (${doing.length})` },
+          { value: 'study', label: 'Estudo' },
         ]}
       />
 
@@ -194,6 +201,8 @@ export function ProgramDetail() {
           onAbrirGrade={() => setTab('curriculum')}
         />
       )}
+
+      {tab === 'study' && <TempoDeEstudo programId={program.id} disciplinas={subjects} />}
 
       {editing && (
         <ProgramForm

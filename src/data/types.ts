@@ -287,6 +287,37 @@ export interface CourseLesson extends BaseRow {
   position: number
 }
 
+/**
+ * Registro que se apaga com carimbo, em vez de sumir da tabela.
+ *
+ * As tabelas novas já nascem assim, pensando na sincronização com a nuvem: sem
+ * o carimbo, um registro apagado num aparelho reaparece vindo do outro, porque
+ * ausência não viaja. Acrescentar isso depois, com dados dos dois lados, custa
+ * uma migração; agora custa um campo.
+ */
+export interface ApagavelComCarimbo {
+  /** Quando foi apagado. `null` enquanto vale. */
+  deleted_at: string | null
+}
+
+/**
+ * Um tempo de estudo, cronometrado ou lançado à mão.
+ *
+ * Guarda os minutos, e não o início e o fim: o cronômetro pode ser pausado no
+ * meio, e o que interessa depois é quanto se estudou, não o horário em que a
+ * pausa do café começou.
+ */
+export interface StudySession extends BaseRow, ApagavelComCarimbo {
+  /** Curso da faculdade ou curso livre. `null` = estudo por conta. */
+  program_id: string | null
+  /** Disciplina, quando o curso é da faculdade. */
+  subject_id: string | null
+  /** Dia em que o estudo aconteceu. */
+  date: string
+  minutes: number
+  notes: string | null
+}
+
 export interface Note extends BaseRow {
   /** Único lugar onde `free` aparece: anotação que não pertence a curso algum. */
   track: Track

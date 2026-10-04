@@ -165,9 +165,14 @@ export function Segmented<T extends string>({
   onChange: (value: T) => void
   className?: string
 }) {
+  // Sem caber, rola dentro de si. Antes os rótulos quebravam em duas linhas
+  // ("Semestre / atual") ou o seletor vazava para fora do cartão no celular.
   return (
     <div
-      className={cn('bg-surface-2 border-border-base inline-flex gap-0.5 rounded-lg border p-0.5', className)}
+      className={cn(
+        'bg-surface-2 border-border-base inline-flex max-w-full gap-0.5 overflow-x-auto rounded-lg border p-0.5',
+        className,
+      )}
     >
       {options.map((option) => (
         <button
@@ -179,7 +184,7 @@ export function Segmented<T extends string>({
           title={option.ariaLabel}
           onClick={() => onChange(option.value)}
           className={cn(
-            'rounded-[6px] px-3 py-1.5 text-xs font-medium transition-colors',
+            'shrink-0 rounded-[6px] px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors',
             value === option.value
               ? 'bg-surface text-fg border-border-base border'
               : 'text-fg-muted hover:text-fg',

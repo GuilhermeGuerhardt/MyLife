@@ -8,6 +8,7 @@ import {
   useMealLogs,
   useMeasurements,
   useSessions,
+  useStudySessions,
   useTransactions,
 } from '@/data/queries'
 import { addDays, today, weekStart } from '@/lib/dates'
@@ -31,6 +32,7 @@ export function useInsights(weeksBack = 16) {
   const { data: lessons } = useCourseLessons()
   const { data: habitLogs } = useHabitLogs()
   const { data: categories } = useCategories()
+  const { data: study } = useStudySessions()
 
   return useMemo(() => {
     const to = today()
@@ -50,6 +52,7 @@ export function useInsights(weeksBack = 16) {
           .filter((lesson) => lesson.done)
           .map((lesson) => ({ date: (lesson.updated_at ?? lesson.created_at).slice(0, 10) })),
         habitLogs,
+        study,
       },
       from,
       to,
@@ -81,6 +84,7 @@ export function useInsights(weeksBack = 16) {
     deadlines,
     lessons,
     habitLogs,
+    study,
     categories,
     weeksBack,
   ])

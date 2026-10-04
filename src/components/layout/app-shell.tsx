@@ -15,6 +15,7 @@ import { Avatar } from '@/components/avatar'
 import { RouteBoundary } from '@/components/route-boundary'
 import { storageMode, type StorageMode } from '@/data/adapters'
 import { useProfile } from '@/data/queries'
+import { CronometroNoTopo } from '@/features/education/cronometro/cronometro-no-topo'
 import { useModulos } from '@/features/profile/use-modulos'
 import { TourGuiado } from '@/features/tutorial/tour'
 import { useTutorial } from '@/features/tutorial/use-tutorial'
@@ -291,6 +292,7 @@ export function AppShell({ onOpenPalette }: { onOpenPalette: () => void }) {
           </span>
 
           <div className="flex items-center gap-2">
+            <CronometroNoTopo />
             {/*
               O guia da tela, de volta a pedido. Na janela destacada não: ela
               existe para escrever sem nada em volta, e quem a abriu já conhece o

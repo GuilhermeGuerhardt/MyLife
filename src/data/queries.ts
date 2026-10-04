@@ -3,6 +3,7 @@
  */
 
 import { useMutation, useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query'
+import { useMemo } from 'react'
 import { collection, type Collection } from './adapters'
 import { ACTIVITY_CATALOG, FOOD_CATALOG } from './seed'
 import { CATEGORY_CATALOG } from './seed-finance'
@@ -34,6 +35,7 @@ import type {
   Profile,
   Program,
   RecurringTransaction,
+  StudySession,
   Subject,
   Transaction,
   WorkoutSession,
@@ -71,6 +73,7 @@ export const TABLES = {
   hiddenTasks: 'hidden_tasks',
   widgets: 'dashboard_widgets',
   modules: 'modules',
+  studySessions: 'study_sessions',
 } as const
 
 const collections = {
@@ -103,6 +106,7 @@ const collections = {
   hiddenTasks: collection<HiddenTask>(TABLES.hiddenTasks),
   widgets: collection<DashboardWidget>(TABLES.widgets),
   modules: collection<ModuleSetting>(TABLES.modules),
+  studySessions: collection<StudySession>(TABLES.studySessions),
 }
 
 type CollectionName = keyof typeof collections
@@ -300,11 +304,27 @@ export class LoteInterrompido extends Error {
   }
 }
 
-function useCollection<T extends BaseRow>(name: CollectionName, key: QueryKey = [name]) {
+interface OpcoesDaColecao {
+  /**
+   * Apagar grava `deleted_at` em vez de tirar a linha, e a leitura esconde o
+   * que foi apagado. Só para tabelas que têm o campo (`ApagavelComCarimbo`).
+   */
+  carimbo?: boolean
+}
+
+function useCollection<T extends BaseRow>(name: CollectionName, opcoes: OpcoesDaColecao = {}) {
   const client = useQueryClient()
   const store = collections[name] as unknown as Collection<T>
+  const key: QueryKey = [name]
 
   const query = useQuery({ queryKey: key, queryFn: () => store.list() })
+
+  // O backup e a exportação leem pela coleção crua e levam o apagado junto:
+  // é o carimbo que conta ao outro aparelho que aquilo saiu.
+  const apagar = async (id: string): Promise<void> => {
+    if (!opcoes.carimbo) return store.remove(id)
+    await store.update(id, { deleted_at: new Date().toISOString() } as unknown as Partial<T>)
+  }
 
   // Relê aqui e conta para as outras janelas relerem também: o banco é
   // compartilhado, o cache de cada janela não.
@@ -322,7 +342,7 @@ function useCollection<T extends BaseRow>(name: CollectionName, key: QueryKey = 
     onSuccess: invalidate,
   })
   const remove = useMutation({
-    mutationFn: (id: string) => store.remove(id),
+    mutationFn: (id: string) => apagar(id),
     onSuccess: invalidate,
   })
 
@@ -375,7 +395,7 @@ function useCollection<T extends BaseRow>(name: CollectionName, key: QueryKey = 
 
   /** Remove vários de uma vez, nas mesmas condições de `updateMany`. */
   async function removeMany(ids: string[]): Promise<void> {
-    await emLote(ids, (id) => store.remove(id))
+    await emLote(ids, (id) => apagar(id))
   }
 
   async function emLote<I>(items: I[], gravar: (item: I) => Promise<unknown>): Promise<void> {
@@ -393,8 +413,17 @@ function useCollection<T extends BaseRow>(name: CollectionName, key: QueryKey = 
     }
   }
 
+  // Memorizado: filtrar a cada render entregaria uma lista nova toda vez, e
+  // todo `useMemo` que dependesse dela recalcularia à toa.
+  const comCarimbo = opcoes.carimbo === true
+  const data = useMemo(() => {
+    const linhas = (query.data ?? []) as T[]
+    if (!comCarimbo) return linhas
+    return linhas.filter((linha) => !(linha as { deleted_at?: string | null }).deleted_at)
+  }, [query.data, comCarimbo])
+
   return {
-    data: (query.data ?? []) as T[],
+    data,
     isLoading: query.isLoading,
     error: query.error,
     create,
@@ -512,6 +541,10 @@ export function useHabits() {
 
 export function useHabitLogs() {
   return useCollection<HabitLog>('habitLogs')
+}
+
+export function useStudySessions() {
+  return useCollection<StudySession>('studySessions', { carimbo: true })
 }
 
 export function useWidgets() {

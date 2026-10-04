@@ -278,5 +278,6 @@ const TABLE_LABELS: Record<string, string> = {
   habits: 'Hábitos',
   habit_logs: 'Registros de hábito',
   dashboard_widgets: 'Layout do dashboard',
+  study_sessions: 'Tempo de estudo',
 }
 
