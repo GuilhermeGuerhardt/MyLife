@@ -2,6 +2,7 @@ import { Check } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { useProfile } from '@/data/queries'
 import { AvatarField } from '@/features/profile/avatar-field'
+import { AvisosCard } from '@/features/profile/avisos-card'
 import { BackupCard } from '@/features/profile/backup-card'
 import { ModulosCard } from '@/features/profile/modulos-card'
 import { TarefasForaCard } from '@/features/profile/tarefas-fora-card'
@@ -143,6 +144,11 @@ export function ProfilePage() {
         <ModulosCard />
         <GuiasCard />
         <TarefasForaCard />
+      </div>
+
+      <div className="space-y-4">
+        <SectionTitle>Avisos</SectionTitle>
+        <AvisosCard />
       </div>
 
       <div className="space-y-4">

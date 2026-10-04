@@ -12,6 +12,7 @@ import { ensureSeed } from './data/queries'
 import { SincroniaEntreJanelas } from './data/sincronia-entre-janelas'
 import { ImportRunProvider } from './features/finance/import-run'
 import { ImportWatcher } from './features/finance/import-watcher'
+import { VigiaDeAvisos } from './features/lembretes/vigia-de-avisos'
 import { UpdateWatcher } from './features/updates/update-watcher'
 import { lazyRoute } from './lib/lazy-route'
 
@@ -194,6 +195,7 @@ function Boot() {
           <QuickAdd open={paletteOpen} onClose={() => setPaletteOpen(false)} />
           <ImportWatcher />
           <UpdateWatcher />
+          <VigiaDeAvisos />
         </ImportRunProvider>
       </BrowserRouter>
     </QueryClientProvider>

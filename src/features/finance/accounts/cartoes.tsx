@@ -1,4 +1,4 @@
-import { CalendarClock, Pencil } from 'lucide-react'
+import { AlertTriangle, CalendarClock, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge, Progress, SectionTitle, Stat } from '@/components/ui/misc'
@@ -8,7 +8,9 @@ import type { AccountSummary } from '@/features/finance/use-finance'
 import { statementPeriod, type Competence } from '@/lib/finance/billing'
 import { cycleOf, invoiceItems } from '@/lib/finance/reports'
 import { formatCents } from '@/lib/finance/money'
+import { daysBetween } from '@/lib/dates'
 import { longDate, percent, relativeDay, shortDate } from '@/lib/format'
+import { today } from '@/lib/utils'
 
 /**
  * O total da fatura, com o que ainda falta pagar.
@@ -115,9 +117,7 @@ export function Cartoes({
                         <p className="text-fg text-sm font-medium">
                           Vence {longDate(period.dueDate)}
                         </p>
-                        <p className="text-fg-subtle text-xs first-letter:uppercase">
-                          {relativeDay(period.dueDate)}
-                        </p>
+                        <PrazoDaFatura vencimento={period.dueDate} aberta={(openInvoice ?? 0) > 0} />
                       </div>
                     </div>
                     {emAberto.length > 0 && (
@@ -160,4 +160,37 @@ export function Cartoes({
       </div>
     </div>
   )
+}
+
+/** A partir de quantos dias antes o prazo da fatura vira alerta. */
+const DIAS_DE_ALERTA = 3
+
+/**
+ * Quanto falta para a fatura vencer.
+ *
+ * Só ganha cor quando pede ação: fatura em aberto a três dias do vencimento, ou
+ * vencida. Fora disso é texto neutro, como antes. Pintar todo prazo ensinaria a
+ * ignorar a cor no dia em que ela importasse.
+ */
+function PrazoDaFatura({ vencimento, aberta }: { vencimento: string; aberta: boolean }) {
+  const dias = daysBetween(today(), vencimento)
+  const quando = relativeDay(vencimento)
+
+  if (aberta && dias < 0) {
+    return (
+      <Badge tone="negative">
+        <AlertTriangle className="size-3" />
+        vencida {quando}
+      </Badge>
+    )
+  }
+  if (aberta && dias <= DIAS_DE_ALERTA) {
+    return (
+      <Badge tone="warning">
+        <CalendarClock className="size-3" />
+        vence {quando}
+      </Badge>
+    )
+  }
+  return <p className="text-fg-subtle text-xs first-letter:uppercase">{quando}</p>
 }

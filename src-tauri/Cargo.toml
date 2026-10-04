@@ -18,6 +18,9 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
+# Avisos do sistema: fatura perto de vencer, prova chegando, hábito do dia. O
+# app só ajudava enquanto estava aberto na frente da pessoa.
+tauri-plugin-notification = "2"
 # Atualização automática: busca o manifesto publicado nas releases do GitHub,
 # confere a assinatura e troca o programa no lugar. No Windows o próprio
 # instalador reabre o app, então não é preciso o plugin de processo.

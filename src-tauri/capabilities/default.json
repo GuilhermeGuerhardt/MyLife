@@ -13,6 +13,7 @@
     "dialog:allow-save",
     "dialog:allow-message",
     "dialog:allow-confirm",
+    "notification:default",
     "sql:default",
     "sql:allow-load",
     "sql:allow-execute",
