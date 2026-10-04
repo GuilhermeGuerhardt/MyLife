@@ -12,6 +12,7 @@ import { ensureSeed } from './data/queries'
 import { SincroniaEntreJanelas } from './data/sincronia-entre-janelas'
 import { ImportRunProvider } from './features/finance/import-run'
 import { ImportWatcher } from './features/finance/import-watcher'
+import { VigiaDeBackup } from './features/backup/vigia-de-backup'
 import { VigiaDeAvisos } from './features/lembretes/vigia-de-avisos'
 import { UpdateWatcher } from './features/updates/update-watcher'
 import { lazyRoute } from './lib/lazy-route'
@@ -196,6 +197,7 @@ function Boot() {
           <ImportWatcher />
           <UpdateWatcher />
           <VigiaDeAvisos />
+          <VigiaDeBackup />
         </ImportRunProvider>
       </BrowserRouter>
     </QueryClientProvider>

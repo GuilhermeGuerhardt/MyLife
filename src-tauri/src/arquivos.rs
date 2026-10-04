@@ -105,3 +105,98 @@ pub fn pasta_existe(caminho: String) -> Result<bool, String> {
     let caminho = conferir(&caminho)?;
     Ok(caminho.is_dir())
 }
+
+/// Nomes dos arquivos de uma pasta, sem entrar em subpastas.
+///
+/// Existe para o backup automático saber quais cópias já estão lá e apagar as
+/// mais velhas. Pasta que não existe devolve lista vazia: é o primeiro backup,
+/// e a pasta nasce na gravação.
+#[tauri::command]
+pub fn listar_arquivos(pasta: String) -> Result<Vec<String>, String> {
+    let pasta = conferir(&pasta)?;
+    let entradas = match fs::read_dir(&pasta) {
+        Ok(entradas) => entradas,
+        Err(erro) if erro.kind() == std::io::ErrorKind::NotFound => return Ok(Vec::new()),
+        Err(erro) => return Err(format!("Não consegui ler {}: {erro}", pasta.display())),
+    };
+
+    Ok(entradas
+        .filter_map(|entrada| entrada.ok())
+        .filter(|entrada| entrada.path().is_file())
+        .filter_map(|entrada| entrada.file_name().into_string().ok())
+        .collect())
+}
+
+/// Apaga uma cópia antiga do backup automático, e só isso.
+///
+/// A trava do nome mora aqui, e não na interface, de propósito: é o único
+/// comando que apaga arquivo no disco da pessoa, e um caminho errado vindo de
+/// um defeito na tela não pode levar junto um documento que estava na mesma
+/// pasta. Só passa o que se chama `life-auto-*.json`.
+#[tauri::command]
+pub fn apagar_backup_automatico(caminho: String) -> Result<(), String> {
+    let caminho = conferir(&caminho)?;
+    let nome = caminho
+        .file_name()
+        .and_then(|nome| nome.to_str())
+        .unwrap_or_default();
+
+    if !nome.starts_with("life-auto-") || !nome.ends_with(".json") {
+        return Err(format!("{nome} não é um backup automático do Life."));
+    }
+
+    fs::remove_file(&caminho)
+        .map_err(|erro| format!("Não consegui apagar {}: {erro}", caminho.display()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn pasta_de_teste(nome: &str) -> PathBuf {
+        let pasta = std::env::temp_dir().join(format!("life-teste-{nome}-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&pasta);
+        fs::create_dir_all(&pasta).unwrap();
+        pasta
+    }
+
+    #[test]
+    fn apaga_so_o_que_tem_nome_de_backup_automatico() {
+        let pasta = pasta_de_teste("apagar");
+        let backup = pasta.join("life-auto-2026-10-01.json");
+        let manual = pasta.join("life-backup-2026-10-01.json");
+        let documento = pasta.join("contrato.json");
+        for arquivo in [&backup, &manual, &documento] {
+            fs::write(arquivo, "{}").unwrap();
+        }
+
+        assert!(apagar_backup_automatico(backup.display().to_string()).is_ok());
+        assert!(apagar_backup_automatico(manual.display().to_string()).is_err());
+        assert!(apagar_backup_automatico(documento.display().to_string()).is_err());
+
+        assert!(!backup.exists());
+        assert!(manual.exists());
+        assert!(documento.exists());
+        let _ = fs::remove_dir_all(&pasta);
+    }
+
+    #[test]
+    fn lista_so_arquivos_e_aceita_pasta_que_ainda_nao_existe() {
+        let pasta = pasta_de_teste("listar");
+        fs::write(pasta.join("life-auto-2026-10-01.json"), "{}").unwrap();
+        fs::create_dir_all(pasta.join("subpasta")).unwrap();
+
+        let nomes = listar_arquivos(pasta.display().to_string()).unwrap();
+        assert_eq!(nomes, vec!["life-auto-2026-10-01.json".to_string()]);
+
+        let ausente = pasta.join("nao-existe");
+        assert!(listar_arquivos(ausente.display().to_string()).unwrap().is_empty());
+        let _ = fs::remove_dir_all(&pasta);
+    }
+
+    #[test]
+    fn recusa_caminho_relativo() {
+        assert!(apagar_backup_automatico("life-auto-2026-10-01.json".into()).is_err());
+        assert!(listar_arquivos("backups".into()).is_err());
+    }
+}

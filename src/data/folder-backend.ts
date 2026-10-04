@@ -76,7 +76,7 @@ export class PathBackend implements FolderBackend {
     return this.path
   }
 
-  private caminhoDe(filename: string): string {
+  caminhoDe(filename: string): string {
     const separador = this.path.includes('\\') ? '\\' : '/'
     return `${this.path.replace(/[\\/]+$/, '')}${separador}${filename}`
   }
@@ -98,4 +98,14 @@ export function pastaExiste(path: string): Promise<boolean> {
 export function folderSupported(): boolean {
   if (isTauri()) return true
   return typeof window !== 'undefined' && typeof window.showDirectoryPicker === 'function'
+}
+
+/** Nomes dos arquivos da pasta. Só no desktop: o backup automático é dele. */
+export function listarArquivos(pasta: string): Promise<string[]> {
+  return invoke<string[]>('listar_arquivos', { pasta })
+}
+
+/** Apaga uma cópia do backup automático. O Rust recusa qualquer outro nome. */
+export function apagarBackupAutomatico(caminho: string): Promise<void> {
+  return invoke('apagar_backup_automatico', { caminho })
 }

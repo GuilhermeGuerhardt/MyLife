@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { useProfile } from '@/data/queries'
 import { AvatarField } from '@/features/profile/avatar-field'
 import { AvisosCard } from '@/features/profile/avisos-card'
+import { BackupAutomaticoCard } from '@/features/profile/backup-automatico-card'
 import { BackupCard } from '@/features/profile/backup-card'
 import { ModulosCard } from '@/features/profile/modulos-card'
 import { TarefasForaCard } from '@/features/profile/tarefas-fora-card'
@@ -154,6 +155,7 @@ export function ProfilePage() {
       <div className="space-y-4">
         <SectionTitle>Dados e sincronização</SectionTitle>
         <WorkspaceCard />
+        <BackupAutomaticoCard />
         <BackupCard />
       </div>
 

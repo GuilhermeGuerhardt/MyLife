@@ -10,19 +10,16 @@ import { PathBackend } from './folder-backend'
 describe('caminhos da pasta de trabalho', () => {
   it('usa a barra do próprio caminho', () => {
     const windows = new PathBackend('C:\\Users\\Guilherme\\Life')
-    // @ts-expect-error método privado, exercitado de propósito
     expect(windows.caminhoDe('transactions.json')).toBe(
       'C:\\Users\\Guilherme\\Life\\transactions.json',
     )
 
     const unix = new PathBackend('/home/guilherme/Life')
-    // @ts-expect-error método privado, exercitado de propósito
     expect(unix.caminhoDe('transactions.json')).toBe('/home/guilherme/Life/transactions.json')
   })
 
   it('não duplica a barra final', () => {
     const backend = new PathBackend('D:\\Life\\')
-    // @ts-expect-error método privado, exercitado de propósito
     expect(backend.caminhoDe('life.json')).toBe('D:\\Life\\life.json')
   })
 

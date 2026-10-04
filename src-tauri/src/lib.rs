@@ -55,6 +55,8 @@ pub fn run() {
             arquivos::gravar_texto,
             arquivos::gravar_bytes,
             arquivos::pasta_existe,
+            arquivos::listar_arquivos,
+            arquivos::apagar_backup_automatico,
         ])
         .setup(|_app| {
             // Em desenvolvimento o inspetor abre junto: sem ele, depurar a
