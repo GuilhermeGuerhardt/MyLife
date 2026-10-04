@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/misc'
 import { useRecurring } from '@/data/queries'
 import { formatCents } from '@/lib/finance/money'
+import { competenceLabel, toCompetence } from '@/lib/finance/billing'
 import { chaveDoPadrao, type RecorrenteSugerida } from '@/lib/finance/recorrentes-do-extrato'
 import { cn } from '@/lib/utils'
 
@@ -72,7 +73,8 @@ export function RecorrentesSugeridas({
         amount_cents: sugestao.amountCents,
         day_of_month: sugestao.dayOfMonth,
         start_date: sugestao.startDate,
-        end_date: null,
+        // Parcela tem fim: a regra para sozinha depois da última.
+        end_date: sugestao.endDate,
         active: true,
       })
       feitas++
@@ -119,6 +121,9 @@ export function RecorrentesSugeridas({
                   <p className="text-fg truncate text-sm">{sugestao.description}</p>
                   <p className="text-fg-subtle text-xs">
                     Todo dia {sugestao.dayOfMonth} · apareceu em {sugestao.meses} meses
+                    {sugestao.parcela && sugestao.endDate
+                      ? ` · parcela ${sugestao.parcela.atual} de ${sugestao.parcela.total}, até ${competenceLabel(toCompetence(sugestao.endDate)).toLowerCase()}`
+                      : ''}
                   </p>
                 </div>
 

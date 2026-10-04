@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/ui/page-header'
 import { useCategories, useRecurring, useTransactions } from '@/data/queries'
 import type { RecurringTransaction } from '@/data/types'
 import { CategoryIcon } from '@/features/finance/category-icons'
+import { RecorrentesDoHistorico } from '@/features/finance/recorrentes-do-historico'
 import { RecurringForm, type RecurringDraft } from '@/features/finance/recurring-form'
 import { MonthNav } from '@/features/finance/month-nav'
 import { useFinance } from '@/features/finance/use-finance'
@@ -71,7 +72,7 @@ export function RecurringPage() {
     <div className="space-y-5">
       <PageHeader
         title="Recorrentes"
-        description={'O que se repete todo mês. A recorrente nasce em Lançamentos, na opção "Se repete". Aqui você acompanha, pausa e edita.'}
+        description={'O que se repete todo mês. A recorrente nasce em Lançamentos, na opção "Se repete", ou do que já se repete no seu histórico, no fim desta tela. Aqui você acompanha, pausa e edita.'}
         action={
           // Só o ícone no celular, como em Lançamentos: com o nome, a fileira
           // não cabia nos 375px e a tela rolava para o lado.
@@ -132,7 +133,7 @@ export function RecurringPage() {
           <EmptyState
             icon={<Repeat className="size-6" />}
             title="Nenhuma recorrente"
-            description='Lance aluguel, internet ou assinatura em Lançamentos e marque "Se repete" — a regra aparece aqui.'
+            description='Lance aluguel, internet ou assinatura em Lançamentos e marque "Se repete", ou crie a partir do que já se repete no histórico, logo abaixo.'
           />
         ) : (
           <div className="divide-border-base divide-y">
@@ -197,6 +198,10 @@ export function RecurringPage() {
           </div>
         )}
       </Card>
+
+      {finance.hasAccounts && (
+        <RecorrentesDoHistorico contas={finance.accounts} categorias={categories} />
+      )}
 
       {editing && (
         <RecurringForm

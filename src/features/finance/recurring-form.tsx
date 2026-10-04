@@ -20,6 +20,7 @@ export type RecurringDraft = Omit<RecurringTransaction, keyof BaseRow>
  */
 export function RecurringForm({
   initial,
+  rascunho,
   accounts,
   categories,
   onClose,
@@ -28,21 +29,24 @@ export function RecurringForm({
 }: {
   /** Nulo = criando. */
   initial: RecurringTransaction | null
+  /** Ao criar: o que já se sabe, para a pessoa só conferir. Vem da busca no histórico. */
+  rascunho?: RecurringDraft
   accounts: Account[]
   categories: Category[]
   onClose: () => void
   onSave: (draft: RecurringDraft) => Promise<void>
   onRemove: (() => void) | null
 }) {
-  const [description, setDescription] = useState(initial?.description ?? '')
-  const [kind, setKind] = useState<RecurringDraft['kind']>(initial?.kind ?? 'expense')
-  const [amount, setAmount] = useState(initial ? centsToInput(initial.amount_cents) : '')
-  const [accountId, setAccountId] = useState(initial?.account_id ?? accounts[0]?.id ?? '')
-  const [categoryId, setCategoryId] = useState(initial?.category_id ?? '')
-  const [day, setDay] = useState(initial?.day_of_month ?? 5)
-  const [startDate, setStartDate] = useState(initial?.start_date ?? today())
-  const [endDate, setEndDate] = useState(initial?.end_date ?? '')
-  const [active, setActive] = useState(initial?.active ?? true)
+  const base = initial ?? rascunho
+  const [description, setDescription] = useState(base?.description ?? '')
+  const [kind, setKind] = useState<RecurringDraft['kind']>(base?.kind ?? 'expense')
+  const [amount, setAmount] = useState(base ? centsToInput(base.amount_cents) : '')
+  const [accountId, setAccountId] = useState(base?.account_id ?? accounts[0]?.id ?? '')
+  const [categoryId, setCategoryId] = useState(base?.category_id ?? '')
+  const [day, setDay] = useState(base?.day_of_month ?? 5)
+  const [startDate, setStartDate] = useState(base?.start_date ?? today())
+  const [endDate, setEndDate] = useState(base?.end_date ?? '')
+  const [active, setActive] = useState(base?.active ?? true)
   const [erro, setErro] = useState<string | null>(null)
   const [salvando, setSalvando] = useState(false)
 
