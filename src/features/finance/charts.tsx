@@ -77,9 +77,12 @@ export function CashFlowChart({
 export function SaldoChart({
   data,
   height = 120,
+  descrever = (ponto) => (ponto.previsto ? 'previsto' : 'fim do mês'),
 }: {
   data: Array<{ label: string; saldoCents: number; previsto: boolean }>
   height?: number
+  /** O que a dica diz ao lado do mês. */
+  descrever?: (ponto: { label: string; previsto: boolean }, indice: number) => string
 }) {
   // Duas séries que se encontram no último mês fechado: a linha cheia vira
   // tracejada sem quebrar na passagem do que foi para o que deve ser.
@@ -119,7 +122,7 @@ export function SaldoChart({
             return (
               <div style={tooltipStyle} className="px-2.5 py-1.5">
                 <p className="text-fg-muted">
-                  {ponto.label} · {ponto.previsto ? 'previsto' : 'fim do mês'}
+                  {ponto.label} · {descrever(ponto, linhas.indexOf(ponto))}
                 </p>
                 <p className="text-fg font-medium">{formatCents(ponto.saldoCents)}</p>
               </div>

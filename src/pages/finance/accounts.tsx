@@ -18,6 +18,7 @@ import { AccountForm } from '@/features/finance/account-form'
 import { Cartoes } from '@/features/finance/accounts/cartoes'
 import { ListaDeContas } from '@/features/finance/accounts/lista-de-contas'
 import { NumerosDasContas } from '@/features/finance/accounts/numeros-das-contas'
+import { Patrimonio } from '@/features/finance/accounts/patrimonio'
 import { usePayInvoice, useSetTransactionPaid } from '@/features/finance/actions'
 import { FormularioDeConferencia } from '@/features/finance/conferencia'
 import { PayInvoiceForm } from '@/features/finance/pay-invoice-form'
@@ -25,6 +26,7 @@ import { MonthNav } from '@/features/finance/month-nav'
 import { useFinance } from '@/features/finance/use-finance'
 import { useTransactionEditor } from '@/features/finance/use-transaction-editor'
 import { toCompetence, type Competence } from '@/lib/finance/billing'
+import { patrimonioPorMes } from '@/lib/finance/patrimonio'
 import { invoiceItems } from '@/lib/finance/reports'
 import { today } from '@/lib/utils'
 
@@ -106,6 +108,13 @@ export function AccountsPage() {
             onQuitar={(conta, fatura) => setPayingCard({ conta, fatura })}
             onEditarLancamento={openEditor}
             onMarcarPago={(transaction, pago) => void setPaid(transaction, pago)}
+          />
+
+          {/* No fim, depois do que se usa todo dia: é consulta, não ação. Com as
+              arquivadas, porque a conta encerrada teve dinheiro nos meses em que
+              existia, e tirá-la criaria um degrau falso na linha. */}
+          <Patrimonio
+            pontos={patrimonioPorMes(finance.allAccounts, finance.transactions, today())}
           />
         </>
       )}
