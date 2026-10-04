@@ -11,7 +11,7 @@ import { Plus } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { PageHeader } from '@/components/ui/page-header'
-import { useAccountChecks, useCategories, useRecurring } from '@/data/queries'
+import { useAccountChecks, useCategories, useReceivables, useRecurring } from '@/data/queries'
 import { useCreateTransaction, useMaterializeRecurring, useSetTransactionPaid } from '@/features/finance/actions'
 import { useAvisoDeCompetencia } from '@/features/finance/aviso-de-competencia'
 import { ContasEOrcamento } from '@/features/finance/overview/contas-e-orcamento'
@@ -43,6 +43,7 @@ export function FinanceOverview() {
   const { data: categories } = useCategories()
   const { data: rules } = useRecurring()
   const { data: conferencias } = useAccountChecks()
+  const { data: aReceber } = useReceivables()
   const createTransaction = useCreateTransaction()
   const setPaid = useSetTransactionPaid()
   const materialize = useMaterializeRecurring()
@@ -143,6 +144,7 @@ export function FinanceOverview() {
         conferencias={conferencias}
         saldoPrevisto={finance.totalBalance + resumoAberto.balanceCents}
         competence={competence}
+        aReceber={aReceber}
       />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">

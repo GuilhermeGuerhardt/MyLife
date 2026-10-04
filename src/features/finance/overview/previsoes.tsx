@@ -2,9 +2,10 @@ import { Link } from 'react-router-dom'
 import { CardContent } from '@/components/ui/card'
 import { Carrossel, type Slide } from '@/components/ui/carrossel'
 import { Progress } from '@/components/ui/misc'
-import type { AccountCheck } from '@/data/types'
+import type { AccountCheck, Receivable } from '@/data/types'
 import { CategoryIcon } from '@/features/finance/category-icons'
 import type { useFinance } from '@/features/finance/use-finance'
+import { emAbertoPorPessoa, totalEmAberto } from '@/lib/finance/a-receber'
 import { competenceLabel, type Competence } from '@/lib/finance/billing'
 import { lastCheck, needsCheck, unchecked, daysSinceCheck } from '@/lib/finance/conferencia'
 import { formatCents } from '@/lib/finance/money'
@@ -34,9 +35,12 @@ export function Previsoes({
   conferencias,
   saldoPrevisto,
   competence,
+  aReceber,
 }: {
   finance: Financeiro
   conferencias: AccountCheck[]
+  /** O que os outros te devem. */
+  aReceber: Receivable[]
   /** Saldo de hoje mais o que falta entrar e sair no mês. */
   saldoPrevisto: number
   competence: Competence
@@ -83,6 +87,26 @@ export function Previsoes({
       />
     ),
   })
+
+  const devido = totalEmAberto(aReceber)
+  if (devido > 0) {
+    const pessoas = emAbertoPorPessoa(aReceber)
+    const maisAntigo = pessoas
+      .map((pessoa) => pessoa.itens[0]!.date)
+      .reduce((antigo, data) => (data < antigo ? data : antigo))
+    slides.push({
+      id: 'a-receber',
+      titulo: 'A receber',
+      conteudo: (
+        <Painel
+          rotulo="Os outros te devem"
+          valor={formatCents(devido)}
+          apoio={`${pessoas.length === 1 ? pessoas[0]!.nome : `${pessoas.length} pessoas`} · o mais antigo é de ${longDate(maisAntigo)} (${relativeDay(maisAntigo)}). Não entra no saldo previsto: dinheiro dos outros só conta quando volta.`}
+          atalho={{ para: '/financeiro/a-receber', texto: 'Ver' }}
+        />
+      ),
+    })
+  }
 
   const maiorGasto = finance.expensesByCategory[0]
   if (maiorGasto) {

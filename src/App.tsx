@@ -68,6 +68,9 @@ const AccountsPage = lazyRoute(() =>
 const ImportPage = lazyRoute(() =>
   import('./pages/finance/import').then((m) => ({ default: m.ImportPage })),
 )
+const AReceberPage = lazyRoute(() =>
+  import('./pages/finance/a-receber').then((m) => ({ default: m.AReceberPage })),
+)
 const BudgetPage = lazyRoute(() =>
   import('./pages/finance/budget').then((m) => ({ default: m.BudgetPage })),
 )
@@ -181,6 +184,7 @@ function Boot() {
               <Route path="financeiro" element={<FinanceOverview />} />
               <Route path="financeiro/transacoes" element={<TransactionsPage />} />
               <Route path="financeiro/contas" element={<AccountsPage />} />
+              <Route path="financeiro/a-receber" element={<AReceberPage />} />
               <Route path="financeiro/orcamento" element={<BudgetPage />} />
               <Route path="financeiro/recorrentes" element={<RecurringPage />} />
               <Route path="financeiro/categorias" element={<CategoriesPage />} />

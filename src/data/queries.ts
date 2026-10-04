@@ -34,6 +34,7 @@ import type {
   Note,
   Profile,
   Program,
+  Receivable,
   RecurringTransaction,
   StudySession,
   Subject,
@@ -74,6 +75,7 @@ export const TABLES = {
   widgets: 'dashboard_widgets',
   modules: 'modules',
   studySessions: 'study_sessions',
+  receivables: 'receivables',
 } as const
 
 const collections = {
@@ -107,6 +109,7 @@ const collections = {
   widgets: collection<DashboardWidget>(TABLES.widgets),
   modules: collection<ModuleSetting>(TABLES.modules),
   studySessions: collection<StudySession>(TABLES.studySessions),
+  receivables: collection<Receivable>(TABLES.receivables),
 }
 
 type CollectionName = keyof typeof collections
@@ -545,6 +548,10 @@ export function useHabitLogs() {
 
 export function useStudySessions() {
   return useCollection<StudySession>('studySessions', { carimbo: true })
+}
+
+export function useReceivables() {
+  return useCollection<Receivable>('receivables', { carimbo: true })
 }
 
 export function useWidgets() {

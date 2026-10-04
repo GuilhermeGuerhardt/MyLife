@@ -426,6 +426,29 @@ export interface AccountCheck extends BaseRow {
   difference_cents: number
 }
 
+/**
+ * Dinheiro que alguém te deve: a parte do outro numa conta que você pagou.
+ *
+ * Não mexe no lançamento original. A despesa continua inteira no extrato,
+ * porque o dinheiro saiu inteiro da conta; quando a pessoa paga, entra uma
+ * receita de reembolso. Diminuir a despesa no ato faria o saldo mentir até o
+ * dinheiro voltar, e ele às vezes não volta.
+ */
+export interface Receivable extends BaseRow, ApagavelComCarimbo {
+  /** Quem deve. Texto livre: o app não tem cadastro de pessoas. */
+  person: string
+  description: string
+  amount_cents: number
+  /** Dia em que a dívida nasceu. */
+  date: string
+  /** A despesa que foi dividida, quando houver. */
+  transaction_id: string | null
+  /** Dia em que o dinheiro voltou. `null` = em aberto. */
+  received_at: string | null
+  /** A receita que registrou a volta do dinheiro. */
+  received_transaction_id: string | null
+}
+
 export interface Budget extends BaseRow {
   category_id: string
   competence: string

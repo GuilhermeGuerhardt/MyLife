@@ -64,6 +64,7 @@ export const NAV: NavItem[] = [
       { to: '/financeiro', label: 'Visão geral' },
       { to: '/financeiro/transacoes', label: 'Lançamentos' },
       { to: '/financeiro/contas', label: 'Contas e cartões' },
+      { to: '/financeiro/a-receber', label: 'A receber' },
       { to: '/financeiro/recorrentes', label: 'Recorrentes' },
       { to: '/financeiro/categorias', label: 'Categorias' },
       { to: '/financeiro/orcamento', label: 'Orçamento e metas' },
