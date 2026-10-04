@@ -73,11 +73,13 @@ export function RecurringPage() {
         title="Recorrentes"
         description={'O que se repete todo mês. A recorrente nasce em Lançamentos, na opção "Se repete". Aqui você acompanha, pausa e edita.'}
         action={
-          <div className="flex items-center gap-2">
+          // Só o ícone no celular, como em Lançamentos: com o nome, a fileira
+          // não cabia nos 375px e a tela rolava para o lado.
+          <div className="flex flex-wrap items-center gap-2">
             <MonthNav competence={competence} onChange={setCompetence} />
             <Link to="/financeiro/transacoes" className={buttonStyles({ variant: 'secondary' })}>
               <Plus />
-              Nova pelo lançamento
+              <span className="max-sm:sr-only">Nova pelo lançamento</span>
             </Link>
           </div>
         }

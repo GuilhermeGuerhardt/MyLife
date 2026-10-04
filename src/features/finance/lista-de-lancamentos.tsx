@@ -332,28 +332,37 @@ export function TransactionList({
               </p>
             </div>
 
-            {/* Coluna de largura fixa: sem ela o selo flutuava com a largura do
-                valor ao lado, e a lista virava uma escada de selos. */}
-            <span className="flex w-[5.5rem] shrink-0 justify-end">
-              {podeMarcar ? (
-                // O gesto é a via rápida; o clique é a que funciona com teclado e
-                // leitor de tela, e a que mostra que o estado tem volta.
-                <button
-                  type="button"
-                  onClick={(event) => {
-                    event.stopPropagation()
-                    onSetPaid(transaction, !transaction.paid)
-                  }}
-                  aria-label={transaction.paid ? 'Marcar como previsto' : 'Marcar como pago'}
-                >
-                  <StatusBadge transaction={transaction} naFatura={naFatura} />
-                </button>
-              ) : (
-                !transaction.paid && <StatusBadge transaction={transaction} naFatura={naFatura} />
-              )}
-            </span>
+            {/* No celular o selo desce para baixo do valor. Lado a lado, selo e
+                valor tomavam quase 200px e a descrição ficava com uns 20px, sem
+                caber nem a primeira letra. */}
+            <div className="flex shrink-0 items-center gap-3 max-sm:flex-col-reverse max-sm:items-end max-sm:gap-1">
+              {/* Coluna de largura fixa: sem ela o selo flutuava com a largura do
+                  valor ao lado, e a lista virava uma escada de selos. */}
+              <span className="flex w-[5.5rem] shrink-0 justify-end max-sm:w-auto">
+                {podeMarcar ? (
+                  // O gesto é a via rápida; o clique é a que funciona com teclado e
+                  // leitor de tela, e a que mostra que o estado tem volta.
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      onSetPaid(transaction, !transaction.paid)
+                    }}
+                    aria-label={transaction.paid ? 'Marcar como previsto' : 'Marcar como pago'}
+                  >
+                    <StatusBadge transaction={transaction} naFatura={naFatura} />
+                  </button>
+                ) : (
+                  !transaction.paid && <StatusBadge transaction={transaction} naFatura={naFatura} />
+                )}
+              </span>
 
-            <Amount cents={transaction.amount_cents} kind={transaction.kind} />
+              <Amount
+                cents={transaction.amount_cents}
+                kind={transaction.kind}
+                className="max-sm:min-w-0"
+              />
+            </div>
 
             {/* No celular a caixa ocupa o lugar do lápis: a linha já não tinha
                 folga, e o lápis só repete que tocar nela abre o lançamento. */}

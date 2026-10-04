@@ -43,7 +43,7 @@ export function FaturaNaLista({
           return (
             <div
               key={`${fatura.accountId}-${fatura.competence}`}
-              className="flex items-center gap-3 px-5 py-3.5"
+              className="flex items-center gap-3 px-5 py-3.5 max-sm:px-4"
             >
               <span
                 className="flex size-8 shrink-0 items-center justify-center rounded-lg"
@@ -66,20 +66,23 @@ export function FaturaNaLista({
                 </p>
               </div>
 
-              {/* As mesmas colunas da lista logo abaixo: selo e valor alinhados. */}
-              <span className="flex w-[5.5rem] shrink-0 justify-end">
-                {paga ? (
-                  <Badge tone="positive">paga</Badge>
-                ) : vencida ? (
-                  <Badge tone="negative">vencida</Badge>
-                ) : (
-                  <Badge tone="neutral">em aberto</Badge>
-                )}
-              </span>
+              {/* As mesmas colunas da lista logo abaixo: selo e valor alinhados,
+                  e empilhados no celular pelo mesmo motivo de lá. */}
+              <div className="flex shrink-0 items-center gap-3 max-sm:flex-col-reverse max-sm:items-end max-sm:gap-1">
+                <span className="flex w-[5.5rem] shrink-0 justify-end max-sm:w-auto">
+                  {paga ? (
+                    <Badge tone="positive">paga</Badge>
+                  ) : vencida ? (
+                    <Badge tone="negative">vencida</Badge>
+                  ) : (
+                    <Badge tone="neutral">em aberto</Badge>
+                  )}
+                </span>
 
-              <span className="text-fg min-w-[6.5rem] text-right text-sm font-medium whitespace-nowrap">
-                −{formatCents(paga ? fatura.totalCents : fatura.openCents)}
-              </span>
+                <span className="text-fg min-w-[6.5rem] text-right text-sm font-medium whitespace-nowrap max-sm:min-w-0">
+                  −{formatCents(paga ? fatura.totalCents : fatura.openCents)}
+                </span>
+              </div>
 
               {!paga && (
                 <Link to="/financeiro/contas">

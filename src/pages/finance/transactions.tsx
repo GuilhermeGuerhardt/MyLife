@@ -67,15 +67,18 @@ export function TransactionsPage() {
         title="Lançamentos"
         description="Cada lançamento no mês em que aconteceu — a compra no cartão inclusive. A fatura aparece à parte, no mês em que vence, somando as compras que caíram nela."
         action={
-          <div className="flex items-center gap-2">
+          // No celular os dois botões ficam só com o ícone: com o nome, a fileira
+          // media uns 500px, a página rolava para o lado e levava junto a
+          // navegação de baixo. O nome continua lá para o leitor de tela.
+          <div className="flex flex-wrap items-center gap-2">
             <MonthNav competence={competence} onChange={setCompetence} />
             <Link to="/financeiro/importar" className={buttonStyles({ variant: 'secondary' })}>
               <Upload />
-              Importar
+              <span className="max-sm:sr-only">Importar</span>
             </Link>
             <Button onClick={() => setAdding(true)} disabled={!finance.hasAccounts}>
               <Plus />
-              Lançamento
+              <span className="max-sm:sr-only">Lançamento</span>
             </Button>
           </div>
         }

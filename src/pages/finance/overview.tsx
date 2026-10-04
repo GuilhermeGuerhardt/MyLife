@@ -109,11 +109,13 @@ export function FinanceOverview() {
         title="Financeiro"
         description="A compra no cartão fica no mês em que foi feita; a fatura aparece no mês em que vence."
         action={
-          <div className="flex items-center gap-2">
+          // Só o ícone no celular, como em Lançamentos: com o nome, a fileira
+          // não cabia nos 375px e a tela rolava para o lado.
+          <div className="flex flex-wrap items-center gap-2">
             <MonthNav competence={competence} onChange={setCompetence} />
             <Button onClick={() => setLancando(true)}>
               <Plus />
-              Lançamento
+              <span className="max-sm:sr-only">Lançamento</span>
             </Button>
           </div>
         }
@@ -138,12 +140,12 @@ export function FinanceOverview() {
         competence={competence}
       />
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <FluxoDeCaixa serie={serie} />
         <DespesasPorCategoria fatias={fatias} competence={competence} />
       </div>
 
-      <div className="grid gap-4 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         <PainelDoMes
           doMes={finance.monthTransactions}
           emAberto={emAberto}

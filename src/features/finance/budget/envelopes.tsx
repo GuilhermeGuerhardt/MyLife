@@ -36,7 +36,7 @@ export function Envelopes({
     <div>
       <SectionTitle
         action={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
             <Button variant="secondary" size="sm" onClick={onCopiarMesAnterior}>
               <Copy />
               Copiar mês anterior
