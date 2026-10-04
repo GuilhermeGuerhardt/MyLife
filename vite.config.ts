@@ -84,6 +84,10 @@ export default defineConfig({
     // apontando para o nada.
     port: 5174,
     strictPort: true,
+    // O Rust compila dentro de src-tauri/target, e o Vite tentava vigiar cada
+    // .dll gerada ali. No Windows o arquivo fica travado durante a compilação,
+    // e o servidor caía com EBUSY no meio do `cargo check`.
+    watch: { ignored: ['**/src-tauri/**'] },
   },
   build: {
     // O WebView2 do Windows 11 é Chromium recente; não há motivo para o Vite
