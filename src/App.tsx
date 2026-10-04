@@ -89,6 +89,9 @@ const TarefasPage = lazyRoute(() =>
 const AgendaPage = lazyRoute(() =>
   import('./pages/routine/agenda').then((m) => ({ default: m.AgendaPage })),
 )
+const RevisaoPage = lazyRoute(() =>
+  import('./pages/routine/revisao').then((m) => ({ default: m.RevisaoPage })),
+)
 const InsightsPage = lazyRoute(() =>
   import('./pages/routine/insights').then((m) => ({ default: m.InsightsPage })),
 )
@@ -192,6 +195,7 @@ function Boot() {
               <Route path="rotina" element={<HabitsPage />} />
               <Route path="rotina/tarefas" element={<TarefasPage />} />
               <Route path="rotina/agenda" element={<AgendaPage />} />
+              <Route path="rotina/revisao" element={<RevisaoPage />} />
               <Route path="rotina/insights" element={<InsightsPage />} />
               <Route path="perfil" element={<ProfilePage />} />
               <Route path="*" element={<Dashboard onOpenPalette={() => setPaletteOpen(true)} />} />

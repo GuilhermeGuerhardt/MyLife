@@ -80,6 +80,7 @@ export const NAV: NavItem[] = [
       { to: '/rotina', label: 'Hábitos' },
       { to: '/rotina/tarefas', label: 'A fazer' },
       { to: '/rotina/agenda', label: 'Agenda' },
+      { to: '/rotina/revisao', label: 'Revisão do mês' },
       { to: '/rotina/insights', label: 'Insights' },
     ],
   },

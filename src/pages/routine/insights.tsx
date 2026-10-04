@@ -48,7 +48,7 @@ export function InsightsPage() {
               description="Registre treinos, peso, sono ou gastos e a revisão aparece aqui."
             />
           ) : (
-            <div className="grid gap-4 sm:grid-cols-3 lg:grid-cols-6">
+            <div className="grid gap-4 sm:grid-cols-4 lg:grid-cols-7">
               {review.metrics.map((metric) => (
                 <ReviewCell key={metric.label} metric={metric} />
               ))}
