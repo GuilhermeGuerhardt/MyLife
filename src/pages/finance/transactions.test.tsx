@@ -414,25 +414,25 @@ describe('seleção de lançamentos', () => {
     expect(confirmar).toHaveBeenCalledWith(expect.stringMatching(/parcela/), expect.anything())
   })
 
-  it('se a gravação para no meio, a tela diz quanto foi e a seleção não se perde', async () => {
+  it('o lote é tudo ou nada: com um item sumido, nenhum é gravado e a seleção fica', async () => {
     semearMes()
     montarTela(<TransactionsPage />)
 
     fireEvent.click(await caixa('Mercado'))
     fireEvent.click(await caixa('Farmacia'))
 
-    // Outra janela apagou a farmácia e esta ainda não releu: a segunda
-    // gravação do lote falha, a primeira já foi.
+    // Outra janela apagou a farmácia e esta ainda não releu: o lote é recusado
+    // inteiro, em vez de pagar o mercado e parar na farmácia.
     localStorage.setItem(
       'life:table:transactions',
       JSON.stringify(gravados().filter((t) => t.description !== 'Farmacia')),
     )
     fireEvent.click(acao('Marcar como pago'))
 
-    expect(await screen.findByText('Parou no meio: 1 de 2 marcados como pagos')).toBeTruthy()
+    expect(await screen.findByText('Nada foi marcado como pago')).toBeTruthy()
     expect(screen.getByText(/não encontrado/)).toBeTruthy()
-    expect(gravado('Mercado')?.paid).toBe(true)
-    // O que foi gravado aparece, e o que sumiu sai da lista e da seleção.
+    expect(gravado('Mercado')?.paid).toBe(false)
+    // O que sumiu sai da lista e da seleção; o resto continua marcado.
     await waitFor(() => expect(screen.queryByText('Farmacia')).toBeNull())
     expect((await caixa('Mercado')).checked).toBe(true)
     expect(anunciado().textContent).toMatch(/^1 despesa · /)

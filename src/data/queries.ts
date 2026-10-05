@@ -293,19 +293,18 @@ function respirar(): Promise<void> {
 }
 
 /**
- * Gravação em lote que parou no meio.
+ * Gravação em lote recusada. Nada do lote foi gravado.
  *
- * Carrega quantos já tinham ido: sem isso a tela só saberia dizer "deu erro",
- * e quem mandou apagar dez não saberia se sumiram zero, quatro ou nove.
+ * O lote é tudo ou nada nos três destinos (ver `aplicarPatches`): antes ele
+ * gravava um item por vez, e um erro no meio deixava parte gravada e parte
+ * não, com a tela tendo de explicar "parou no meio: 4 de 10".
  */
-export class LoteInterrompido extends Error {
-  readonly feitos: number
+export class LoteRecusado extends Error {
   readonly total: number
 
-  constructor(feitos: number, total: number, causa: unknown) {
-    super(`Gravação interrompida: ${feitos} de ${total} feitos`, { cause: causa })
-    this.name = 'LoteInterrompido'
-    this.feitos = feitos
+  constructor(total: number, causa: unknown) {
+    super(`Gravação recusada: nenhum dos ${total} foi gravado`, { cause: causa })
+    this.name = 'LoteRecusado'
     this.total = total
   }
 }
@@ -388,32 +387,37 @@ function useCollection<T extends BaseRow>(name: CollectionName, opcoes: OpcoesDa
   }
 
   /**
-   * Altera vários de uma vez, relendo a coleção uma vez só — o mesmo motivo de
-   * `createMany`.
+   * Altera vários de uma vez, numa gravação só e relendo a coleção uma vez só
+   * (o mesmo motivo de `createMany`). Tudo ou nada: se um item sumiu, nenhum
+   * é gravado, e o erro chega como `LoteRecusado`.
    *
-   * A releitura fica no `finally`: se a gravação parar no meio, o que já foi
-   * gravado precisa aparecer na tela. Sem isso a lista mostraria o estado de
-   * antes, e repetir a ação daria a impressão de que nada tinha acontecido.
+   * A releitura fica no `finally` mesmo assim: o item que sumiu foi apagado
+   * por outra janela, e a lista desta precisa deixar de mostrá-lo.
    */
   async function updateMany(items: Array<{ id: string; patch: Partial<T> }>): Promise<void> {
-    await emLote(items, ({ id, patch }) => store.update(id, patch))
+    await emLote(items.length, () => store.updateMany(items))
   }
 
   /** Remove vários de uma vez, nas mesmas condições de `updateMany`. */
   async function removeMany(ids: string[]): Promise<void> {
-    await emLote(ids, (id) => apagar(id))
+    await emLote(ids.length, () =>
+      opcoes.carimbo
+        ? store.updateMany(
+            ids.map((id) => ({
+              id,
+              patch: { deleted_at: new Date().toISOString() } as unknown as Partial<T>,
+            })),
+          )
+        : store.removeMany(ids),
+    )
   }
 
-  async function emLote<I>(items: I[], gravar: (item: I) => Promise<unknown>): Promise<void> {
-    if (items.length === 0) return
-    let feitos = 0
+  async function emLote(total: number, gravar: () => Promise<unknown>): Promise<void> {
+    if (total === 0) return
     try {
-      for (const item of items) {
-        await gravar(item)
-        feitos++
-      }
+      await gravar()
     } catch (causa) {
-      throw new LoteInterrompido(feitos, items.length, causa)
+      throw new LoteRecusado(total, causa)
     } finally {
       await invalidate()
     }

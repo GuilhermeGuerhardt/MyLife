@@ -15,6 +15,7 @@
 import Database from '@tauri-apps/plugin-sql'
 import { uid } from '@/lib/utils'
 import type { Collection } from './adapters'
+import { aplicarPatches } from './lote'
 import type { BaseRow } from './types'
 
 const ARQUIVO = 'sqlite:life.db'
@@ -38,6 +39,11 @@ export function abrirBanco(): Promise<Database> {
 
 function gravar<T extends BaseRow>(linha: T): [string, string, string, string] {
   return [linha.id, JSON.stringify(linha), linha.created_at ?? '', linha.updated_at ?? '']
+}
+
+/** "$2, $3, $4": os marcadores de parâmetro, a partir de `inicio`. */
+function marcadores(quantos: number, inicio: number): string {
+  return Array.from({ length: quantos }, (_, i) => `$${inicio + i}`).join(', ')
 }
 
 function ler<T>(registros: Registro[]): T[] {
@@ -100,6 +106,49 @@ export function sqliteCollection<T extends BaseRow>(colecao: string): Collection
     async remove(id) {
       const db = await abrirBanco()
       await db.execute('DELETE FROM rows WHERE collection = $1 AND id = $2', [colecao, id])
+    },
+
+    /**
+     * O lote vai num comando só, e não em BEGIN e COMMIT separados: o plugin
+     * de SQL do Tauri trabalha com um conjunto de conexões, e cada comando pode
+     * cair numa diferente, o que tira a garantia de uma transação feita em
+     * vários comandos. Um comando único é atômico no SQLite por definição.
+     *
+     * A leitura vem antes e confere tudo (\`aplicarPatches\`): um id que sumiu
+     * recusa o lote antes de qualquer escrita.
+     */
+    async updateMany(items) {
+      if (items.length === 0) return []
+      const db = await abrirBanco()
+      const ids = [...new Set(items.map((item) => item.id))]
+      const registros = await db.select<Registro[]>(
+        `SELECT data FROM rows WHERE collection = $1 AND id IN (${marcadores(ids.length, 2)})`,
+        [colecao, ...ids],
+      )
+      const { alterados } = aplicarPatches(ler<T>(registros), items, colecao)
+
+      const valores: string[] = []
+      const parametros: string[] = []
+      for (const linha of alterados) {
+        const inicio = parametros.length + 1
+        valores.push(`(${marcadores(5, inicio)})`)
+        parametros.push(colecao, ...gravar(linha))
+      }
+      await db.execute(
+        `INSERT INTO rows (collection, id, data, created_at, updated_at) VALUES ${valores.join(', ')}
+         ON CONFLICT (collection, id) DO UPDATE SET data = excluded.data, updated_at = excluded.updated_at`,
+        parametros,
+      )
+      return alterados
+    },
+
+    async removeMany(ids) {
+      if (ids.length === 0) return
+      const db = await abrirBanco()
+      await db.execute(
+        `DELETE FROM rows WHERE collection = $1 AND id IN (${marcadores(ids.length, 2)})`,
+        [colecao, ...ids],
+      )
     },
 
     /**

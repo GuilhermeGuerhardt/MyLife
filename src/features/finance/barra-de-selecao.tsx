@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } fro
 import { Button } from '@/components/ui/button'
 import { CaixaDeSelecao } from '@/components/ui/caixa-de-selecao'
 import { Toast, ToastArea } from '@/components/ui/toast'
-import { LoteInterrompido, useAccounts } from '@/data/queries'
+import { LoteRecusado, useAccounts } from '@/data/queries'
 import { confirmar } from '@/lib/avisos'
 import { formatCents } from '@/lib/finance/money'
 import {
@@ -122,33 +122,21 @@ interface Aviso {
 /** Como cada ação se descreve quando não termina. */
 interface Verbo {
   nada: string
-  feitos: string
 }
 
-const VERBO_PAGO: Verbo = { nada: 'Nada foi marcado como pago', feitos: 'marcados como pagos' }
-const VERBO_NAO_PAGO: Verbo = {
-  nada: 'Nada foi marcado como não pago',
-  feitos: 'marcados como não pagos',
-}
-const VERBO_APAGAR: Verbo = { nada: 'Nada foi apagado', feitos: 'apagados' }
+const VERBO_PAGO: Verbo = { nada: 'Nada foi marcado como pago' }
+const VERBO_NAO_PAGO: Verbo = { nada: 'Nada foi marcado como não pago' }
+const VERBO_APAGAR: Verbo = { nada: 'Nada foi apagado' }
 
 /**
- * O que dizer quando a gravação falha. Parar no meio é o caso que mais
- * confunde: sem o "4 de 10", a lista mudada pela metade parece um defeito da
- * tela, e não uma gravação a repetir.
+ * O que dizer quando a gravação falha.
+ *
+ * O lote é tudo ou nada, então não existe "parou no meio": ou tudo foi, ou
+ * nada foi, e a seleção continua para tentar de novo.
  */
 function avisoDeFalha(erro: unknown, verbo: Verbo): Omit<Aviso, 'id'> {
-  const lote = erro instanceof LoteInterrompido ? erro : null
-  const causa = lote ? lote.cause : erro
+  const causa = erro instanceof LoteRecusado ? erro.cause : erro
   const motivo = causa instanceof Error ? causa.message : undefined
-  if (lote && lote.feitos > 0) {
-    return {
-      tipo: 'falha',
-      titulo: `Parou no meio: ${lote.feitos} de ${lote.total} ${verbo.feitos}`,
-      texto: 'Os que faltaram continuam marcados para tentar de novo.',
-      motivo,
-    }
-  }
   return {
     tipo: 'falha',
     titulo: verbo.nada,

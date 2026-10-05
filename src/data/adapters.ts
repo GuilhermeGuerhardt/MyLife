@@ -12,6 +12,7 @@ import { isTauri } from '@tauri-apps/api/core'
 import { uid } from '@/lib/utils'
 import type { FolderStore } from './folder-store'
 import { sqliteCollection } from './sqlite-store'
+import { aplicarPatches } from './lote'
 import type { BaseRow } from './types'
 
 export interface Collection<T extends BaseRow> {
@@ -20,6 +21,13 @@ export interface Collection<T extends BaseRow> {
   update(id: string, patch: Partial<T>): Promise<T>
   remove(id: string): Promise<void>
   replaceAll(items: T[]): Promise<void>
+  /**
+   * Altera vários de uma vez, tudo ou nada: se um deles não existe, nenhum é
+   * gravado. Ver `aplicarPatches`.
+   */
+  updateMany(items: Array<{ id: string; patch: Partial<T> }>): Promise<T[]>
+  /** Remove vários de uma vez, numa gravação só. */
+  removeMany(ids: string[]): Promise<void>
 }
 
 const PREFIX = 'life:table:'
@@ -68,6 +76,20 @@ function localCollection<T extends BaseRow>(table: string): Collection<T> {
     async replaceAll(items) {
       writeLocal(table, items)
     },
+    // Uma leitura e uma escrita para o lote inteiro: ou a chave muda toda, ou
+    // não muda.
+    async updateMany(items) {
+      const { rows, alterados } = aplicarPatches(readLocal<T>(table), items, table)
+      writeLocal(table, rows)
+      return alterados
+    },
+    async removeMany(ids) {
+      const fora = new Set(ids)
+      writeLocal(
+        table,
+        readLocal<T>(table).filter((r) => !fora.has(r.id)),
+      )
+    },
   }
 }
 
@@ -104,6 +126,21 @@ function folderCollection<T extends BaseRow>(table: string, store: FolderStore):
     },
     async replaceAll(items) {
       await store.writeTable(table, items)
+    },
+    // Uma gravação do arquivo para o lote inteiro, que no disco é atômica: o
+    // arquivo novo só substitui o antigo depois de escrito por completo.
+    async updateMany(items) {
+      return store.mutate(table, (rows) => {
+        const { rows: proximas, alterados } = aplicarPatches(rows as T[], items, table)
+        return { rows: proximas, result: alterados }
+      })
+    },
+    async removeMany(ids) {
+      const fora = new Set(ids)
+      await store.mutate(table, (rows) => ({
+        rows: (rows as T[]).filter((r) => !fora.has(r.id)),
+        result: undefined,
+      }))
     },
   }
 }
@@ -157,5 +194,7 @@ export function collection<T extends BaseRow>(table: string): Collection<T> {
     update: (id, patch) => active().update(id, patch),
     remove: (id) => active().remove(id),
     replaceAll: (items) => active().replaceAll(items),
+    updateMany: (items) => active().updateMany(items),
+    removeMany: (ids) => active().removeMany(ids),
   }
 }
