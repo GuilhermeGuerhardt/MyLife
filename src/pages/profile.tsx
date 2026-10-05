@@ -6,7 +6,6 @@ import { AvisosCard } from '@/features/profile/avisos-card'
 import { BackupAutomaticoCard } from '@/features/profile/backup-automatico-card'
 import { BackupCard } from '@/features/profile/backup-card'
 import { ModulosCard } from '@/features/profile/modulos-card'
-import { TarefasForaCard } from '@/features/profile/tarefas-fora-card'
 import { ThemeCard } from '@/features/profile/theme-card'
 import { WorkspaceCard } from '@/features/profile/workspace-card'
 import { GuiasCard } from '@/features/tutorial/guias-card'
@@ -144,7 +143,6 @@ export function ProfilePage() {
         <SectionTitle>O que aparece</SectionTitle>
         <ModulosCard />
         <GuiasCard />
-        <TarefasForaCard />
       </div>
 
       <div className="space-y-4">

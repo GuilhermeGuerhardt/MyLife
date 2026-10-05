@@ -47,7 +47,6 @@ export function ExcluirDeOnde({
           <p className="text-fg text-sm font-medium">Só do A fazer</p>
           <p className="text-fg-muted mt-0.5 text-xs">
             O cartão sai do quadro e a caixinha continua escrita na anotação, do jeito que está.
-            Dá para devolver depois.
           </p>
         </button>
 

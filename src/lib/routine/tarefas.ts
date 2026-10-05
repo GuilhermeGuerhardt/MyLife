@@ -125,13 +125,6 @@ export function semAsOcultas(
   return itens.filter((item) => !estaOculta(item, ocultas))
 }
 
-export function apenasAsOcultas(
-  itens: readonly ItemDeTarefa[],
-  ocultas: readonly TarefaOculta[],
-): ItemDeTarefa[] {
-  return itens.filter((item) => estaOculta(item, ocultas))
-}
-
 /**
  * O quadro: o que falta de um lado, o que saiu do outro.
  *

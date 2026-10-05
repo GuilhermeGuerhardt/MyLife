@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
-  apenasAsOcultas,
   colunaDe,
-  estaOculta,
   semAsOcultas,
   filtrar,
   mudaDeColuna,
@@ -246,10 +244,5 @@ describe('tarefas tiradas do quadro', () => {
       'Caixinha nova',
       'Refazer a lista',
     ])
-  })
-
-  it('separa as que estão fora, para poder devolver', () => {
-    expect(apenasAsOcultas(lista, ocultas)).toHaveLength(1)
-    expect(estaOculta(apenasAsOcultas(lista, ocultas)[0]!, ocultas)).toBe(true)
   })
 })
