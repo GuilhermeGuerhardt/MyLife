@@ -114,8 +114,12 @@ export function sqliteCollection<T extends BaseRow>(colecao: string): Collection
      * cair numa diferente, o que tira a garantia de uma transação feita em
      * vários comandos. Um comando único é atômico no SQLite por definição.
      *
-     * A leitura vem antes e confere tudo (\`aplicarPatches\`): um id que sumiu
+     * A leitura vem antes e confere tudo (`aplicarPatches`): um id que sumiu
      * recusa o lote antes de qualquer escrita.
+     *
+     * O SQLite aceita até 32.766 parâmetros por comando, uns 6.500 lançamentos
+     * por lote. Os lotes do app são o que cabe numa tela (a seleção do mês, as
+     * ocorrências de uma recorrente), muito abaixo disso.
      */
     async updateMany(items) {
       if (items.length === 0) return []
