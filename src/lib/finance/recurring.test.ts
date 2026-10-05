@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   occurrenceDate,
+  quandoSeRepete,
   repeatEndDate,
   repeatTotal,
   pendingBalance,
@@ -162,5 +163,42 @@ describe('total do prazo', () => {
 
   it('prazo zero não tem total', () => {
     expect(repeatTotal(180000, 0)).toBeNull()
+  })
+})
+
+describe('recorrente anual', () => {
+  const anuidade = rule({
+    description: 'Anuidade',
+    amount_cents: 45000,
+    day_of_month: 22,
+    frequency: 'yearly',
+    month_of_year: 12,
+    start_date: '2026-01-01',
+  })
+
+  it('só cai no mês dela', () => {
+    expect(occurrenceDate(anuidade, '2026-12')).toBe('2026-12-22')
+    expect(occurrenceDate(anuidade, '2026-11')).toBeNull()
+    expect(occurrenceDate(anuidade, '2027-12')).toBe('2027-12-22')
+  })
+
+  it('sem o mês gravado, vale o mês do início', () => {
+    const semMes = rule({ frequency: 'yearly', start_date: '2026-03-01' })
+    expect(occurrenceDate(semMes, '2027-03')).toBe('2027-03-05')
+    expect(occurrenceDate(semMes, '2027-04')).toBeNull()
+  })
+
+  it('fica pendente só no mês dela', () => {
+    expect(pendingOccurrences([anuidade], '2026-12', [])).toHaveLength(1)
+    expect(pendingOccurrences([anuidade], '2026-10', [])).toEqual([])
+  })
+
+  it('regra gravada antes, sem frequência, continua mensal', () => {
+    expect(occurrenceDate(rule(), '2026-04')).toBe('2026-04-05')
+  })
+
+  it('diz quando se repete', () => {
+    expect(quandoSeRepete(anuidade)).toBe('todo ano, 22 de dezembro')
+    expect(quandoSeRepete(rule())).toBe('todo dia 5')
   })
 })

@@ -339,3 +339,42 @@ describe('no histórico', () => {
     expect(propostaDaBusca(tres, 'a')).toBeNull()
   })
 })
+
+describe('uma vez por ano', () => {
+  const anuidade = (date: string, amountCents = 45000) =>
+    linha({ date, description: 'Anuidade cartao', amountCents })
+
+  it('o mesmo mês em anos seguidos vira regra anual', () => {
+    const [sugestao] = sugerirRecorrentes([anuidade('2024-12-22'), anuidade('2025-12-20', 48000)])
+    expect(sugestao).toMatchObject({
+      frequency: 'yearly',
+      monthOfYear: 12,
+      dayOfMonth: 21,
+      meses: 2,
+      amountCents: 48000,
+      startDate: '2026-01-01',
+    })
+  })
+
+  it('não é anual se tiver duas no mesmo ano, mês diferente ou ano pulado', () => {
+    expect(sugerirRecorrentes([anuidade('2025-03-10'), anuidade('2025-12-10')])).toEqual([])
+    expect(sugerirRecorrentes([anuidade('2024-11-10'), anuidade('2025-12-10')])).toEqual([])
+    expect(sugerirRecorrentes([anuidade('2023-12-10'), anuidade('2025-12-10')])).toEqual([])
+  })
+
+  it('no histórico, a anual de dez meses atrás ainda vale', () => {
+    const lancamentos = ['2024-12-22', '2025-12-22'].map((date, i) => ({
+      id: `a${i}`,
+      description: 'Anuidade cartao',
+      amountCents: 45000,
+      date,
+      kind: 'expense' as const,
+      account_id: 'cc',
+      category_id: null,
+      installment_group_id: null,
+      recurring_id: null,
+    }))
+    expect(recorrentesNoHistorico(lancamentos, [], '2026-10-04')).toHaveLength(1)
+    expect(recorrentesNoHistorico(lancamentos, [], '2027-03-01')).toEqual([])
+  })
+})

@@ -5,6 +5,7 @@ import { Modal } from '@/components/ui/modal'
 import { Segmented, Toggle } from '@/components/ui/misc'
 import type { Account, BaseRow, Category, RecurringTransaction } from '@/data/types'
 import { centsToInput, parseAmount } from '@/lib/finance/money'
+import { mesDoAno, nomeDoMes } from '@/lib/finance/recurring'
 import { today } from '@/lib/utils'
 import { InputDeDinheiro } from './input-de-dinheiro'
 import { sortCategories } from './use-finance'
@@ -47,6 +48,10 @@ export function RecurringForm({
   const [startDate, setStartDate] = useState(base?.start_date ?? today())
   const [endDate, setEndDate] = useState(base?.end_date ?? '')
   const [active, setActive] = useState(base?.active ?? true)
+  const [frequencia, setFrequencia] = useState<'monthly' | 'yearly'>(
+    base?.frequency === 'yearly' ? 'yearly' : 'monthly',
+  )
+  const [mes, setMes] = useState(base ? mesDoAno(base) : Number(today().slice(5, 7)))
   const [erro, setErro] = useState<string | null>(null)
   const [salvando, setSalvando] = useState(false)
 
@@ -86,6 +91,8 @@ export function RecurringForm({
         start_date: startDate,
         end_date: endDate || null,
         active,
+        frequency: frequencia,
+        month_of_year: frequencia === 'yearly' ? mes : null,
       })
     } catch (causa) {
       setErro(causa instanceof Error ? causa.message : 'Não foi possível salvar.')
@@ -147,15 +154,40 @@ export function RecurringForm({
             />
           </Field>
 
-          <Field label="Dia do mês">
-            <Select value={day} onChange={(e) => setDay(Number(e.target.value))}>
-              {Array.from({ length: 31 }, (_, i) => i + 1).map((n) => (
-                <option key={n} value={n}>
-                  {n}
-                </option>
-              ))}
-            </Select>
+          <Field label="Se repete">
+            <Segmented
+              className="w-full"
+              value={frequencia}
+              onChange={setFrequencia}
+              options={[
+                { value: 'monthly' as const, label: 'Todo mês' },
+                { value: 'yearly' as const, label: 'Todo ano' },
+              ]}
+            />
           </Field>
+
+          <div className="grid grid-cols-2 gap-3 sm:col-span-2">
+            <Field label={frequencia === 'yearly' ? 'Dia' : 'Dia do mês'}>
+              <Select value={day} onChange={(e) => setDay(Number(e.target.value))}>
+                {Array.from({ length: 31 }, (_, i) => i + 1).map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            {frequencia === 'yearly' && (
+              <Field label="Mês">
+                <Select value={mes} onChange={(e) => setMes(Number(e.target.value))}>
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map((n) => (
+                    <option key={n} value={n}>
+                      {nomeDoMes(n)}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            )}
+          </div>
 
           <Field label="Conta">
             <Select value={accountId} onChange={(e) => setAccountId(e.target.value)}>

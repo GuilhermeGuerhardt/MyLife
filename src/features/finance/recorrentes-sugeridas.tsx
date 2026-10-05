@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/misc'
 import { useRecurring } from '@/data/queries'
 import { formatCents } from '@/lib/finance/money'
 import { competenceLabel, toCompetence } from '@/lib/finance/billing'
+import { nomeDoMes } from '@/lib/finance/recurring'
 import { chaveDoPadrao, type RecorrenteSugerida } from '@/lib/finance/recorrentes-do-extrato'
 import { cn } from '@/lib/utils'
 
@@ -76,6 +77,8 @@ export function RecorrentesSugeridas({
         start_date: sugestao.startDate,
         // Parcela tem fim: a regra para sozinha depois da última.
         end_date: sugestao.endDate,
+        frequency: sugestao.frequency,
+        month_of_year: sugestao.monthOfYear,
         active: true,
       })
       feitas++
@@ -119,7 +122,9 @@ export function RecorrentesSugeridas({
                   <span className="min-w-0 flex-1">
                     <span className="text-fg block truncate text-sm">{sugestao.description}</span>
                     <span className="text-fg-subtle block text-xs">
-                      Todo dia {sugestao.dayOfMonth} · apareceu em {sugestao.meses} meses
+                      {sugestao.frequency === 'yearly'
+                        ? `Todo ano, ${sugestao.dayOfMonth} de ${nomeDoMes(sugestao.monthOfYear ?? 1)} · apareceu em ${sugestao.meses} anos`
+                        : `Todo dia ${sugestao.dayOfMonth} · apareceu em ${sugestao.meses} meses`}
                       {sugestao.parcela && sugestao.endDate
                         ? ` · parcela ${sugestao.parcela.atual} de ${sugestao.parcela.total}, até ${competenceLabel(toCompetence(sugestao.endDate)).toLowerCase()}`
                         : ''}

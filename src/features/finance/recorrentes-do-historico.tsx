@@ -15,6 +15,7 @@ import {
   type RecorrenteDoHistorico,
 } from '@/lib/finance/recorrentes-do-extrato'
 import { parcelamentosDaBusca, parcelamentosEmAndamento } from '@/lib/finance/parcelamentos'
+import { quandoSeRepete } from '@/lib/finance/recurring'
 import { today } from '@/lib/utils'
 import { mesEAno, resumoDoParcelamento } from './parcelamentos'
 import { RecurringForm, type RecurringDraft } from './recurring-form'
@@ -44,7 +45,19 @@ function paraRegra(achado: RecorrenteDoHistorico): RecurringDraft {
     start_date: achado.startDate,
     end_date: achado.endDate,
     active: true,
+    frequency: achado.frequency,
+    month_of_year: achado.monthOfYear,
   }
+}
+
+/** "todo dia 12 · 7 meses" ou "todo ano, 22 de dezembro · 2 anos". */
+function ritmo(achado: RecorrenteDoHistorico): string[] {
+  return achado.frequency === 'yearly'
+    ? [
+        quandoSeRepete({ ...paraRegra(achado), start_date: achado.startDate }),
+        `${achado.meses} anos`,
+      ]
+    : [`todo dia ${achado.dayOfMonth}`, `${achado.meses} meses`]
 }
 
 
@@ -149,8 +162,7 @@ export function RecorrentesDoHistorico({
                       <p className="text-fg truncate text-sm">{achado.description}</p>
                       <p className="text-fg-subtle truncate text-xs">
                         {[
-                          `todo dia ${achado.dayOfMonth}`,
-                          `${achado.meses} meses`,
+                          ...ritmo(achado),
                           conta?.name,
                           achado.parcela && achado.endDate
                             ? `parcela ${achado.parcela.atual} de ${achado.parcela.total}, até ${mesEAno(achado.endDate)}`

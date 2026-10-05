@@ -22,6 +22,10 @@ export interface RecurringLike {
   start_date: string
   end_date: string | null
   active: boolean
+  /** Ausente = todo mês. */
+  frequency?: 'monthly' | 'yearly' | null
+  /** Só no anual: o mês, de 1 a 12. Ausente, vale o mês do início. */
+  month_of_year?: number | null
 }
 
 /** O que já existe no extrato, para não materializar duas vezes. */
@@ -39,6 +43,8 @@ export interface MaterializedLike {
  */
 export function occurrenceDate(rule: RecurringLike, competence: Competence): string | null {
   if (!rule.active) return null
+  // A anual só vale no mês dela: nos outros onze não há o que lançar.
+  if (rule.frequency === 'yearly' && Number(competence.slice(5, 7)) !== mesDoAno(rule)) return null
 
   const date = dateInCompetence(competence, rule.day_of_month)
   if (date < rule.start_date) return null
@@ -115,4 +121,37 @@ export function repeatEndDate(startDate: string, months: number | null): string 
 export function repeatTotal(amountCents: number, months: number | null): number | null {
   if (months === null || months <= 0) return null
   return amountCents * months
+}
+
+/** O mês da regra anual, de 1 a 12. */
+export function mesDoAno(rule: Pick<RecurringLike, 'month_of_year' | 'start_date'>): number {
+  return rule.month_of_year ?? Number(rule.start_date.slice(5, 7))
+}
+
+const NOMES_DOS_MESES = [
+  'janeiro',
+  'fevereiro',
+  'março',
+  'abril',
+  'maio',
+  'junho',
+  'julho',
+  'agosto',
+  'setembro',
+  'outubro',
+  'novembro',
+  'dezembro',
+]
+
+export function nomeDoMes(mes: number): string {
+  return NOMES_DOS_MESES[mes - 1] ?? ''
+}
+
+/** "todo dia 5" ou "todo ano, 22 de dezembro". */
+export function quandoSeRepete(
+  rule: Pick<RecurringLike, 'frequency' | 'month_of_year' | 'start_date' | 'day_of_month'>,
+): string {
+  return rule.frequency === 'yearly'
+    ? `todo ano, ${rule.day_of_month} de ${nomeDoMes(mesDoAno(rule))}`
+    : `todo dia ${rule.day_of_month}`
 }

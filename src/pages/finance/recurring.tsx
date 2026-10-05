@@ -19,7 +19,13 @@ import { useMaterializeRecurring } from '@/features/finance/actions'
 import { competenceLabel, toCompetence } from '@/lib/finance/billing'
 import { formatCents } from '@/lib/finance/money'
 import { regrasQueRepetemParcelamento } from '@/lib/finance/parcelamentos'
-import { pendingBalance, pendingOccurrences } from '@/lib/finance/recurring'
+import {
+  mesDoAno,
+  nomeDoMes,
+  pendingBalance,
+  pendingOccurrences,
+  quandoSeRepete,
+} from '@/lib/finance/recurring'
 import { shortDate } from '@/lib/format'
 import { today } from '@/lib/utils'
 
@@ -57,8 +63,10 @@ export function RecurringPage() {
   )
   const repeteDe = new Map(repetidas.map((item) => [item.regraId, item]))
 
+  // A anual fica fora do saldo mensal: somar a anuidade em todo mês faria o
+  // mês comum parecer doze vezes mais caro do que é.
   const monthly = rules
-    .filter((r) => r.active)
+    .filter((r) => r.active && r.frequency !== 'yearly')
     .reduce((sum, r) => sum + (r.kind === 'income' ? r.amount_cents : -r.amount_cents), 0)
 
   const ordered = [...rules].sort(
@@ -178,7 +186,7 @@ export function RecurringPage() {
                     </p>
                     <p className="text-fg-subtle truncate text-xs">
                       {[
-                        `todo dia ${rule.day_of_month}`,
+                        quandoSeRepete(rule),
                         account?.name,
                         category?.name,
                         rule.end_date ? `até ${shortDate(rule.end_date)}` : null,
@@ -193,6 +201,9 @@ export function RecurringPage() {
                     <Badge tone="warning">repete parcela</Badge>
                   ) : !rule.active ? (
                     <Badge>pausada</Badge>
+                  ) : rule.frequency === 'yearly' &&
+                    mesDoAno(rule) !== Number(competence.slice(5, 7)) ? (
+                    <Badge>em {nomeDoMes(mesDoAno(rule))}</Badge>
                   ) : jaLancada ? (
                     <Badge tone="positive">lançada</Badge>
                   ) : (

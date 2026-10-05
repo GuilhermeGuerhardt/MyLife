@@ -49,7 +49,11 @@ export interface Padrao<T extends Ocorrencia> {
   /** Último dia da regra, quando é parcela: o mês da última parcela. */
   endDate: string | null
   parcela: Parcela | null
-  /** Uma por mês, da mais antiga para a mais nova. */
+  /** Todo mês, ou uma vez por ano (anuidade, IPVA). */
+  frequency: 'monthly' | 'yearly'
+  /** Só no anual: o mês, de 1 a 12. */
+  monthOfYear: number | null
+  /** Uma por mês (ou por ano, no anual), da mais antiga para a mais nova. */
   ocorrencias: T[]
 }
 
@@ -209,7 +213,50 @@ function avaliar<T extends Ocorrencia>(grupo: T[], modo: Modo): Padrao<T> | null
     startDate: `${addMonths(mesDaUltima, 1)}-01`,
     endDate: parcela ? dateInCompetence(addMonths(mesDaUltima, parcela.total - parcela.atual), dia) : null,
     parcela,
+    frequency: 'monthly',
+    monthOfYear: null,
     ocorrencias,
+  }
+}
+
+/** Anuidade corrigida de um ano para o outro ainda é a mesma anuidade. */
+const VARIACAO_ANUAL_ACEITA = 0.2
+
+/**
+ * O que vem uma vez por ano: anuidade do cartão, IPVA, seguro anual.
+ *
+ * Uma ocorrência por ano, no mesmo mês, em anos seguidos, com valor parecido.
+ * Dois anos bastam: ninguém tem três anos de extrato importado para provar
+ * que a anuidade é anual, e o mesmo mês com o mesmo nome já é sinal forte.
+ * Mais de uma no mesmo ano não é anual, é outra coisa.
+ */
+function avaliarAnual<T extends Ocorrencia>(grupo: T[]): Padrao<T> | null {
+  const emOrdem = [...grupo].sort((a, b) => a.date.localeCompare(b.date))
+  const anos = emOrdem.map((linha) => Number(linha.date.slice(0, 4)))
+  if (emOrdem.length < 2 || new Set(anos).size !== emOrdem.length) return null
+  if (!anos.every((ano, i) => i === 0 || ano === anos[i - 1]! + 1)) return null
+
+  const mes = Number(emOrdem[0]!.date.slice(5, 7))
+  if (!emOrdem.every((linha) => Number(linha.date.slice(5, 7)) === mes)) return null
+
+  const valores = emOrdem.map((linha) => linha.amountCents)
+  const tipico = mediana(valores)
+  if (!valores.every((valor) => Math.abs(valor - tipico) <= tipico * VARIACAO_ANUAL_ACEITA)) return null
+
+  const ultima = emOrdem.at(-1)!
+  return {
+    description: ultima.description,
+    kind: ultima.kind === 'income' ? 'income' : 'expense',
+    amountCents: valorParaSugerir(valores),
+    dayOfMonth: mediana(emOrdem.map((linha) => Number(linha.date.slice(8, 10)))),
+    meses: emOrdem.length,
+    valorVaria: valores.some((valor) => Math.abs(valor - tipico) > tipico * VARIACAO_ACEITA),
+    startDate: `${addMonths(toCompetence(ultima.date), 1)}-01`,
+    endDate: null,
+    parcela: null,
+    frequency: 'yearly',
+    monthOfYear: mes,
+    ocorrencias: emOrdem,
   }
 }
 
@@ -232,7 +279,7 @@ export function encontrarPadroes<T extends Ocorrencia>(linhas: T[]): Array<Padra
     return chave ? `${linha.kind}:${chave}` : null
   })
   for (const grupo of porDescricao) {
-    const padrao = avaliar(grupo, 'descricao')
+    const padrao = avaliar(grupo, 'descricao') ?? avaliarAnual(grupo)
     if (!padrao) continue
     padroes.push(padrao)
     for (const linha of grupo) usadas.add(linha)
@@ -277,6 +324,8 @@ export interface RecorrenteSugerida {
   startDate: string
   endDate: string | null
   parcela: Parcela | null
+  frequency: 'monthly' | 'yearly'
+  monthOfYear: number | null
 }
 
 /**
@@ -356,13 +405,19 @@ export function recorrentesNoHistorico(
     (lancamento) => !lancamento.installment_group_id && !lancamento.recurring_id,
   )
   const limite = addMonths(toCompetence(hoje), -MESES_PARADO)
+  // A anual some por onze meses de propósito: só parou se passou do mês dela.
+  const limiteAnual = addMonths(toCompetence(hoje), -(12 + MESES_PARADO))
 
   return encontrarPadroes(candidatos)
     .map((padrao) => {
       const ultima = padrao.ocorrencias.at(-1)!
       return { ...padrao, accountId: ultima.account_id, categoryId: ultima.category_id }
     })
-    .filter((padrao) => toCompetence(padrao.ocorrencias.at(-1)!.date) >= limite)
+    .filter(
+      (padrao) =>
+        toCompetence(padrao.ocorrencias.at(-1)!.date) >=
+        (padrao.frequency === 'yearly' ? limiteAnual : limite),
+    )
     .filter((padrao) => !jaTemRegra(padrao, regras, padrao.accountId))
 }
 
@@ -419,6 +474,8 @@ export function propostaDaBusca(
         ? dateInCompetence(addMonths(mesDaUltima, parcela.total - parcela.atual), dia)
         : null,
     parcela,
+    frequency: 'monthly',
+    monthOfYear: null,
     ocorrencias,
     accountId: ultima.account_id,
     categoryId: ultima.category_id,

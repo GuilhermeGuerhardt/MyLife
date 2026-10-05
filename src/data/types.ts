@@ -476,6 +476,13 @@ export interface RecurringTransaction extends BaseRow {
   start_date: string
   end_date: string | null
   active: boolean
+  /**
+   * `yearly` = uma vez por ano, no mês `month_of_year`: anuidade, IPVA, seguro
+   * anual. Ausente = todo mês, que é o que toda regra gravada até a 0.6.0 é.
+   */
+  frequency?: 'monthly' | 'yearly' | null
+  /** Só no anual: o mês, de 1 a 12. */
+  month_of_year?: number | null
 }
 
 /**
