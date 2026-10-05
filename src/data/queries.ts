@@ -114,6 +114,9 @@ const collections = {
 
 type CollectionName = keyof typeof collections
 
+/** O nome de uma tabela, como ela é gravada. */
+export type TableName = (typeof TABLES)[keyof typeof TABLES]
+
 /** Nomes de tabela que o backup sabe restaurar. */
 export const BACKUP_TABLES: readonly string[] = Object.values(TABLES)
 

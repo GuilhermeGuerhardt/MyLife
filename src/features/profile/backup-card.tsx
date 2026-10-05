@@ -6,7 +6,7 @@ import { BACKUP_JSON, salvarArquivo } from '@/lib/salvar-arquivo'
 import { confirmar } from '@/lib/avisos'
 import { Badge } from '@/components/ui/misc'
 import { Modal } from '@/components/ui/modal'
-import { BACKUP_TABLES, exportAll, importAll } from '@/data/queries'
+import { BACKUP_TABLES, exportAll, importAll, type TableName } from '@/data/queries'
 import {
   backupCounts,
   backupFilename,
@@ -228,7 +228,7 @@ export function BackupCard() {
                   key={entry.table}
                   className="flex items-baseline justify-between gap-4 px-3 py-1.5 text-xs"
                 >
-                  <span className="text-fg-muted">{TABLE_LABELS[entry.table] ?? entry.table}</span>
+                  <span className="text-fg-muted">{(TABLE_LABELS as Record<string, string>)[entry.table] ?? entry.table}</span>
                   <span className="text-fg font-medium">{integer(entry.count)}</span>
                 </div>
               ))}
@@ -252,8 +252,14 @@ export function BackupCard() {
   )
 }
 
-/** Nome de tabela é detalhe do banco; na tela vale o nome da coisa. */
-const TABLE_LABELS: Record<string, string> = {
+/**
+ * Nome de tabela é detalhe do banco; na tela vale o nome da coisa.
+ *
+ * Tipado pela lista de tabelas: faltavam cinco aqui, e a restauração mostrava
+ * "meal_presets" e "hidden_tasks" para a pessoa. Agora tabela nova sem nome
+ * não compila.
+ */
+const TABLE_LABELS: Record<TableName, string> = {
   profiles: 'Perfil',
   activity_types: 'Atividades',
   workout_sessions: 'Treinos',
@@ -262,6 +268,7 @@ const TABLE_LABELS: Record<string, string> = {
   diet_plans: 'Planos de emagrecimento',
   foods: 'Alimentos',
   meal_logs: 'Diário alimentar',
+  meal_presets: 'Refeições salvas',
   institutions: 'Instituições',
   programs: 'Cursos',
   subjects: 'Disciplinas',
@@ -270,6 +277,7 @@ const TABLE_LABELS: Record<string, string> = {
   notes: 'Anotações',
   deadlines: 'Compromissos',
   accounts: 'Contas e cartões',
+  account_checks: 'Conferências de extrato',
   categories: 'Categorias',
   transactions: 'Lançamentos',
   budgets: 'Orçamentos',
@@ -277,6 +285,9 @@ const TABLE_LABELS: Record<string, string> = {
   recurring_transactions: 'Recorrentes',
   habits: 'Hábitos',
   habit_logs: 'Registros de hábito',
+  tasks: 'Tarefas',
+  hidden_tasks: 'Tarefas tiradas do quadro',
+  modules: 'Módulos escondidos',
   dashboard_widgets: 'Layout do dashboard',
   study_sessions: 'Tempo de estudo',
   receivables: 'A receber',
