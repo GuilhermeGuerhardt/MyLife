@@ -6,10 +6,11 @@ import type { AccountCheck, Receivable } from '@/data/types'
 import { CategoryIcon } from '@/features/finance/category-icons'
 import type { useFinance } from '@/features/finance/use-finance'
 import { emAbertoPorPessoa, totalEmAberto } from '@/lib/finance/a-receber'
-import { competenceLabel, type Competence } from '@/lib/finance/billing'
+import { competenceLabel, toCompetence, type Competence } from '@/lib/finance/billing'
 import { lastCheck, needsCheck, unchecked, daysSinceCheck } from '@/lib/finance/conferencia'
 import { formatCents } from '@/lib/finance/money'
 import { commitmentProjection, openInvoices } from '@/lib/finance/reports'
+import type { PontoDeSaldo } from '@/lib/finance/saldo-por-mes'
 import { longDate, percent, relativeDay } from '@/lib/format'
 import { today } from '@/lib/utils'
 import { CompromissoFuturo } from './compromisso-futuro'
@@ -33,7 +34,7 @@ type Financeiro = ReturnType<typeof useFinance>
 export function Previsoes({
   finance,
   conferencias,
-  saldoPrevisto,
+  saldoDoMes,
   competence,
   aReceber,
 }: {
@@ -41,8 +42,12 @@ export function Previsoes({
   conferencias: AccountCheck[]
   /** O que os outros te devem. */
   aReceber: Receivable[]
-  /** Saldo de hoje mais o que falta entrar e sair no mês. */
-  saldoPrevisto: number
+  /**
+   * O saldo no fim do mês olhado, o mesmo ponto do gráfico de fluxo. Do mês
+   * atual em diante é previsto; nos meses fechados, o que as contas tinham no
+   * último dia.
+   */
+  saldoDoMes: PontoDeSaldo
   competence: Competence
 }) {
   const slides: Slide[] = []
@@ -75,15 +80,29 @@ export function Previsoes({
     })
   }
 
+  // O mesmo número do ponto do gráfico. Antes o painel somava ao saldo de hoje
+  // só o que faltava no mês olhado: em dezembro esquecia outubro e novembro, e
+  // num mês passado misturava o saldo de hoje com o aberto daquela época.
+  const mesAtual = competence === toCompetence(today())
   slides.push({
     id: 'saldo-previsto',
-    titulo: 'Saldo previsto',
+    titulo: saldoDoMes.previsto ? 'Saldo previsto' : 'Saldo no fim do mês',
     conteudo: (
       <Painel
-        rotulo="Saldo previsto para o fim do mês"
-        valor={formatCents(saldoPrevisto)}
-        negativo={saldoPrevisto < 0}
-        apoio="Saldo de hoje, menos o que falta pagar, mais o que falta receber."
+        rotulo={
+          saldoDoMes.previsto
+            ? 'Saldo previsto para o fim do mês'
+            : `Saldo no fim de ${competenceLabel(competence).toLowerCase()}`
+        }
+        valor={formatCents(saldoDoMes.saldoCents)}
+        negativo={saldoDoMes.saldoCents < 0}
+        apoio={
+          !saldoDoMes.previsto
+            ? 'O que as contas tinham no último dia do mês, com o que foi pago até lá.'
+            : mesAtual
+              ? 'Saldo de hoje, menos o que falta pagar, mais o que falta receber.'
+              : 'Saldo de hoje, mais o que falta entrar e sair até o fim deste mês, mês a mês.'
+        }
       />
     ),
   })

@@ -142,7 +142,7 @@ export function FinanceOverview() {
       <Previsoes
         finance={finance}
         conferencias={conferencias}
-        saldoPrevisto={finance.totalBalance + resumoAberto.balanceCents}
+        saldoDoMes={saldos.at(-1)!}
         competence={competence}
         aReceber={aReceber}
       />
