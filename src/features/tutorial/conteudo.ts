@@ -120,6 +120,11 @@ export const TUTORIAIS: Tutorial[] = [
         titulo: 'De onde continuar',
         texto: 'O cartão “Próxima aula” no painel diz onde você parou. Ligue ele em Personalizar.',
       },
+      {
+        titulo: 'Cronômetro de estudo',
+        texto:
+          'O botão Estudar liga um cronômetro que fica no topo de todas as telas, com Pomodoro se quiser. Vale também nas disciplinas da Faculdade.',
+      },
     ],
   },
   {
@@ -168,7 +173,8 @@ export const TUTORIAIS: Tutorial[] = [
       },
       {
         titulo: 'O que se repete, se repete sozinho',
-        texto: 'Cadastre em Recorrentes e a previsão do mês já vem montada.',
+        texto:
+          'Cadastre em Recorrentes e a previsão do mês já vem montada. Lá também ficam os parcelamentos e o que já se repete no seu histórico.',
       },
       {
         titulo: 'Orçamento avisa antes',
@@ -196,6 +202,11 @@ export const TUTORIAIS: Tutorial[] = [
         texto:
           'Prova, entrega, vencimento e prazo no mesmo calendário, com filtro por área.',
       },
+      {
+        titulo: 'O mês numa tela',
+        texto:
+          'Revisão do mês põe gasto, treino, estudo e hábitos lado a lado, comparados com o mês anterior.',
+      },
     ],
   },
   {
@@ -213,7 +224,13 @@ export const TUTORIAIS: Tutorial[] = [
       },
       {
         titulo: 'Backup é um arquivo',
-        texto: 'Exporte tudo num arquivo só e guarde onde quiser; importar devolve do mesmo jeito.',
+        texto:
+          'Exporte tudo num arquivo só e guarde onde quiser; importar devolve do mesmo jeito. No app instalado, o backup automático faz isso todo dia.',
+      },
+      {
+        titulo: 'Avisos fora do app',
+        texto:
+          'Ligue os avisos e o app lembra da fatura, da prova e do hábito com um balão no canto, mesmo minimizado.',
       },
     ],
   },

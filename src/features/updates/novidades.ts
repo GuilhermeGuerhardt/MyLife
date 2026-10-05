@@ -19,6 +19,31 @@ export interface Novidade {
 /** Da mais nova para a mais antiga, que é a ordem em que aparecem. */
 export const NOVIDADES: Novidade[] = [
   {
+    versao: '0.6.0',
+    titulo: 'Avisos, backup automático e o que se repete à vista',
+    itens: [
+      'Avisos no canto da tela, mesmo com o app minimizado: fatura perto de vencer, prova chegando, recorrente por lançar e os hábitos do dia. Ligue em Perfil.',
+      'Backup automático: uma cópia por dia numa pasta sua, guardando as últimas semanas.',
+      'Botão Estudar em cada curso e disciplina: o cronômetro fica no topo de todas as telas, tem modo Pomodoro, e o tempo da semana aparece no curso.',
+      'A receber: anote a parte dos outros numa conta que você pagou e registre o reembolso quando o dinheiro voltar.',
+      'Recorrentes mostra os parcelamentos em andamento e acha o que já se repete no seu histórico, inclusive parcela com data para acabar.',
+      'Patrimônio mês a mês em Contas e cartões, saldo no fim de cada mês no gráfico de fluxo, e a Revisão do mês em Rotina.',
+      'Em Lançamentos, marque vários de uma vez para pagar, desmarcar ou apagar. E as telas do Financeiro cabem no celular.',
+    ],
+  },
+  {
+    versao: '0.5.0',
+    titulo: 'Cartão do jeito que a gente pensa e extrato conferido',
+    itens: [
+      'A compra no cartão fica no mês em que você comprou; a fatura aparece à parte, no mês em que vence.',
+      'Fatura pode ser paga em partes, e só fica paga quando é paga de verdade.',
+      'Conferência de extrato: compare o saldo do app com o do banco numa data e veja o que falta lançar.',
+      'A Visão geral ganhou o saldo previsto do mês e um carrossel com o que vem pela frente.',
+      'Na importação, o app reconhece o que se repete e aprende a categoria com o que você já classificou.',
+      'O campo de valor escreve a vírgula sozinho.',
+    ],
+  },
+  {
     versao: '0.4.0',
     titulo: 'Caderno novo, quadro de tarefas e um app mais limpo',
     itens: [
