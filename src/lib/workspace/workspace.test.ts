@@ -3,6 +3,7 @@ import {
   MANIFEST_FILE,
   WORKSPACE_VERSION,
   buildManifest,
+  checarPastaSemManifesto,
   checkManifest,
   deviceName,
   parseTableFile,
@@ -101,5 +102,43 @@ describe('nome do dispositivo', () => {
 
   it('Android vem antes de Linux, porque o user agent tem os dois', () => {
     expect(deviceName('Mozilla/5.0 (Linux; Android 14; Pixel)')).toBe('Android')
+  })
+})
+
+describe('pasta sem manifesto', () => {
+  const tabelas = ['transactions', 'accounts']
+
+  it('pasta vazia, ou só com o que o sistema cria, é nova', () => {
+    expect(checarPastaSemManifesto([], tabelas)).toEqual({ ok: true, existing: false })
+    expect(checarPastaSemManifesto(['desktop.ini', '.DS_Store', 'Thumbs.db'], tabelas)).toEqual({
+      ok: true,
+      existing: false,
+    })
+  })
+
+  it('a pasta de um projeto é recusada, dizendo o que tem lá', () => {
+    const resultado = checarPastaSemManifesto(
+      ['package.json', 'README.md', 'tsconfig.json', 'vite.config.ts', 'index.html'],
+      tabelas,
+    )
+    expect(resultado).toEqual({
+      ok: false,
+      error:
+        'Esta pasta já tem outros arquivos (README.md, index.html, package.json e mais 2). Escolha uma pasta vazia, ou uma que já seja do Life.',
+    })
+  })
+
+  it('tabela do Life sem manifesto conta como pasta já usada', () => {
+    expect(checarPastaSemManifesto(['transactions.json', 'life-auto-2026-10-04.json'], tabelas)).toEqual({
+      ok: true,
+      existing: true,
+    })
+  })
+
+  it('só backups do Life não é pasta usada, mas também não é estranha', () => {
+    expect(checarPastaSemManifesto(['life-backup-2026-09-01.json'], tabelas)).toEqual({
+      ok: true,
+      existing: false,
+    })
   })
 })

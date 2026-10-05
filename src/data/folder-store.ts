@@ -22,6 +22,7 @@ import { open } from '@tauri-apps/plugin-dialog'
 import {
   MANIFEST_FILE,
   buildManifest,
+  checarPastaSemManifesto,
   checkManifest,
   deviceName,
   parseTableFile,
@@ -165,17 +166,20 @@ export class FolderStore {
   }
 
   /**
-   * Confere o manifesto antes de qualquer escrita. Pasta vazia é aceita — é
-   * quem está começando; pasta de outro app é recusada.
+   * Confere a pasta antes de qualquer escrita. Pasta vazia é aceita, porque é
+   * quem está começando. Pasta de outro app, ou com arquivos que não são do
+   * Life, é recusada (ver `checarPastaSemManifesto`).
    */
-  async verify(): Promise<{ ok: true; existing: boolean } | { ok: false; error: string }> {
+  async verify(
+    tabelas: readonly string[],
+  ): Promise<{ ok: true; existing: boolean } | { ok: false; error: string }> {
     try {
       const conteudo = await this.backend.read(MANIFEST_FILE)
-      if (conteudo === null) return { ok: true, existing: false }
+      if (conteudo === null) return checarPastaSemManifesto(await this.backend.list(), tabelas)
       const check = checkManifest(JSON.parse(conteudo))
       return check.ok ? { ok: true, existing: true } : { ok: false, error: check.error }
     } catch {
-      return { ok: false, error: 'Não foi possível ler o arquivo life.json da pasta.' }
+      return { ok: false, error: 'Não foi possível ler a pasta escolhida.' }
     }
   }
 

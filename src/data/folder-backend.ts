@@ -23,6 +23,8 @@ export interface FolderBackend {
   /** `null` quando o arquivo não existe — ausência não é erro. */
   read(filename: string): Promise<string | null>
   write(filename: string, content: string): Promise<void>
+  /** Nomes dos arquivos da pasta, sem subpastas. */
+  list(): Promise<string[]>
 }
 
 // ---------------------------------------------------------------------------
@@ -56,6 +58,16 @@ export class HandleBackend implements FolderBackend {
     await writable.write(content)
     await writable.close()
   }
+
+  async list(): Promise<string[]> {
+    // A tipagem do DOM ainda não traz a iteração da pasta.
+    const pasta = this.handle as unknown as { values(): AsyncIterable<FileSystemHandle> }
+    const nomes: string[] = []
+    for await (const item of pasta.values()) {
+      if (item.kind === 'file') nomes.push(item.name)
+    }
+    return nomes
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -87,6 +99,10 @@ export class PathBackend implements FolderBackend {
 
   async write(filename: string, content: string): Promise<void> {
     await invoke('gravar_texto', { caminho: this.caminhoDe(filename), conteudo: content })
+  }
+
+  list(): Promise<string[]> {
+    return listarArquivos(this.path)
   }
 }
 

@@ -41,7 +41,7 @@ export function WorkspaceCard() {
     if (!store) return
     setError(null)
 
-    const check = await store.verify()
+    const check = await store.verify(BACKUP_TABLES)
     if (!check.ok) {
       setError(check.error)
       return

@@ -119,3 +119,46 @@ export function deviceName(userAgent: string): string {
   if (/linux/i.test(userAgent)) return 'Linux'
   return 'Desconhecido'
 }
+
+/** Arquivos que o sistema operacional cria sozinho em qualquer pasta. */
+const ARQUIVOS_DO_SISTEMA = new Set(['desktop.ini', 'thumbs.db', '.ds_store', 'icon\r'])
+
+export type PastaSemManifesto =
+  | { ok: true; existing: boolean }
+  | { ok: false; error: string }
+
+/**
+ * Pasta sem `life.json`: dá para usar?
+ *
+ * Só quando ela está vazia, ou quando o que tem lá é do próprio Life (tabelas,
+ * backups, arquivos que o Windows cria sozinho). Antes, qualquer pasta sem o
+ * manifesto passava como "nova", e escolher sem querer a pasta de um projeto
+ * espalhava vinte JSONs no meio dos arquivos dele. Pior: se ela tivesse um
+ * `accounts.json` de outro programa, ele seria sobrescrito.
+ *
+ * Tabela do Life sem o manifesto conta como pasta já usada: o manifesto se
+ * perdeu, mas os dados são dela, e copiar os do aparelho por cima apagaria
+ * o que estava lá.
+ */
+export function checarPastaSemManifesto(
+  nomes: string[],
+  tabelasConhecidas: readonly string[],
+): PastaSemManifesto {
+  const tabelas = new Set(tabelasConhecidas.map(tableFilename))
+  const ehDoLife = (nome: string) =>
+    tabelas.has(nome) || /^life-(backup|auto)-.+\.json$/.test(nome) || nome.endsWith('.tmp')
+  const ehDoSistema = (nome: string) =>
+    ARQUIVOS_DO_SISTEMA.has(nome.toLowerCase()) || nome.startsWith('.') || nome.startsWith('~$')
+
+  const estranhos = nomes.filter((nome) => !ehDoLife(nome) && !ehDoSistema(nome)).sort()
+  if (estranhos.length > 0) {
+    const amostra = estranhos.slice(0, 3).join(', ')
+    const resto = estranhos.length > 3 ? ` e mais ${estranhos.length - 3}` : ''
+    return {
+      ok: false,
+      error: `Esta pasta já tem outros arquivos (${amostra}${resto}). Escolha uma pasta vazia, ou uma que já seja do Life.`,
+    }
+  }
+
+  return { ok: true, existing: nomes.some((nome) => tabelas.has(nome)) }
+}
