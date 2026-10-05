@@ -1,5 +1,6 @@
 import { AlertTriangle, Check, Copy, Tags } from 'lucide-react'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { CaixaDeSelecao } from '@/components/ui/caixa-de-selecao'
 import { Badge, Callout, EmptyState, Segmented, Stat, Toggle } from '@/components/ui/misc'
 import { formatCents } from '@/lib/finance/money'
 import { rowMatches, type ImportRow, type ImportSummary, type RowFilter } from '@/lib/finance/import'
@@ -226,8 +227,7 @@ function RowTable({
               )}
             >
               <td className="p-2 text-center">
-                <input
-                  type="checkbox"
+                <CaixaDeSelecao
                   checked={selected.has(row.line)}
                   disabled={row.error !== null}
                   onChange={() => onToggle(row.line)}

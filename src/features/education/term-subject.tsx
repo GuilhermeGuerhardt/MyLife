@@ -1,6 +1,7 @@
 import { AlertTriangle, CalendarPlus, Check, Minus, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { CaixaDeSelecao } from '@/components/ui/caixa-de-selecao'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/field'
 import { Badge, Progress } from '@/components/ui/misc'
@@ -238,30 +239,32 @@ export function TermSubject({
             </p>
           ) : (
             subjectDeadlines.map((deadline) => (
-              <label key={deadline.id} className="flex cursor-pointer items-center gap-2">
-                <input
-                  type="checkbox"
+              <div key={deadline.id} className="flex items-center gap-2">
+                {/* O título é o rótulo da caixa: clicar nele marca, como antes. */}
+                <CaixaDeSelecao
                   checked={deadline.done}
                   onChange={() =>
                     updateDeadline.mutate({ id: deadline.id, patch: { done: !deadline.done } })
                   }
-                  className="accent-accent size-3.5 shrink-0"
-                />
-                <span
-                  className={
-                    deadline.done
-                      ? 'text-fg-subtle flex-1 truncate text-xs line-through'
-                      : 'text-fg flex-1 truncate text-xs'
-                  }
+                  aria-label={`Concluir ${deadline.title}`}
+                  className="min-w-0 flex-1"
                 >
-                  {deadline.title}
-                </span>
+                  <span
+                    className={
+                      deadline.done
+                        ? 'text-fg-subtle min-w-0 flex-1 truncate text-xs line-through'
+                        : 'text-fg min-w-0 flex-1 truncate text-xs'
+                    }
+                  >
+                    {deadline.title}
+                  </span>
+                </CaixaDeSelecao>
                 <span className="text-fg-subtle shrink-0 text-xs">
                   {deadline.start_date && deadline.start_date !== deadline.date
                     ? `${shortDate(deadline.start_date)} → ${shortDate(deadline.date)}`
                     : shortDate(deadline.date)}
                 </span>
-              </label>
+              </div>
             ))
           )}
         </div>

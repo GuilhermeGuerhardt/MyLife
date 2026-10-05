@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { CaixaDeSelecao } from '@/components/ui/caixa-de-selecao'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/misc'
 import { useRecurring } from '@/data/queries'
@@ -97,16 +98,15 @@ export function RecorrentesSugeridas({
             const marcada = escolhidas.has(id)
 
             return (
-              <label
+              <div
                 key={id}
-                className={cn(
-                  'flex cursor-pointer items-center gap-3 px-4 py-3',
-                  !marcada && 'opacity-70',
-                )}
+                className={cn('flex items-center gap-3 px-4 py-3', !marcada && 'opacity-70')}
               >
-                <input
-                  type="checkbox"
+                {/* A descrição é o rótulo da caixa: clicar no texto marca, como antes. */}
+                <CaixaDeSelecao
                   checked={marcada}
+                  aria-label={`Criar recorrente: ${sugestao.description}`}
+                  className="min-w-0 flex-1"
                   onChange={() =>
                     setEscolhidas((atual) => {
                       const proximo = new Set(atual)
@@ -115,24 +115,24 @@ export function RecorrentesSugeridas({
                       return proximo
                     })
                   }
-                />
-
-                <div className="min-w-0 flex-1">
-                  <p className="text-fg truncate text-sm">{sugestao.description}</p>
-                  <p className="text-fg-subtle text-xs">
-                    Todo dia {sugestao.dayOfMonth} · apareceu em {sugestao.meses} meses
-                    {sugestao.parcela && sugestao.endDate
-                      ? ` · parcela ${sugestao.parcela.atual} de ${sugestao.parcela.total}, até ${competenceLabel(toCompetence(sugestao.endDate)).toLowerCase()}`
-                      : ''}
-                  </p>
-                </div>
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="text-fg block truncate text-sm">{sugestao.description}</span>
+                    <span className="text-fg-subtle block text-xs">
+                      Todo dia {sugestao.dayOfMonth} · apareceu em {sugestao.meses} meses
+                      {sugestao.parcela && sugestao.endDate
+                        ? ` · parcela ${sugestao.parcela.atual} de ${sugestao.parcela.total}, até ${competenceLabel(toCompetence(sugestao.endDate)).toLowerCase()}`
+                        : ''}
+                    </span>
+                  </span>
+                </CaixaDeSelecao>
 
                 {sugestao.valorVaria && <Badge tone="neutral">valor varia</Badge>}
 
                 <span className="text-fg text-sm font-medium">
                   {formatCents(sugestao.amountCents)}
                 </span>
-              </label>
+              </div>
             )
           })}
         </div>

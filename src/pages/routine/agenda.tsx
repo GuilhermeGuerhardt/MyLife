@@ -2,6 +2,7 @@ import { CalendarDays, ChevronLeft, ChevronRight, Download, Plus } from 'lucide-
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import { CaixaDeSelecao } from '@/components/ui/caixa-de-selecao'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge, EmptyState } from '@/components/ui/misc'
 import { PageHeader } from '@/components/ui/page-header'
@@ -305,12 +306,11 @@ function EventRow({
   if (deadline) {
     return (
       <div className="hover:bg-surface-2 -mx-2 flex items-start gap-2 rounded-lg px-2 py-1.5">
-        <input
-          type="checkbox"
+        <CaixaDeSelecao
           checked={deadline.done}
           onChange={() => onToggleDone(deadline)}
           aria-label={`Concluir ${event.title}`}
-          className="mt-1.5"
+          className="mt-1"
         />
         <button type="button" onClick={() => onEdit(deadline)} className="min-w-0 flex-1 text-left">
           {body}

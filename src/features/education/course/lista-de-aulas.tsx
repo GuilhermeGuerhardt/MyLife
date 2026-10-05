@@ -1,6 +1,7 @@
 import { ChevronRight, ChevronsDownUp, ChevronsUpDown, ListPlus, Trash2 } from 'lucide-react'
 import { useCallback, useState } from 'react'
 import { Button } from '@/components/ui/button'
+import { CaixaDeSelecao } from '@/components/ui/caixa-de-selecao'
 import { Card, CardContent } from '@/components/ui/card'
 import { Badge, EmptyState, Progress } from '@/components/ui/misc'
 import type { CourseLesson } from '@/data/types'
@@ -113,11 +114,9 @@ export function ListaDeAulas({
                     <div className="divide-border-base divide-y">
                       {items.map((lesson) => (
                         <div key={lesson.id} className="flex items-center gap-3 py-2">
-                          <input
-                            type="checkbox"
+                          <CaixaDeSelecao
                             checked={lesson.done}
-                            onChange={(e) => onMarcar(lesson.id, e.target.checked)}
-                            className="accent-accent size-4 shrink-0 cursor-pointer"
+                            onChange={(feita) => onMarcar(lesson.id, feita)}
                             aria-label={`Concluir ${lesson.title}`}
                           />
                           <span

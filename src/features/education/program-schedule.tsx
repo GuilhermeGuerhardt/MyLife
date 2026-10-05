@@ -2,6 +2,7 @@ import { CalendarClock, CalendarPlus, ExternalLink, Pencil } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
+import { CaixaDeSelecao } from '@/components/ui/caixa-de-selecao'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge, EmptyState, Progress } from '@/components/ui/misc'
 import { useDeadlines, useSubjects } from '@/data/queries'
@@ -181,12 +182,10 @@ function DeadlineRow({
 
   return (
     <div className="flex items-center gap-3 py-2">
-      <input
-        type="checkbox"
+      <CaixaDeSelecao
         checked={deadline.done}
-        onChange={onToggle}
+        onChange={() => onToggle()}
         aria-label={`Concluir ${deadline.title}`}
-        className="accent-accent size-4 shrink-0 cursor-pointer"
       />
       <button type="button" onClick={onEdit} className="min-w-0 flex-1 text-left">
         <p
