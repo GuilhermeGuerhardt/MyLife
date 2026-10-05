@@ -7,10 +7,11 @@ sem mensalidade — seus dados ficam na sua máquina. A única coisa que consult
 busca por versão nova, que você pode desligar.
 
 **Entregue até aqui:** módulos de **Saúde** (atividades, medidas, plano de emagrecimento
-adaptativo e diário alimentar com refeições salvas), **Faculdade**, **Cursos**, **Caderno**,
-**Financeiro** e **Rotina** (hábitos, agenda unificada e insights entre módulos), com dashboard
-configurável, registro rápido em linguagem natural, importação de extrato em planilha e oito
-temas de cor.
+adaptativo e diário alimentar com refeições salvas), **Faculdade** e **Cursos** (com cronômetro
+de estudo), **Caderno**, **Financeiro** (cartão, conferência de extrato, recorrentes,
+parcelamentos, a receber e patrimônio) e **Rotina** (hábitos, agenda unificada, revisão do mês e
+insights entre módulos), com dashboard configurável, registro rápido em linguagem natural,
+importação de extrato em planilha, avisos do sistema, backup automático e oito temas de cor.
 O que ainda falta está em [docs/PLANO.md](docs/PLANO.md).
 
 ---
@@ -28,9 +29,10 @@ treinos da semana, hábitos para marcar ali mesmo e o que vence nas próximas du
 
 ### Financeiro
 
-Fatura de cartão contada por **competência** — a compra entra na fatura que a inclui, não no mês
-em que foi feita. Parcelamento distribuído sem perder centavos, orçamento por categoria e fluxo
-de caixa de seis meses.
+A compra no cartão fica **no mês em que foi feita**, e a fatura aparece à parte, **no mês em que
+vence** — "gastei em setembro, pago em outubro". Parcelamento distribuído sem perder centavos,
+orçamento por categoria, fluxo de caixa de seis meses com o saldo no fim de cada mês, conferência
+de extrato e o patrimônio mês a mês.
 
 ![Tela do financeiro, com saldo, fluxo de caixa, distribuição por categoria e últimos lançamentos](docs/prints/financeiro.png)
 
@@ -118,6 +120,10 @@ A lista também mostra **as caixas de tarefa escritas dentro das anotações**, 
 do lado — e marcar aqui marca lá. São a mesma tarefa vista de dois lugares, não duas: sem isso, o
 `- [ ]` anotado no meio de uma aula virava um cemitério que ninguém revisita.
 
+A **Revisão do mês** põe os módulos lado a lado — gasto, treino, sono, estudo, hábitos —,
+comparados com o mês anterior. No mês que ainda não acabou, a comparação é com o mesmo trecho do
+anterior: dia 4 de outubro contra 1 a 4 de setembro, e não contra setembro inteiro.
+
 ![Tela de hábitos, com progresso da semana e heatmap de seis meses](docs/prints/rotina.png)
 
 ### Faculdade
@@ -125,6 +131,10 @@ do lado — e marcar aqui marca lá. São a mesma tarefa vista de dois lugares, 
 Progresso por carga horária, CR ponderado por créditos e previsão de conclusão pelo seu ritmo.
 O **"pode cursar agora"** sai dos pré-requisitos já cumpridos — em vez de você conferir a grade
 na mão todo semestre.
+
+O botão **Estudar**, no curso e em cada disciplina do semestre, liga um cronômetro que fica no
+topo de todas as telas, com modo Pomodoro. Ao encerrar, o tempo entra na conta do curso: a
+semana, as anteriores e cada disciplina. Estudou sem ligar nada? Dá para lançar à mão.
 
 Removendo um curso, a pergunta diz **exatamente o que sai junto** — quantas disciplinas, aulas,
 avaliações e compromissos. E o que não sai: **suas anotações ficam**, passando para Estudos. O
@@ -175,8 +185,17 @@ cada tabela vira um `.json` legível. Apontando para dentro do OneDrive ou do Go
 dados acompanham você entre computadores — a sincronização é do próprio serviço, sem servidor
 no meio.
 
-De qualquer forma, **exporte um backup de vez em quando** em Perfil → Backup. Desinstalar o
-programa pode levar o banco junto, e o backup é o que sobrevive a isso.
+De qualquer forma, **ligue o backup automático** em Perfil → Dados e sincronização: uma cópia
+por dia numa pasta sua, guardando as últimas 7, 14 ou 30. Desinstalar o programa pode levar o
+banco junto, e o backup é o que sobrevive a isso.
+
+### Avisos
+
+Em **Perfil → Avisos**, o Life manda um balão no canto do Windows quando algo pede atenção, mesmo
+minimizado: fatura a três dias do vencimento ou vencida, conta que vence amanhã, prova ou entrega
+chegando, recorrente cujo dia chegou e ainda não foi lançada, extrato há mais de um mês sem
+conferir e, à noite, os hábitos do dia que ainda não foram marcados. Cada situação avisa uma vez
+só, e cada tipo pode ser desligado. Começa desligado: aviso que ninguém pediu é spam.
 
 ### Atualizando
 
@@ -214,6 +233,7 @@ Seus dados não são tocados em nenhum dos dois caminhos: o banco vive fora da p
   entram por `import()` e só descem quando alguém exporta ou importa naquele formato
 - **TanStack Query** para estado de servidor, **Recharts** para gráficos (carregado sob demanda)
 - **SQLite** via `tauri-plugin-sql` — banco local, sem servidor e sem conta
+- **Avisos do Windows** via `tauri-plugin-notification`; no navegador, a API `Notification`
 - **PWA** via vite-plugin-pwa, só no build web — o app segue instalável pelo navegador para quem
   quiser essa via; no build do desktop o plugin é desligado, porque um cache entre o app e ele
   mesmo só cria problema quando os arquivos já estão em disco
@@ -349,6 +369,8 @@ escrita a cada nova sessão. Pedir permissão sem gesto do usuário é recusado 
 botão "Reconectar a última" em vez de uma tentativa silenciosa ao abrir.
 
 Trocar para uma pasta vazia com dados já no navegador pergunta antes se você quer levá-los junto.
+Uma pasta que já tem outros arquivos, e não é do Life, é recusada, com a lista do que tem lá:
+escolher sem querer a pasta de um projeto espalharia vinte JSONs no meio dele.
 
 ## Backup e restauração
 
@@ -367,31 +389,42 @@ O formato é versionado (`app`, `version`, `exported_at`, `tables`), e o import 
 backups do formato antigo, sem cabeçalho. Arquivo de outro app, versão futura ou tabela
 corrompida são recusados inteiros, em vez de gravados pela metade.
 
+**Backup automático** (só no programa instalado): ligado, ele grava uma cópia por dia na pasta
+escolhida, `life-auto-AAAA-MM-DD.json`, no mesmo formato e restaurável pelo mesmo botão. Olha na
+abertura e de hora em hora, então quem deixa o app aberto por dias também ganha a cópia de cada
+dia. As cópias mais velhas que o limite escolhido são apagadas — e só elas: a trava do nome fica
+no comando Rust que apaga, e não na interface, para que um defeito na tela não leve junto outro
+arquivo da mesma pasta. No navegador o cartão só explica: lá a pasta pede um clique a cada
+sessão, e backup que espera clique não é automático.
+
 Os dados vivem **nesta máquina** — no banco do aplicativo ou na pasta que você escolheu.
 Formatar o computador, ou desinstalar o programa sem cuidado, apaga tudo. Não há servidor
-guardando uma cópia: exportar de vez em quando é o que garante levar os dados adiante.
+guardando uma cópia: o backup, automático ou exportado, é o que garante levar os dados adiante.
 
 ## Estrutura
 
 ```
 src/
 ├─ components/         # design system (button, card, field, modal…) e layout
-├─ data/               # tipos, adaptadores (SQLite/pasta/local), hooks de query, seeds
+├─ data/               # tipos, adaptadores (SQLite/pasta/local), lote tudo-ou-nada, hooks, seeds
 ├─ features/
 │  ├─ dashboard/       # catálogo de widgets (um arquivo por área) e layout configurável
 │  ├─ health/          # resumo, gráfico de peso, modal de alimento, formulário e resumo do dia
-│  ├─ education/       # curso/disciplina, semestre, caderno, Markdown com [[links]]
-│  ├─ finance/         # formulários, ações, gráficos e as etapas do assistente de importação
-│  ├─ routine/         # hábitos, agenda e insights
-│  ├─ profile/         # avatar, tema, pasta de trabalho e backup
-│  └─ updates/         # busca por versão nova, aviso no canto e o interruptor
+│  ├─ education/       # curso/disciplina, semestre, caderno, [[links]] e cronômetro de estudo
+│  ├─ finance/         # formulários, ações, gráficos, importação, recorrentes, a receber
+│  ├─ routine/         # hábitos, agenda, revisão do mês e insights
+│  ├─ lembretes/       # avisos do sistema: preferências e o vigia que os manda
+│  ├─ backup/          # o vigia do backup automático diário
+│  ├─ profile/         # avatar, tema, avisos, pasta de trabalho e backup
+│  └─ updates/         # busca por versão nova, aviso no canto e as novidades
 ├─ lib/
 │  ├─ health/          # TMB, TDEE, IMC, média móvel, plano, macros e refeições (puro + testado)
-│  ├─ education/       # progresso, faltas, média, caderno e remoção em cascata (puro + testado)
-│  ├─ finance/         # centavos, ciclo de fatura, parcelas e relatórios (puro + testado)
+│  ├─ education/       # progresso, faltas, média, caderno, cronômetro (puro + testado)
+│  ├─ finance/         # centavos, fatura, parcelas, recorrentes, patrimônio (puro + testado)
 │  ├─ habits/          # sequências, meta semanal e heatmap (puro + testado)
 │  ├─ calendar/        # agenda unificada e export iCalendar (puro + testado)
-│  ├─ insights/        # série semanal, correlação e regras de insight (puro + testado)
+│  ├─ insights/        # série semanal, regras de insight e revisão do mês (puro + testado)
+│  ├─ lembretes/       # quais avisos valem agora e quais já saíram (puro + testado)
 │  ├─ quick-add/       # interpretador do Ctrl+K
 │  ├─ dates.ts         # aritmética de datas em ISO local
 │  ├─ format.ts        # formatação pt-BR
@@ -539,18 +572,48 @@ automático. O HTML gerado passa por sanitização antes de ir para a tela.
 
 ## Destaques do Financeiro
 
-**Fatura por competência.** Uma compra não pertence ao mês em que foi feita, e sim à fatura que
-a inclui: comprar dia 29 com fechamento dia 28 significa pagar só na fatura seguinte. Cada
-lançamento carrega uma competência (`AAAA-MM`) calculada a partir do ciclo do cartão, e é por
-isso que o "gasto do mês" bate com o extrato. O formulário mostra a fatura de destino antes de
-salvar — e, quando o lançamento cai fora do mês que está aberto, um aviso no canto diz para onde
-ele foi, com um atalho para lá. Acertar a fatura em silêncio parecia engolir a compra: ela não
-aparecia no mês da tela, e de fora não dava para distinguir isso de um erro.
+**A compra no mês da compra, a fatura no mês do vencimento.** A compra de 24 de setembro aparece
+em setembro, junto com as outras despesas do mês. A fatura é a janela de datas entre dois
+fechamentos — de 21/09 a 20/10, por exemplo —, calculada na hora e nunca gravada, e aparece no
+mês em que vence como um valor único a pagar, também como linha acima da lista de lançamentos.
+Mudar o dia do fechamento vale na hora, inclusive para o que já foi lançado. Na tela do cartão, o
+prazo da fatura em aberto vira alerta a três dias do vencimento.
+
+**Fatura só fica paga quando é paga.** O pagamento pode ser parcial: ele entra como transferência
+apontando para a fatura, e o que falta é o total menos os pagamentos. As compras só viram "pago"
+quando a fatura fecha em zero, e o selo de cada compra é só leitura — clicável, ele deixava quitar
+meia fatura sem dinheiro sair da conta. A fatura vencida e ainda em aberto entra no que falta pagar
+dos cartões, em vez de sumir por ter virado o mês.
 
 **Parcelamento que fecha a conta.** R$ 900 em 7x viram 6 parcelas de R$ 128,57 e uma primeira de
 R$ 128,58 — a sobra de centavos fica na primeira, como as operadoras fazem, e a soma devolve o
-total exato. Cada parcela cai na sua fatura, e remover uma pergunta se você quer apagar o grupo
-inteiro.
+total exato. Cada parcela ganha a data do seu mês, e remover uma pergunta se você quer apagar o
+grupo inteiro.
+
+**Conferência de extrato.** Registre até que data a conta bateu com o banco e o app mostra a
+diferença, de que lado está sobrando e quantos lançamentos entraram depois da última conferência.
+
+**Recorrentes que se acham sozinhas.** Regras mensais ou anuais (anuidade, IPVA), que nunca lançam
+nada sozinhas: viram pendência no mês, para confirmar. Na importação e, a qualquer hora, no
+histórico já gravado, o app reconhece o que se repete: o boleto pago em dias diferentes mas
+sempre do mesmo valor, a descrição que muda todo mês ("PIX ENVIADO", "TRANSF ENVIADA") pelo valor
+exato, e a parcela escrita no nome (`PARC 20/48`), que vira regra com data para acabar. Os
+parcelamentos em andamento aparecem na mesma tela — valor, parcela atual, até quando vai e quanto
+falta —, e uma busca pela descrição acha o que a detecção não pegou.
+
+**A receber.** Pagou o jantar e cada um vai mandar a parte? Anote quem deve, a partir da própria
+despesa, que divide o valor sozinha. A despesa fica inteira no extrato; quando o dinheiro volta,
+"Recebi" lança uma receita de reembolso na conta escolhida, e dá para desfazer.
+
+**Saldo no fim do mês e patrimônio.** O fluxo de caixa ganhou, embaixo das barras, a linha do
+saldo no fim de cada mês: realizado nos meses fechados, previsto em tracejado do mês atual em
+diante. Em Contas e cartões, o patrimônio mês a mês: contas e investimentos menos a dívida dos
+cartões.
+
+**Seleção em massa, tudo ou nada.** Em Lançamentos, marque vários e pague, desmarque ou apague de
+uma vez, com o total do que está marcado à vista. A ação obedece às mesmas regras da linha (a
+compra no cartão continua esperando a fatura), só age no que está visível, e grava o lote inteiro
+ou nada: um item apagado por outra janela recusa o lote, em vez de deixar metade gravada.
 
 **Dinheiro em centavos.** Todo valor é inteiro. Reais em ponto flutuante parecem inofensivos até
 somar algumas centenas de lançamentos e o saldo fechar com uns centavos que ninguém explica.
@@ -590,6 +653,10 @@ cartão esconde o cartão; a gravação segue.
 **Orçamento envelope** por categoria e mês, com alerta em 80% e 100% e cópia dos limites do mês
 anterior. **Metas** calculam o aporte mensal necessário para o prazo.
 
+**Exportação que volta.** O CSV sai com as colunas que a importação reconhece, e reimportado sem
+edição reproduz os mesmos lançamentos. No fim, uma coluna a mais para quem lê no Excel: em qual
+fatura cada compra no cartão caiu.
+
 **Registro rápido** também lança: `gastei 35 no mercado` grava a despesa na categoria certa,
 `recebi 3500 de salario` grava a receita.
 
@@ -628,7 +695,9 @@ mensagem de erro.
 **Insights que sabem calar a boca.** Toda regra passa por três travas antes de virar frase: pelo
 menos 3 semanas de cada lado da comparação, efeito de no mínimo 10%, e linguagem descritiva — "nas
 semanas em que X, Y foi maior", nunca "X causa Y". A tela vazia com "ainda não dá para afirmar
-nada" é o comportamento correto, não uma feature faltando.
+nada" é o comportamento correto, não uma feature faltando. O tempo de estudo entra na revisão da
+semana e numa regra própria, e as semanas antes do primeiro registro contam como sem dado, não
+como zero.
 
 **Dashboard configurável.** Onze widgets que podem ser ligados, desligados e reordenados; o banco
 guarda só o que foi personalizado, então widget novo aparece com o padrão dele em vez de sumir.

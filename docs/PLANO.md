@@ -285,8 +285,10 @@ pronto para Static Site.
 
 **Financeiro — concluído.**
 - Contas (corrente, poupança, carteira, investimento) e cartões com limite e ciclo de fatura
-- Lançamentos com competência: no cartão, a fatura que inclui a compra, não o mês dela
-- Parcelamento distribuído pelas faturas, sem perder centavos; remoção por parcela ou por grupo
+- Lançamentos com competência (na 0.5.0, a regra mudou: a compra no cartão fica no mês dela, e
+  a fatura, calculada pela janela de datas, aparece no mês em que vence)
+- Parcelamento sem perder centavos, cada parcela com a data do seu mês; remoção por parcela ou
+  por grupo
 - Categorias com palavra-chave e palpite automático pela descrição
 - Orçamento envelope por categoria e mês, com alerta e cópia do mês anterior
 - Metas com cálculo de aporte mensal
@@ -346,5 +348,22 @@ a instalação; sem `maskable`, o Android desenha o quadrado inteiro dentro de u
 Ícones gerados, `apple-touch-icon` para o iOS (que ignora o manifest) e a fonte externa passou a
 carregar sem bloquear o primeiro paint, com cache de um ano no service worker.
 
-**Próximas (Fase 5):** importação de OFX, transações recorrentes geradas automaticamente,
-flashcards com repetição espaçada, investimentos, bot no Telegram e notificações push.
+**0.5.0 — cartão pelo mês da compra.** Compra no mês em que foi feita e fatura no mês do
+vencimento, pagamento parcial de fatura, conferência de extrato, comprometido dos próximos doze
+meses, carrossel de previsões e sugestão de recorrentes na importação.
+
+**0.6.0 — o que se repete, à vista.**
+- **Avisos do sistema** (fatura, prazo, recorrente, conferência e hábitos), por
+  `tauri-plugin-notification` no desktop e pela API `Notification` no navegador
+- **Backup automático** diário numa pasta escolhida, com limpeza das cópias antigas
+- **Cronômetro de estudo** por disciplina, com Pomodoro, e o tempo de estudo nos Insights
+- **Recorrentes**: regra anual, detecção no histórico (inclusive parcela com fim), parcelamentos
+  em andamento e aviso das regras que repetem um parcelamento
+- **A receber**, **patrimônio** mês a mês, **saldo no fim do mês** no fluxo de caixa e a
+  **Revisão do mês**
+- **Seleção em massa** em Lançamentos, com gravação em lote tudo ou nada nos três destinos
+- As tabelas novas (`study_sessions`, `receivables`) já apagam com carimbo (`deleted_at`),
+  pensando na sincronização com a nuvem
+
+**Próximas:** importação de OFX, flashcards com repetição espaçada, investimentos com cotação, bot
+no Telegram, e a sincronização com a nuvem (a "5.0").
