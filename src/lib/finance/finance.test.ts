@@ -21,6 +21,7 @@ import {
   budgetProgress,
   byCategory,
   commitmentProjection,
+  faturasAPagar,
   goalProjection,
   invoiceTotal,
   invoicesDueIn,
@@ -540,6 +541,38 @@ describe('quem vence é a fatura', () => {
       tx({ id: 'c1', account_id: 'card', date: '2026-10-02', amount_cents: 25000, paid: false }),
     ]
     expect(lateInvoices([cartao], compras, hoje)).toEqual([])
+  })
+
+  describe('o que falta pagar dos cartões', () => {
+    // Fecha dia 25, vence dia 5. A compra de 30/08 cai na fatura que fechou em
+    // 25/09 e venceu em 05/10; a de 28/09, na que vence em 05/11.
+    const venceu = tx({ id: 'v', account_id: 'card', date: '2026-08-30', amount_cents: 15000, paid: false })
+    const aVencer = tx({ id: 'a', account_id: 'card', date: '2026-09-28', amount_cents: 58000, paid: false })
+
+    it('soma a fatura do mês e a vencida que ficou para trás', () => {
+      // Novembro olhado em 08/10: a de 05/10 venceu, a de 05/11 é a do mês.
+      expect(faturasAPagar([cartao], [venceu, aVencer], '2026-11', hoje)).toEqual({
+        doMesCents: 58000,
+        vencidasCents: 15000,
+        vencidas: 1,
+        totalCents: 73000,
+      })
+    })
+
+    it('a vencida que é a própria fatura do mês entra uma vez só', () => {
+      // Outubro olhado em 08/10: a fatura do mês é a que venceu em 05/10.
+      expect(faturasAPagar([cartao], [venceu], '2026-10', hoje)).toEqual({
+        doMesCents: 15000,
+        vencidasCents: 0,
+        vencidas: 0,
+        totalCents: 15000,
+      })
+    })
+
+    it('fatura quitada não entra', () => {
+      const paga = { ...venceu, paid: true }
+      expect(faturasAPagar([cartao], [paga, aVencer], '2026-11', hoje).vencidasCents).toBe(0)
+    })
   })
 
   /**

@@ -14,6 +14,7 @@ import {
   cycleOf,
   budgetProgress,
   byCategory,
+  faturasAPagar,
   goalProjection,
   invoiceTotal,
   monthlyFlow,
@@ -69,10 +70,8 @@ export function useFinance(competence: Competence = toCompetence(today())) {
       .reduce((sum, s) => sum + s.balance, 0)
 
     // Só o que falta pagar: a fatura já quitada saiu do saldo da conta e não
-    // pode ser descontada de novo na projeção.
-    const openInvoices = summaries
-      .filter((s) => s.account.kind === 'credit')
-      .reduce((sum, s) => sum + (s.openInvoice ?? 0), 0)
+    // pode ser descontada de novo. A vencida entra junto com a do mês.
+    const faturas = faturasAPagar(active, rows, competence, today())
 
     // Cartão não vence compra a compra: quem vence é a fatura. Quase toda
     // tela precisa saber quais contas são cartão para não gritar errado.
@@ -111,7 +110,7 @@ export function useFinance(competence: Competence = toCompetence(today())) {
       allAccounts: accounts,
       summaries,
       totalBalance,
-      openInvoices,
+      faturas,
       categories,
       categoryById,
       cardIds,

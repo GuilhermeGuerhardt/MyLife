@@ -86,7 +86,7 @@ export function AccountsPage() {
         <>
           <NumerosDasContas
             saldo={finance.totalBalance}
-            faturas={finance.openInvoices}
+            faturas={finance.faturas}
             competence={competence}
           />
 

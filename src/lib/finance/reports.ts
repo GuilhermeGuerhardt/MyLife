@@ -493,6 +493,54 @@ export function lateInvoices(
   return openInvoices(accounts, transactions).filter((fatura) => fatura.dueDate < today)
 }
 
+export interface FaturasAPagar {
+  /** O que falta pagar das faturas que vencem no mês olhado. */
+  doMesCents: number
+  /** O que falta das faturas que já venceram, fora as do mês. */
+  vencidasCents: number
+  /** Quantas faturas vencidas entram em `vencidasCents`. */
+  vencidas: number
+  totalCents: number
+}
+
+/**
+ * O que os cartões ainda vão tirar das contas: a fatura do mês e as vencidas.
+ *
+ * Antes só a fatura do mês entrava, e o "saldo após faturas" mostrava folga que
+ * não existia: a fatura de setembro, vencida e com R$ 150 em aberto, não sumia
+ * por ter virado o mês. Ela continua sendo dívida, e das mais urgentes.
+ *
+ * A vencida que é a própria fatura do mês (mês corrente, vencimento já passado)
+ * entra uma vez só, como fatura do mês.
+ */
+export function faturasAPagar(
+  accounts: AccountLike[],
+  transactions: TransactionLike[],
+  competence: Competence,
+  today: string,
+): FaturasAPagar {
+  const doMes = new Set<string>()
+  let doMesCents = 0
+  for (const account of accounts) {
+    if (!isCreditCard(account)) continue
+    const fatura = invoiceDueIn(competence, cycleOf(account))
+    doMes.add(`${account.id}:${fatura}`)
+    doMesCents += openInvoiceTotal(account, fatura, transactions)
+  }
+
+  const vencidas = lateInvoices(accounts, transactions, today).filter(
+    (fatura) => !doMes.has(`${fatura.accountId}:${fatura.competence}`),
+  )
+  const vencidasCents = vencidas.reduce((soma, fatura) => soma + fatura.totalCents, 0)
+
+  return {
+    doMesCents,
+    vencidasCents,
+    vencidas: vencidas.length,
+    totalCents: doMesCents + vencidasCents,
+  }
+}
+
 export interface CommitmentMonth {
   competence: Competence
   total: number

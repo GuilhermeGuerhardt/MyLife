@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { PainelDeNumeros, Stat } from '@/components/ui/misc'
-import type { OpenInvoice, OverdueSummary } from '@/lib/finance/reports'
+import type { FaturasAPagar, OpenInvoice, OverdueSummary } from '@/lib/finance/reports'
 import { formatCents } from '@/lib/finance/money'
 import { percent, shortDate } from '@/lib/format'
 
@@ -71,11 +71,11 @@ export function AvisoDeAtrasos({
 /** Os quatro números do topo: saldo, o que entrou, o que saiu e o que sobrou. */
 export function NumerosDoMes({
   saldo,
-  faturasAbertas,
+  faturas,
   fluxo,
 }: {
   saldo: number
-  faturasAbertas: number
+  faturas: FaturasAPagar
   fluxo: { income: number; expense: number; net: number; savingsRate: number }
 }) {
   return (
@@ -84,9 +84,16 @@ export function NumerosDoMes({
         label="Saldo em contas"
         value={formatCents(saldo)}
         hint={
-          faturasAbertas > 0
-            ? `${formatCents(faturasAbertas)} em faturas abertas`
-            : 'Cartões não entram no saldo'
+          faturas.totalCents === 0 ? (
+            'Cartões não entram no saldo'
+          ) : (
+            <>
+              {formatCents(faturas.totalCents)} em faturas a pagar
+              {faturas.vencidasCents > 0 && (
+                <span className="text-negative">, {formatCents(faturas.vencidasCents)} vencidos</span>
+              )}
+            </>
+          )
         }
         tone={saldo < 0 ? 'negative' : undefined}
       />

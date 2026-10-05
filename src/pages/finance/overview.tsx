@@ -135,7 +135,7 @@ export function FinanceOverview() {
 
       <NumerosDoMes
         saldo={finance.totalBalance}
-        faturasAbertas={finance.openInvoices}
+        faturas={finance.faturas}
         fluxo={finance.flow}
       />
 
