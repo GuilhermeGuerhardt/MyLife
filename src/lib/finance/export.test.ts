@@ -80,7 +80,27 @@ describe('buildExportRows', () => {
       'Destino',
       'Categoria',
       'Situação',
+      'Fatura',
     ])
+  })
+
+  it('diz em qual fatura a compra no cartão caiu, e qual fatura o pagamento quitou', () => {
+    const comCartao = {
+      ...NAMES,
+      cartao: (id: string) => (id === 'cartao' ? { closingDay: 20, dueDay: 28 } : null),
+    }
+    const [, compra, pagamento, comum] = buildExportRows(
+      [
+        // 24/09 num cartão que fecha dia 20 é da fatura de outubro.
+        tx({ date: '2026-09-24', account_id: 'cartao' }),
+        tx({ date: '2026-09-25', kind: 'transfer', account_id: 'a1', transfer_account_id: 'cartao', invoice_competence: '2026-09', category_id: null }),
+        tx({ date: '2026-09-26' }),
+      ],
+      comCartao,
+    )
+    expect(compra!.at(-1)).toBe('10/2026')
+    expect(pagamento!.at(-1)).toBe('09/2026')
+    expect(comum!.at(-1)).toBe('')
   })
 
   it('ordena por data crescente, como um extrato', () => {

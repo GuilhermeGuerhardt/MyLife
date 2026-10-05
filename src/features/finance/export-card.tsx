@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Field, Input } from '@/components/ui/field'
 import { useAccounts, useCategories, useTransactions } from '@/data/queries'
 import { toCompetence } from '@/lib/finance/billing'
+import { cycleOf } from '@/lib/finance/reports'
 import {
   buildExportRows,
   exportFilename,
@@ -77,6 +78,10 @@ export function ExportCard() {
         buildExportRows(selecionadas, {
           account: (id) => accountName.get(id) ?? '',
           category: (id) => (id ? (categoryName.get(id) ?? '') : ''),
+          cartao: (id) => {
+            const conta = accounts.find((a) => a.id === id)
+            return conta?.kind === 'credit' ? cycleOf(conta) : null
+          },
         }),
       )
 
@@ -150,8 +155,9 @@ export function ExportCard() {
           <p className="text-fg-subtle flex items-start gap-1.5 text-xs leading-relaxed">
             <Info className="mt-0.5 size-3 shrink-0" />
             <span>
-              Colunas: data, valor, tipo, descrição, complemento, conta, destino, categoria e
-              situação. Separado por ponto e vírgula, que é o que o Excel em português espera.
+              Colunas: data, valor, tipo, descrição, complemento, conta, destino, categoria,
+              situação e fatura (em qual fatura do cartão a compra caiu). Separado por ponto e
+              vírgula, que é o que o Excel em português espera.
               {transferencias > 0 && (
                 <>
                   {' '}

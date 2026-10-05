@@ -15,16 +15,16 @@
  * como "AlimentaÃ§Ã£o".
  */
 
-import type { Competence } from './billing'
+import { competenceForPurchase, type CardConfig, type Competence } from './billing'
 
 /**
- * Cabeçalho do arquivo.
+ * As colunas que a importação lê.
  *
  * Cada nome é um sinônimo exato de `HEADER_SYNONYMS` no `import.ts`. Mudar
  * qualquer um aqui sem mexer lá quebra a reimportação em silêncio — o mapeamento
  * de colunas simplesmente deixa de achar o campo.
  */
-export const EXPORT_HEADER = [
+export const IMPORT_HEADER = [
   'Data',
   'Valor',
   'Tipo',
@@ -35,6 +35,16 @@ export const EXPORT_HEADER = [
   'Categoria',
   'Situação',
 ] as const
+
+/**
+ * O que sai na exportação: as colunas da importação e mais a fatura.
+ *
+ * A fatura vem por último, e com um nome que a importação não reconhece: o
+ * arquivo reimportado continua idêntico, e a coluna só existe para quem lê no
+ * Excel. O modelo para preencher fica sem ela (`IMPORT_HEADER`), porque ali
+ * ela seria uma coluna que ninguém precisa preencher.
+ */
+export const EXPORT_HEADER = [...IMPORT_HEADER, 'Fatura'] as const
 
 export interface ExportTransaction {
   date: string
@@ -49,6 +59,8 @@ export interface ExportTransaction {
   paid: boolean
   installment_n: number | null
   installment_total: number | null
+  /** Só em pagamento de fatura: qual fatura foi paga. */
+  invoice_competence?: string | null
 }
 
 const KIND_LABEL: Record<ExportTransaction['kind'], string> = {
@@ -100,6 +112,24 @@ export function toCsv(rows: readonly (readonly string[])[], delimiter = ';'): st
 export interface ExportNames {
   account: (id: string) => string
   category: (id: string | null) => string
+  /** O ciclo do cartão, quando a conta é cartão. */
+  cartao?: (id: string) => CardConfig | null
+}
+
+/**
+ * Em qual fatura o lançamento caiu, como "10/2026".
+ *
+ * Desde a 0.5.0 a compra no cartão fica no mês em que foi feita, e o arquivo
+ * deixou de dizer em qual fatura ela cai: a compra de 24/09 num cartão que
+ * fecha dia 20 é da fatura de outubro, e isso não estava em coluna nenhuma. O
+ * pagamento da fatura diz qual fatura pagou.
+ */
+export function faturaDoLancamento(tx: ExportTransaction, names: ExportNames): string {
+  const card = tx.kind === 'transfer' ? null : (names.cartao?.(tx.account_id) ?? null)
+  const fatura = card ? competenceForPurchase(tx.date, card) : (tx.invoice_competence ?? null)
+  if (!fatura) return ''
+  const [ano, mes] = fatura.split('-')
+  return `${mes}/${ano}`
 }
 
 /**
@@ -128,6 +158,7 @@ export function buildExportRows(
       tx.transfer_account_id ? names.account(tx.transfer_account_id) : '',
       names.category(tx.category_id),
       tx.paid ? 'Pago' : 'Em aberto',
+      faturaDoLancamento(tx, names),
     ]),
   ]
 }

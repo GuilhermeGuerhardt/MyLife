@@ -14,7 +14,7 @@
  * em vez de quebrar na mão de quem baixou.
  */
 
-import { EXPORT_HEADER, toCsvFile } from './export'
+import { IMPORT_HEADER, toCsvFile } from './export'
 
 export const MODELO_NOME = 'life-modelo-importacao.csv'
 
@@ -33,7 +33,7 @@ export function linhasDoModelo(hoje: string): string[][] {
   }
 
   return [
-    [...EXPORT_HEADER],
+    [...IMPORT_HEADER],
     [dia('05'), '4.200,00', 'Receita', 'Salário', '', 'Conta Corrente', '', 'Salário', 'Pago'],
     [
       dia('06'),
