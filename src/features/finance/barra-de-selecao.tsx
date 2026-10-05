@@ -26,6 +26,8 @@ function juntar(itens: string[]): string {
 
 interface Parte {
   rotulo: string
+  /** O rótulo abreviado, para a linha de baixo do resumo em duas linhas. */
+  curto: string
   /** `null` = só contado, sem valor ao lado. */
   cents: number | null
 }
@@ -34,14 +36,23 @@ interface Parte {
 function partesDoResumo({ despesas, receitas, transferencias }: ResumoDaSelecao): Parte[] {
   const partes: Parte[] = []
   if (despesas.quantidade > 0) {
-    partes.push({ rotulo: contar(despesas.quantidade, 'despesa', 'despesas'), cents: despesas.cents })
+    partes.push({
+      rotulo: contar(despesas.quantidade, 'despesa', 'despesas'),
+      curto: `${despesas.quantidade} desp.`,
+      cents: despesas.cents,
+    })
   }
   if (receitas.quantidade > 0) {
-    partes.push({ rotulo: contar(receitas.quantidade, 'receita', 'receitas'), cents: receitas.cents })
+    partes.push({
+      rotulo: contar(receitas.quantidade, 'receita', 'receitas'),
+      curto: `${receitas.quantidade} rec.`,
+      cents: receitas.cents,
+    })
   }
   if (transferencias.quantidade > 0) {
     partes.push({
       rotulo: contar(transferencias.quantidade, 'transferência', 'transferências'),
+      curto: `${transferencias.quantidade} transf.`,
       // Ao lado de receita e despesa, o valor da transferência parecia parte
       // da soma. Sozinha, ela é o próprio total que a pessoa quer ver.
       cents: partes.length === 0 ? transferencias.cents : null,
@@ -180,13 +191,39 @@ function Trecho({ primeiro = false, children }: { primeiro?: boolean; children: 
   )
 }
 
+/** O começo do resumo misto: quantos estão marcados e, com os dois lados, o saldo. */
+function ContagemESaldo({ resumo }: { resumo: ResumoDaSelecao }) {
+  return (
+    <>
+      <Trecho primeiro>
+        <span className="text-fg font-medium">
+          {contar(resumo.quantidade, 'selecionado', 'selecionados')}
+        </span>
+      </Trecho>
+      {temSaldo(resumo) && (
+        <Trecho>
+          <Separador />
+          saldo
+          <Valor cents={resumo.saldoCents} saldo />
+        </Trecho>
+      )}
+    </>
+  )
+}
+
 /**
- * O resumo à vista, sempre numa linha. O que não cabe vira reticências, com o
- * texto inteiro na dica — quebrar a linha fazia a barra crescer e a lista
- * descer no meio dos cliques.
+ * O resumo à vista, sem nunca mudar a altura da barra: quebrar a linha a
+ * fazia crescer, e a lista descia no meio dos cliques.
  *
  * Seleção mista abre com o saldo, logo depois da contagem: se a linha cortar,
  * corta o detalhe e o número que resume tudo fica.
+ *
+ * Sem espaço para a linha inteira (uns 630px), a seleção mista vai em duas
+ * linhas, que cabem nos 44px da barra: contagem e saldo em cima, as partes
+ * abreviadas embaixo. Numa linha só, a janela de 800px mostrava apenas
+ * contagem e saldo, e despesas e receitas ficavam escondidas na dica. A troca
+ * é pela largura do próprio resumo (container query), e não da janela: o menu
+ * lateral recolhido ou aberto muda o espaço sem mudar a janela.
  */
 function Resumo({ resumo }: { resumo: ResumoDaSelecao }) {
   const partes = partesDoResumo(resumo)
@@ -195,45 +232,52 @@ function Resumo({ resumo }: { resumo: ResumoDaSelecao }) {
   return (
     // Escondido do leitor de tela porque o mesmo texto já está na região de
     // status da barra; sem isso ele seria lido duas vezes.
-    <p
+    <div
       aria-hidden
       title={textoDoResumo(resumo)}
-      className="text-fg-muted min-w-0 flex-1 truncate text-xs"
+      className="text-fg-muted @container min-w-0 flex-1 text-xs"
     >
       {partes.length === 1 && unica ? (
-        <Trecho primeiro>
-          <span className="text-fg font-medium">{unica.rotulo}</span>
-          {unica.cents !== null && (
-            <>
-              <Separador />
-              <Valor cents={unica.cents} />
-            </>
-          )}
-        </Trecho>
+        <p className="truncate">
+          <Trecho primeiro>
+            <span className="text-fg font-medium">{unica.rotulo}</span>
+            {unica.cents !== null && (
+              <>
+                <Separador />
+                <Valor cents={unica.cents} />
+              </>
+            )}
+          </Trecho>
+        </p>
       ) : (
         <>
-          <Trecho primeiro>
-            <span className="text-fg font-medium">
-              {contar(resumo.quantidade, 'selecionado', 'selecionados')}
-            </span>
-          </Trecho>
-          {temSaldo(resumo) && (
-            <Trecho>
-              <Separador />
-              saldo
-              <Valor cents={resumo.saldoCents} saldo />
-            </Trecho>
-          )}
-          {partes.map((parte) => (
-            <Trecho key={parte.rotulo}>
-              <Separador />
-              {parte.rotulo}
-              {parte.cents !== null && <Valor cents={parte.cents} />}
-            </Trecho>
-          ))}
+          <p className="hidden truncate @2xl:block">
+            <ContagemESaldo resumo={resumo} />
+            {partes.map((parte) => (
+              <Trecho key={parte.rotulo}>
+                <Separador />
+                {parte.rotulo}
+                {parte.cents !== null && <Valor cents={parte.cents} />}
+              </Trecho>
+            ))}
+          </p>
+          <div className="leading-tight @2xl:hidden">
+            <p className="truncate">
+              <ContagemESaldo resumo={resumo} />
+            </p>
+            <p className="truncate">
+              {partes.map((parte, indice) => (
+                <Trecho key={parte.rotulo} primeiro={indice === 0}>
+                  {indice > 0 && <Separador />}
+                  {parte.curto}
+                  {parte.cents !== null && <Valor cents={parte.cents} />}
+                </Trecho>
+              ))}
+            </p>
+          </div>
         </>
       )}
-    </p>
+    </div>
   )
 }
 

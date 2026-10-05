@@ -185,7 +185,11 @@ describe('seleção de lançamentos', () => {
     await caixa('Mercado')
     fireEvent.click(caixaDeTodos())
 
-    expect(screen.getByText('4 selecionados')).toBeTruthy()
+    // Duas formas no HTML: a de uma linha e a de duas, com as partes
+    // abreviadas. O CSS mostra uma conforme a largura; aqui não há CSS.
+    expect(screen.getAllByText('4 selecionados')).toHaveLength(2)
+    expect(screen.getByText('3 desp.')).toBeTruthy()
+    expect(screen.getByText('1 rec.')).toBeTruthy()
     expect(anunciado().textContent).toMatch(
       /^4 selecionados · saldo \+R\$\s3\.729,50 · 3 despesas R\$\s770,50 · 1 receita R\$\s4\.500,00$/,
     )
